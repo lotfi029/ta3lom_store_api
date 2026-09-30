@@ -1,5 +1,5 @@
 # Build progress
-Next: run complete — Build-report.md pushed, PR marked ready; only PR events (CI, reviews) remain
+Next: run complete — PR #8 merged into main (8c68131); next work starts from plan 14 on a new session branch
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
