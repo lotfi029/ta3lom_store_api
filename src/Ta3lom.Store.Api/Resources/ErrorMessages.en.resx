@@ -163,4 +163,10 @@
   <data name="staff.email_taken.detail" xml:space="preserve">
     <value>A staff user with this email already exists.</value>
   </data>
+  <data name="catalog.product_not_found" xml:space="preserve">
+    <value>Product not found</value>
+  </data>
+  <data name="catalog.product_not_found.detail" xml:space="preserve">
+    <value>This product does not exist or is no longer available.</value>
+  </data>
 </root>

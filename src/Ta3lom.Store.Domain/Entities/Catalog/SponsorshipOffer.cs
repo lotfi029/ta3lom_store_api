@@ -54,4 +54,9 @@ public sealed class SponsorshipOffer : AggregateRoot
     public bool IsActive { get; private set; }
 
     public DateTimeOffset CreatedAt { get; private set; }
+
+    /// RUL-09/RUL-10: open between starts_at and ends_at while active; reaching the target closes it only when
+    /// `close_on_target` is set.
+    public bool IsOpen(DateTimeOffset now, int fundedUnits) =>
+        IsActive && now >= StartsAt && now < EndsAt && !(CloseOnTarget && fundedUnits >= TargetUnits);
 }

@@ -43,6 +43,7 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
+app.UseOutputCache();
 
 // ── Endpoints ───────────────────────────────────────────────────────────────────────────────────
 var v1 = app.MapGroup("/v1").RequireCors(CorsSetup.WebPolicy);

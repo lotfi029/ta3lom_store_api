@@ -1,5 +1,5 @@
 # Build progress
-Next: S-08 — Public catalogue
+Next: S-09 — Admin catalogue and settings
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -25,7 +25,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-03a-lite CI | done | e96bd7d | — | — | n/a (workflow file; runs on push) | `.github/workflows/ci.yml` accepted by the push |
 | S-04 customer OTP | done | S-04 | 16–20 | PruneOtp | ✅ tools/smoke/S-04.http | 192 tests green; Build + Done-when ticked below |
 | S-05 staff identity | done | S-05 | 47–52, 123–128 | — | ✅ tools/smoke/S-05.http | 204 tests green; actor bug found and fixed in smoke |
-| S-08 public catalogue | todo | | 1–7, 9 | — | | |
+| S-08 public catalogue | done | S-08 | 1–7, 9 | — | ✅ tools/smoke/S-08.http | seed catalogue served (15 products), ETag/304 |
 | S-09 admin catalogue | todo | | 54–77, 118, 119 | — | | |
 | S-13 cart | todo | | 10–15 | ExpireGuestCarts | | |
 | S-15 checkout | todo | | 40–42 | — | | |
@@ -137,3 +137,21 @@ Done when (local smoke)
 - [x] `create-admin` works (dev DB)
 - [x] A `viewer` gets 403 on every write (staff admin routes; later sessions' writes join the matrix in T-6)
 - [ ] An `admin` without `allocation_officer` gets 403 on the allocate route → verified when #112 exists (S-25)
+
+### S-08 — Public catalogue API
+
+Build
+- [x] Domain: `Product.IsPublished`, `SponsorshipOffer.IsOpen(now, funded)`, `CauseDetail.IsOpen(now, raised)` (RUL-09/10), `GoalMath.Percent` floor (RUL-08), `DonorDisplay` (RUL-23)
+- [x] Application: `GetHome`, `ListProducts` (type, category, sponsorable, q, sort, page) + `ListProductSlugs` (`fields=slug`), `GetProductBySlug`, `GetLiveFigures`, `GetProductUpdates`, `GetGiftFeed` (anonymised), `GetCatalogConfig` (presets, min gift, dedication templates, VAT flag)
+- [x] Infrastructure: `AsNoTracking` projections to DTOs; search SQL `search_vector @@ plainto_tsquery('simple', ar_normalize(q))` + trigram fallback; `StoreSettingsProvider` (typed, 60 s cache)
+- [x] Api: `/v1/catalog/*`; ETag + Cache-Control (content 60 s + SWR 300, live 15 s); `If-None-Match` → 304; output caching keyed by URL
+- [x] Audit §2.2: gift feed anonymised; config endpoint; locale-free output cache; tashkeel-insensitive search
+
+Tests (test phase)
+- [ ] RUL-02 (draft invisible, archived only in history), RUL-08 (floor and cap), RUL-09 (ended campaign flagged), RUL-23 (feed never shows a name when anonymous)
+- [ ] Arabic search: مكتبة for مكتبه, حكايات with tashkeel; ETag round trip; the seed catalogue returns 15 products
+
+Done when (local smoke)
+- [x] The seed catalogue is served (15 products, dev DB)
+- [x] p95 < 150 ms for the product endpoint (local: 2–4 ms cached; k6 load smoke in H-1)
+- [x] S-10/S-11 (frontend) can start against the API (OpenAPI regenerated)

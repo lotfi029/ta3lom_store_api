@@ -10,6 +10,348 @@
     }
   ],
   "paths": {
+    "/v1/catalog/home": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/catalog/categories": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/catalog/products": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sponsorable",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedResultOfProductCardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/catalog/products/{slug}": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDetailResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/catalog/live": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "parameters": [
+          {
+            "name": "slugs",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveFiguresResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/catalog/products/{slug}/updates": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedResultOfCauseUpdateResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/catalog/products/{slug}/feed": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GiftFeedItem"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/catalog/config": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogConfigResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/auth/otp/request": {
       "post": {
         "tags": [
@@ -766,6 +1108,108 @@
           }
         }
       },
+      "BookBlock": {
+        "required": [
+          "authorAr",
+          "authorEn",
+          "pages",
+          "isbn",
+          "publishedYear",
+          "formats"
+        ],
+        "type": "object",
+        "properties": {
+          "authorAr": {
+            "type": "string"
+          },
+          "authorEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pages": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "isbn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "publishedYear": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "formats": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookFormatResponse"
+            }
+          }
+        }
+      },
+      "BookFormatResponse": {
+        "required": [
+          "id",
+          "kind",
+          "sku",
+          "price",
+          "compareAtPrice",
+          "available",
+          "maxQuantity"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "price": {
+            "type": "string"
+          },
+          "compareAtPrice": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "available": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "maxQuantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "CartNoticeResponse": {
         "required": [
           "code",
@@ -778,6 +1222,455 @@
           },
           "slug": {
             "type": "string"
+          }
+        }
+      },
+      "CatalogConfigResponse": {
+        "required": [
+          "vatEnabled",
+          "vatRate",
+          "shippingFlatFee",
+          "minGiftAmount",
+          "cartMaxTotal",
+          "cartMaxLines",
+          "printMaxQuantity",
+          "giftMaxQuantity",
+          "paymentMethods",
+          "dedicationFreeTextEnabled",
+          "dedicationTemplates",
+          "sponsorPresets",
+          "causeUnitPresets",
+          "amountPresets"
+        ],
+        "type": "object",
+        "properties": {
+          "vatEnabled": {
+            "type": "boolean"
+          },
+          "vatRate": {
+            "type": "string"
+          },
+          "shippingFlatFee": {
+            "type": "string"
+          },
+          "minGiftAmount": {
+            "type": "string"
+          },
+          "cartMaxTotal": {
+            "type": "string"
+          },
+          "cartMaxLines": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "printMaxQuantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "giftMaxQuantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "paymentMethods": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "dedicationFreeTextEnabled": {
+            "type": "boolean"
+          },
+          "dedicationTemplates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DedicationTemplateResponse"
+            }
+          },
+          "sponsorPresets": {
+            "$ref": "#/components/schemas/SponsorPresets"
+          },
+          "causeUnitPresets": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "amountPresets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CategoryRef": {
+        "required": [
+          "slug",
+          "nameAr",
+          "nameEn"
+        ],
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "CategoryResponse": {
+        "required": [
+          "slug",
+          "nameAr",
+          "nameEn",
+          "sort"
+        ],
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sort": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "CauseBlock": {
+        "required": [
+          "unitAmount",
+          "unitLabelAr",
+          "unitLabelEn",
+          "target",
+          "raised",
+          "percent",
+          "donorCount",
+          "allowCustomAmount",
+          "minAmount",
+          "zakatEligible",
+          "beneficiariesAr",
+          "beneficiariesEn",
+          "closeOnTarget",
+          "isGeneralFund",
+          "startsAt",
+          "endsAt",
+          "daysLeft",
+          "isOpen"
+        ],
+        "type": "object",
+        "properties": {
+          "unitAmount": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unitLabelAr": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unitLabelEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "target": {
+            "type": "string"
+          },
+          "raised": {
+            "type": "string"
+          },
+          "percent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "donorCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "allowCustomAmount": {
+            "type": "boolean"
+          },
+          "minAmount": {
+            "type": "string"
+          },
+          "zakatEligible": {
+            "type": "boolean"
+          },
+          "beneficiariesAr": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "beneficiariesEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "closeOnTarget": {
+            "type": "boolean"
+          },
+          "isGeneralFund": {
+            "type": "boolean"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "daysLeft": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "isOpen": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CauseUpdateResponse": {
+        "required": [
+          "id",
+          "titleAr",
+          "titleEn",
+          "bodyAr",
+          "bodyEn",
+          "image",
+          "unitsDelivered",
+          "occurredOn"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "titleAr": {
+            "type": "string"
+          },
+          "titleEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bodyAr": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bodyEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "image": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ImageResponse"
+              }
+            ]
+          },
+          "unitsDelivered": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "occurredOn": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "CourseBlock": {
+        "required": [
+          "price",
+          "compareAtPrice",
+          "lessons",
+          "durationMinutes",
+          "levelAr",
+          "levelEn",
+          "instructorAr",
+          "instructorEn",
+          "accessDays",
+          "learnerCount",
+          "modules"
+        ],
+        "type": "object",
+        "properties": {
+          "price": {
+            "type": "string"
+          },
+          "compareAtPrice": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lessons": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "durationMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "levelAr": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "levelEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instructorAr": {
+            "type": "string"
+          },
+          "instructorEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "accessDays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "learnerCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "modules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CourseModuleResponse"
+            }
+          }
+        }
+      },
+      "CourseModuleResponse": {
+        "required": [
+          "sort",
+          "titleAr",
+          "titleEn",
+          "durationSeconds"
+        ],
+        "type": "object",
+        "properties": {
+          "sort": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "titleAr": {
+            "type": "string"
+          },
+          "titleEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "durationSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -864,6 +1757,512 @@
           }
         }
       },
+      "DedicationTemplateResponse": {
+        "required": [
+          "key",
+          "ar",
+          "en"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "ar": {
+            "type": "string"
+          },
+          "en": {
+            "type": "string"
+          }
+        }
+      },
+      "FormatPrice": {
+        "required": [
+          "kind",
+          "price"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "price": {
+            "type": "string"
+          }
+        }
+      },
+      "GeneralFundBand": {
+        "required": [
+          "slug",
+          "raised",
+          "target",
+          "percent",
+          "donorCount"
+        ],
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "raised": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "percent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "donorCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "GiftFeedItem": {
+        "required": [
+          "displayAr",
+          "displayEn",
+          "amount",
+          "units",
+          "at"
+        ],
+        "type": "object",
+        "properties": {
+          "displayAr": {
+            "type": "string"
+          },
+          "displayEn": {
+            "type": "string"
+          },
+          "amount": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "units": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "GoalCard": {
+        "required": [
+          "unitAmount",
+          "unitLabelAr",
+          "unitLabelEn",
+          "target",
+          "raised",
+          "percent",
+          "donorCount",
+          "endsAt",
+          "isOpen",
+          "zakatEligible",
+          "isGeneralFund"
+        ],
+        "type": "object",
+        "properties": {
+          "unitAmount": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unitLabelAr": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unitLabelEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "target": {
+            "type": "string"
+          },
+          "raised": {
+            "type": "string"
+          },
+          "percent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "donorCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "endsAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "isOpen": {
+            "type": "boolean"
+          },
+          "zakatEligible": {
+            "type": "boolean"
+          },
+          "isGeneralFund": {
+            "type": "boolean"
+          }
+        }
+      },
+      "HomeResponse": {
+        "required": [
+          "featured",
+          "causes",
+          "courses",
+          "sponsorable",
+          "books",
+          "impact",
+          "generalFund"
+        ],
+        "type": "object",
+        "properties": {
+          "featured": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductCardResponse"
+            }
+          },
+          "causes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductCardResponse"
+            }
+          },
+          "courses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductCardResponse"
+            }
+          },
+          "sponsorable": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductCardResponse"
+            }
+          },
+          "books": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductCardResponse"
+            }
+          },
+          "impact": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImpactFigure"
+            }
+          },
+          "generalFund": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GeneralFundBand"
+              }
+            ]
+          }
+        }
+      },
+      "ImageResponse": {
+        "required": [
+          "url",
+          "altAr",
+          "altEn",
+          "width",
+          "height"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "altAr": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "altEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "width": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "height": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ImpactFigure": {
+        "required": [
+          "value",
+          "labelAr",
+          "labelEn"
+        ],
+        "type": "object",
+        "properties": {
+          "value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "labelAr": {
+            "type": "string"
+          },
+          "labelEn": {
+            "type": "string"
+          }
+        }
+      },
+      "LiveFiguresResponse": {
+        "required": [
+          "items",
+          "asOf"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LiveItem"
+            }
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "LiveFormat": {
+        "required": [
+          "kind",
+          "price",
+          "available"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "price": {
+            "type": "string"
+          },
+          "available": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "LiveGoal": {
+        "required": [
+          "raised",
+          "target",
+          "percent",
+          "donorCount",
+          "daysLeft",
+          "isOpen"
+        ],
+        "type": "object",
+        "properties": {
+          "raised": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "percent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "donorCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "daysLeft": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "isOpen": {
+            "type": "boolean"
+          }
+        }
+      },
+      "LiveItem": {
+        "required": [
+          "slug",
+          "price",
+          "compareAtPrice",
+          "formats",
+          "sponsorship",
+          "goal"
+        ],
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "price": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "compareAtPrice": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "formats": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/LiveFormat"
+            }
+          },
+          "sponsorship": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LiveSponsorship"
+              }
+            ]
+          },
+          "goal": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LiveGoal"
+              }
+            ]
+          }
+        }
+      },
+      "LiveSponsorship": {
+        "required": [
+          "fundedUnits",
+          "targetUnits",
+          "percent",
+          "donorCount",
+          "isOpen"
+        ],
+        "type": "object",
+        "properties": {
+          "fundedUnits": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "targetUnits": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "percent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "donorCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "isOpen": {
+            "type": "boolean"
+          }
+        }
+      },
       "OneTimePasswordResponse": {
         "required": [
           "oneTimePassword"
@@ -882,6 +2281,88 @@
         "type": "object",
         "properties": {
           "expiresInSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "PagedResultOfCauseUpdateResponse": {
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CauseUpdateResponse"
+            }
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "PagedResultOfProductCardResponse": {
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductCardResponse"
+            }
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -929,6 +2410,296 @@
           }
         }
       },
+      "ProductCardResponse": {
+        "required": [
+          "id",
+          "type",
+          "slug",
+          "titleAr",
+          "titleEn",
+          "summaryAr",
+          "summaryEn",
+          "badge",
+          "category",
+          "cover",
+          "price",
+          "compareAtPrice",
+          "formats",
+          "sponsorship",
+          "goal"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "titleAr": {
+            "type": "string"
+          },
+          "titleEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "summaryAr": {
+            "type": "string"
+          },
+          "summaryEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "badge": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "category": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CategoryRef"
+              }
+            ]
+          },
+          "cover": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ImageResponse"
+              }
+            ]
+          },
+          "price": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "compareAtPrice": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "formats": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/FormatPrice"
+            }
+          },
+          "sponsorship": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SponsorshipCard"
+              }
+            ]
+          },
+          "goal": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GoalCard"
+              }
+            ]
+          }
+        }
+      },
+      "ProductDetailResponse": {
+        "required": [
+          "id",
+          "type",
+          "slug",
+          "titleAr",
+          "titleEn",
+          "summaryAr",
+          "summaryEn",
+          "bodyAr",
+          "bodyEn",
+          "badge",
+          "category",
+          "cover",
+          "seo",
+          "course",
+          "book",
+          "cause",
+          "sponsorship",
+          "related"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "titleAr": {
+            "type": "string"
+          },
+          "titleEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "summaryAr": {
+            "type": "string"
+          },
+          "summaryEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bodyAr": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bodyEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "badge": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "category": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CategoryRef"
+              }
+            ]
+          },
+          "cover": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ImageResponse"
+              }
+            ]
+          },
+          "seo": {
+            "$ref": "#/components/schemas/SeoResponse"
+          },
+          "course": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CourseBlock"
+              }
+            ]
+          },
+          "book": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BookBlock"
+              }
+            ]
+          },
+          "cause": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CauseBlock"
+              }
+            ]
+          },
+          "sponsorship": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SponsorshipDetail"
+              }
+            ]
+          },
+          "related": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RelatedProduct"
+            }
+          }
+        }
+      },
+      "RelatedProduct": {
+        "required": [
+          "slug",
+          "type",
+          "titleAr",
+          "titleEn",
+          "price"
+        ],
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "titleAr": {
+            "type": "string"
+          },
+          "titleEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "price": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "RequestOtpRequest": {
         "required": [
           "mobile",
@@ -940,6 +2711,41 @@
             "type": "string"
           },
           "locale": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SeoResponse": {
+        "required": [
+          "titleAr",
+          "titleEn",
+          "descAr",
+          "descEn"
+        ],
+        "type": "object",
+        "properties": {
+          "titleAr": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "titleEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "descAr": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "descEn": {
             "type": [
               "null",
               "string"
@@ -975,6 +2781,199 @@
             "items": {
               "$ref": "#/components/schemas/CartNoticeResponse"
             }
+          }
+        }
+      },
+      "SponsorPresets": {
+        "required": [
+          "course",
+          "book"
+        ],
+        "type": "object",
+        "properties": {
+          "course": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "book": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "SponsorshipCard": {
+        "required": [
+          "offerId",
+          "seatPrice",
+          "unitLabelAr",
+          "unitLabelEn",
+          "targetUnits",
+          "fundedUnits",
+          "percent",
+          "donorCount",
+          "endsAt",
+          "isOpen"
+        ],
+        "type": "object",
+        "properties": {
+          "offerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seatPrice": {
+            "type": "string"
+          },
+          "unitLabelAr": {
+            "type": "string"
+          },
+          "unitLabelEn": {
+            "type": "string"
+          },
+          "targetUnits": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "fundedUnits": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "percent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "donorCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isOpen": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SponsorshipDetail": {
+        "required": [
+          "offerId",
+          "seatPrice",
+          "unitLabelAr",
+          "unitLabelEn",
+          "targetUnits",
+          "fundedUnits",
+          "percent",
+          "donorCount",
+          "groupLabelAr",
+          "groupLabelEn",
+          "allowPartial",
+          "zakatEligible",
+          "startsAt",
+          "endsAt",
+          "isOpen"
+        ],
+        "type": "object",
+        "properties": {
+          "offerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seatPrice": {
+            "type": "string"
+          },
+          "unitLabelAr": {
+            "type": "string"
+          },
+          "unitLabelEn": {
+            "type": "string"
+          },
+          "targetUnits": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "fundedUnits": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "percent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "donorCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "groupLabelAr": {
+            "type": "string"
+          },
+          "groupLabelEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "allowPartial": {
+            "type": "boolean"
+          },
+          "zakatEligible": {
+            "type": "boolean"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isOpen": {
+            "type": "boolean"
           }
         }
       },
@@ -1189,6 +3188,9 @@
     }
   },
   "tags": [
+    {
+      "name": "Catalog"
+    },
     {
       "name": "Auth"
     },

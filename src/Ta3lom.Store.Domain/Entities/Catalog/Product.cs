@@ -58,4 +58,7 @@ public sealed class Product : AggregateRoot
     public DateTimeOffset CreatedAt { get; private set; }
 
     public DateTimeOffset UpdatedAt { get; private set; }
+
+    /// RUL-02: only published products appear in the catalogue or accept cart lines.
+    public bool IsPublished => Status == ProductStatus.Published;
 }

@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 # Applies artifacts/migrate.sql (idempotent) to the local dev database (PGDATABASE, default ta3lom_store_dev).
 # Cloud/dev only: PostgreSQL < 18 gets the same uuidv7() shim the tests use (never part of a migration).
-# Usage: tools/scripts/dev-db-migrate.sh [--regenerate]
+# Usage: tools/scripts/dev-db-migrate.sh [--regenerate] [--seed-catalogue]
+#   --seed-catalogue  loads the reference catalogue (db/reference/002_store_seed.sql) when the DB has no products
 set -euo pipefail
 ROOT="$(git rev-parse --show-toplevel)"
 DB="${PGDATABASE:-ta3lom_store_dev}"
-if [ "${1:-}" = "--regenerate" ] || [ ! -f "$ROOT/artifacts/migrate.sql" ]; then
+REGEN=0; SEED=0
+for arg in "$@"; do case "$arg" in --regenerate) REGEN=1 ;; --seed-catalogue) SEED=1 ;; esac; done
+if [ "$REGEN" = 1 ] || [ ! -f "$ROOT/artifacts/migrate.sql" ]; then
   "$ROOT/tools/scripts/migrate-script.sh" >/dev/null
 fi
 if [ "$(psql -qAtd "$DB" -c "SHOW server_version_num")" -lt 180000 ] \
@@ -21,3 +24,7 @@ fi
 PGOPTIONS='-c search_path=store,public -c client_min_messages=warning' \
   psql -v ON_ERROR_STOP=1 -qd "$DB" -f "$ROOT/artifacts/migrate.sql" >/dev/null
 echo "migrated $DB"
+if [ "$SEED" = 1 ] && [ "$(psql -qAtd "$DB" -c "SELECT count(*) FROM store.product")" = "0" ]; then
+  PGOPTIONS='-c client_min_messages=warning' psql -v ON_ERROR_STOP=1 -qd "$DB" -f "$ROOT/db/reference/002_store_seed.sql" >/dev/null
+  echo "seeded the reference catalogue ($(psql -qAtd "$DB" -c "SELECT count(*) FROM store.product") products)"
+fi

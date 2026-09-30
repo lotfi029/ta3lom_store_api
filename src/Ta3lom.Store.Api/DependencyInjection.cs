@@ -42,6 +42,7 @@ public static class DependencyInjection
         services.AddStoreForwardedHeaders();
         services.AddStoreCors();
         services.AddStoreRateLimiting();
+        services.AddStoreOutputCache();
         services.AddHsts(o =>
         {
             o.MaxAge = TimeSpan.FromDays(365);

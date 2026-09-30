@@ -163,4 +163,10 @@
   <data name="staff.email_taken.detail" xml:space="preserve">
     <value>يوجد موظف بهذا البريد الإلكتروني.</value>
   </data>
+  <data name="catalog.product_not_found" xml:space="preserve">
+    <value>المنتج غير موجود</value>
+  </data>
+  <data name="catalog.product_not_found.detail" xml:space="preserve">
+    <value>لم نجد هذا المنتج، أو لم يعد متاحًا.</value>
+  </data>
 </root>

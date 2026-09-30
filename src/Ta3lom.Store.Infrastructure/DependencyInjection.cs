@@ -17,9 +17,12 @@ using Ta3lom.Store.Infrastructure.Persistence;
 using Ta3lom.Store.Infrastructure.Persistence.Interceptors;
 using Ta3lom.Store.Infrastructure.Persistence.Repositories;
 using Ta3lom.Store.Infrastructure.Persistence.Seeders;
+using Ta3lom.Store.Infrastructure.Services.Catalog;
+using Ta3lom.Store.Infrastructure.Services.Files;
 using Ta3lom.Store.Infrastructure.Services.Health;
 using Ta3lom.Store.Infrastructure.Services.Jobs;
 using Ta3lom.Store.Infrastructure.Services.Security;
+using Ta3lom.Store.Infrastructure.Services.Settings;
 using Ta3lom.Store.Infrastructure.Services.Sms;
 using Ta3lom.Store.Infrastructure.Services.Templates;
 using Ta3lom.Store.Infrastructure.Services.Time;
@@ -122,6 +125,13 @@ public static class DependencyInjection
                 ? sp.GetRequiredService<UnifonicSmsSender>()
                 : sp.GetRequiredService<SinkSmsSender>());
         services.AddScoped<ITemplateRenderer, ScribanTemplateRenderer>();
+
+        services.AddSingleton<StoreSettingsProvider>();
+        services.AddSingleton<IStoreSettings>(sp => sp.GetRequiredService<StoreSettingsProvider>());
+        services.AddSingleton<ISettingsProvider>(sp => sp.GetRequiredService<StoreSettingsProvider>());
+        services.AddScoped<ICatalogSearch, CatalogSearch>();
+        services.AddOptions<FileStorageOptions>().BindConfiguration(FileStorageOptions.Section);
+        services.AddSingleton<IFileUrls, FileUrls>();
     }
 
     /// Data Protection encrypts beneficiary PII (09 §5.13). Keys persist in `Store:DataProtection:KeysPath`

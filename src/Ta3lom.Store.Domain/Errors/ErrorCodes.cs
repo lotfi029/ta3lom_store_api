@@ -30,4 +30,5 @@ public static class ErrorCodes
     public const string TotpInvalid = "auth.totp_invalid";
     public const string TotpNotEnrolled = "auth.totp_not_enrolled";
     public const string StaffEmailTaken = "staff.email_taken";
+    public const string ProductNotFound = "catalog.product_not_found";
 }

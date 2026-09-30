@@ -46,4 +46,9 @@ public sealed class CauseDetail
     public DateTimeOffset StartsAt { get; private set; }
 
     public DateTimeOffset? EndsAt { get; private set; }
+
+    /// RUL-09/RUL-10: after ends_at (Riyadh wall time stored as UTC) no new gifts; the target closes the cause
+    /// only with `close_on_target`. The general fund is open-ended (ends_at NULL).
+    public bool IsOpen(DateTimeOffset now, decimal raised) =>
+        now >= StartsAt && (EndsAt is null || now < EndsAt) && !(CloseOnTarget && raised >= TargetAmount);
 }
