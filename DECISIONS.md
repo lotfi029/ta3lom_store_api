@@ -96,6 +96,7 @@ the owner should confirm.
 | 2026-09-30 | S-19 | Internal LMS | Q-05 open | `InternalAccessLmsGateway` (default): enrol/revoke succeed with `internal:{id}`; launch URL `{web}/{locale}/learn/{slug}?t={enrolment}.{exp}.{hmac}` (10 min, key derived from `Store:Tokens:StatusKeyBase64`); progress `null` (S-40 has nothing to pull). `Store:Lms:SimulateFailure` for Development smoke | Q-05 undecided | REVIEW (Q-05) |
 | 2026-09-30 | S-19 | Launch | 11 §5.4 | `POST /v1/me/enrolments/{id}/launch` (policy customer, rate `me`): someone else's or unknown enrolment → 404 `http.not_found`; pending/revoked/expired → 409 `enrolment.not_active`; first launch sets `started_at` (RUL-50 lapse) | Not leaking other customers' ids | |
 | 2026-09-30 | S-19 | Dispatcher crash | bug found in smoke | `PeriodicTimer.WaitForNextTickAsync` was called again while the previous wait was pending (after a nudge won) → `InvalidOperationException` stopped the host. The tick and nudge tasks are now kept across iterations | Would have taken production down on the first quick commit | |
+| 2026-09-30 | P0-4 | Watermark | plan 14 §5 | PDFsharp 6.2.4 stamps pages, but the stamp is rendered by QuestPDF (shaped Arabic) and drawn as a form XObject; PdfSharp `DrawString` leaves Arabic unjoined. 301 pages in ~0.2 s, output ≈ input size; cached per grant | Spike GO (`store/spikes/P0-4-watermark.md`) | |
 
 ## Bugs found by tests
 

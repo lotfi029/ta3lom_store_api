@@ -1,5 +1,5 @@
 # Build progress
-Next: P0-4 — PdfSharp watermark spike (then S-20)
+Next: S-20 — Digital downloads
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -33,7 +33,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | P0-3 Arabic PDF spike | done | P0-3 | — | — | spikes/P0-3 → 2 PDFs | GO: shaping, table, QR ok; LRI/PDI isolates for phones/English; store/spikes/P0-3-arabic-pdf.md |
 | S-17 outbox, documents | done | S-17 | 88 | OutboxDispatcher; OrderPaid, RenderDocuments, FinanceAlert, DedicationCard (stub), DocumentsResendRequested, lifecycle no-ops | ✅ tools/smoke/S-17.http | 294 tests green; retry after provider outage verified; path-resolution bug fixed |
 | S-19 enrolment + LMS | done | S-19 | 29 | CourseEnrolmentEffect; LmsEnrol, LmsRevoke | ✅ tools/smoke/S-19.http | 296 tests green; first invoice PDF; dispatcher crash fixed |
-| P0-4 watermark spike | todo | | — | — | | |
+| P0-4 watermark spike | done | P0-4 | — | — | spikes/P0-4 → 301-page book stamped | GO: QuestPDF stamp as PdfSharp form XObject ~0.2 s/300 pages; PdfSharp text cannot shape Arabic; store/spikes/P0-4-watermark.md |
 | S-20 digital downloads | todo | | 32, 46, 94 | DigitalBookEffect | | |
 | S-21 shipments, stock, admin orders | todo | | 78–80, 85, 86, 95–99 | PrintBookEffect; ShipmentShipped/Delivered | | integrity check |
 | S-40 LMS progress sync | todo | | — | LmsProgressSync; SponsorUnitCompleted | | |
@@ -68,7 +68,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 - [ ] Every settlement effect of §13.4 registered (5 line effects + gift/donate counters)
 - [ ] 17 outbox message types of 09 §4.9 handled (all except RefundProcessed)
 - [ ] Integrity checks 0 rows after the full smoke scenario
-- [ ] Spikes P0-3 and P0-4 written up in store/spikes/
+- [x] Spikes P0-3 and P0-4 written up in store/spikes/
 - [ ] H-1 code-side hardening done
 - [ ] No session left blocked
 
