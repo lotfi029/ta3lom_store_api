@@ -4,8 +4,8 @@ using Ta3lom.Store.Domain.Entities.Ordering;
 namespace Ta3lom.Store.Application.Features.Settlement;
 
 /// One paid-order effect per line case (plan 14 §13.4, RUL-39). Every effect runs inside the settlement transaction and
-/// uses Domain methods and repositories only; row locks live in Infrastructure repositories. Exactly one effect must
-/// handle each line, otherwise settlement is refused with `settlement.effect_missing`.
+/// uses Domain methods and repositories only; row locks live in Infrastructure repositories. Exactly one effect handles
+/// each line (the S-16 `settlement.effect_missing` guard was removed with S-23, plan 14 §13.4).
 public interface ILineSettlementEffect
 {
     bool Handles(OrderLine line, SettlementContext context);

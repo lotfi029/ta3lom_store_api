@@ -409,12 +409,6 @@
   <data name="order.not_found.detail" xml:space="preserve">
     <value>No order with this reference.</value>
   </data>
-  <data name="settlement.effect_missing" xml:space="preserve">
-    <value>Settlement refused</value>
-  </data>
-  <data name="settlement.effect_missing.detail" xml:space="preserve">
-    <value>An internal error stopped the settlement. Finance has been alerted.</value>
-  </data>
   <data name="order.cancel_not_allowed" xml:space="preserve">
     <value>Cancel not allowed</value>
   </data>

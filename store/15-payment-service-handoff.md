@@ -87,9 +87,9 @@ These are **not yet built** by the backend plan. Add them in the payment session
 
 ### 2.3a As built (S-16)
 
-- `SettleAsync` returns `NotFound` as a success outcome (unknown order id); `Result` failures are only the internal
-  `settlement.effect_missing` (a line kind without an effect: nothing commits, a `FinanceAlert` is written in its own
-  transaction; the guard is removed after S-23).
+- `SettleAsync` returns `NotFound` as a success outcome (unknown order id). Every line kind has its effect since S-23, so
+  the S-16 `settlement.effect_missing` guard is gone (plan 14 §13.4); an exception inside an effect rolls the whole
+  settlement back and surfaces as a 500.
 - `PaymentReview` commits the status change and a `FinanceAlert` (`payment_review_amount` or
   `payment_review_late_capture`) and runs no effect.
 - `Paid` commits in one transaction: status/`paid_at`, the line effects, goal counters (atomic upsert, donor +1 per

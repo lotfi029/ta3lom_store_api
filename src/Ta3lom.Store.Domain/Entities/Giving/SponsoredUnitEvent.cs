@@ -1,6 +1,6 @@
 namespace Ta3lom.Store.Domain.Entities.Giving;
 
-/// Table `sponsored_unit_event` (db/reference/001_store_schema.sql). State only in S-02; behaviour arrives with its session.
+/// Table `sponsored_unit_event` (RUL-50): every unit transition, time-stamped with its actor.
 public sealed class SponsoredUnitEvent
 {
     public SponsoredUnitEvent(Guid unitId, string toStatus, string actor, DateTimeOffset now)
@@ -26,4 +26,8 @@ public sealed class SponsoredUnitEvent
     public DateTimeOffset At { get; private set; }
 
     public string Actor { get; private set; } = null!;
+
+    /// A transition `from → to` (null `from` = the unit was just funded).
+    public static SponsoredUnitEvent Transition(Guid unitId, UnitStatus? from, UnitStatus to, string actor, DateTimeOffset now) =>
+        new(unitId, to.ToWire(), actor, now) { FromStatus = from?.ToWire() };
 }

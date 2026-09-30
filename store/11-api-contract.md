@@ -212,7 +212,6 @@ The client switches on `code`, never on `title`.
 | `order.retry_not_allowed` | 409 | status not `payment_failed`/`pending_payment` | RUL-37 |
 | `order.payment_window_closed` | 410 | `payment_due_at` passed | RUL-29, RUL-37 |
 | `order.cancel_not_allowed` | 409 | cancel only from `pending_payment`/`payment_failed` | RUL-29 |
-| `settlement.effect_missing` | 500 | internal: a paid line kind has no settlement effect yet; logged + `FinanceAlert`, never shown to customers (plan 14 §13.4) | RUL-39 |
 | `order.not_in_review` | 409 | resolve only from `payment_review` | RUL-35 |
 | `webhook.signature_invalid` | 401 | signature/secret check failed | RUL-33, FR-S34 |
 | `webhook.provider_unknown` | 404 | unknown `{provider}` | — |

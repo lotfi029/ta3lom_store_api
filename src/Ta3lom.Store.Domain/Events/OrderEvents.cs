@@ -21,7 +21,7 @@ public sealed record DocumentsResendRequested(Guid OrderId, IReadOnlyList<string
 public sealed record DedicationCard(Guid DedicationId, Guid OrderId) : IDomainEvent;
 
 /// Staff e-mail (`staff_alert`): `payment_review_amount`, `payment_review_late_capture`, `duplicate_course`,
-/// `settlement_effect_missing` … Never shown to customers.
+/// … Never shown to customers.
 public sealed record FinanceAlert(string Kind, Guid? OrderId, string? Reference, string? Detail) : IDomainEvent;
 
 public static class FinanceAlertKinds
@@ -29,7 +29,6 @@ public static class FinanceAlertKinds
     public const string AmountMismatch = "payment_review_amount";
     public const string LateCapture = "payment_review_late_capture";
     public const string DuplicateCourse = "duplicate_course";
-    public const string EffectMissing = "settlement_effect_missing";
 }
 
 /// RUL-42: grant LMS access for an enrolment (retried by the dispatcher until the LMS accepts; adapter keyed by id).

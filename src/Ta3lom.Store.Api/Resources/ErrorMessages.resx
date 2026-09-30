@@ -409,12 +409,6 @@
   <data name="order.not_found.detail" xml:space="preserve">
     <value>لا يوجد طلب بهذا الرقم.</value>
   </data>
-  <data name="settlement.effect_missing" xml:space="preserve">
-    <value>تعذّر إتمام الطلب</value>
-  </data>
-  <data name="settlement.effect_missing.detail" xml:space="preserve">
-    <value>حدث خطأ داخلي أثناء إتمام الطلب. أبلغنا الفريق المالي.</value>
-  </data>
   <data name="order.cancel_not_allowed" xml:space="preserve">
     <value>لا يمكن إلغاء الطلب</value>
   </data>

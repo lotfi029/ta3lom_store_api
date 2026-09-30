@@ -1,6 +1,7 @@
 namespace Ta3lom.Store.Domain.Entities.Giving;
 
-/// Table `sponsored_unit` (db/reference/001_store_schema.sql). State only in S-02; behaviour arrives with its session.
+/// Table `sponsored_unit` (RUL-43 … RUL-50): one fundable seat or copy. Created `awaiting_allocation` by settlement, either
+/// `full` (one per unit of a `units`-mode line) or `pooled` (converted from pool contributions).
 public sealed class SponsoredUnit : AggregateRoot
 {
     public SponsoredUnit(Guid productId, Guid sponsorshipOfferId, UnitSource source, Money unitPrice, DateTimeOffset now) : base(Guid.CreateVersion7())
@@ -45,4 +46,15 @@ public sealed class SponsoredUnit : AggregateRoot
     public DateTimeOffset? CompletedAt { get; private set; }
 
     public DateTimeOffset? LapsedAt { get; private set; }
+
+    /// RUL-43: one unit per purchased unit of a `units`-mode sponsor line; zakat intent marks it (RUL-47d).
+    public static SponsoredUnit Full(Guid productId, Guid offerId, Guid orderLineId, Money unitPrice, bool isZakat, DateTimeOffset now) =>
+        new(productId, offerId, UnitSource.Full, unitPrice, now) { OrderLineId = Guard.NotEmpty(orderLineId), HasZakat = isZakat };
+
+    /// RUL-45: a unit converted from the pool at the offer's seat price.
+    public static SponsoredUnit Pooled(Guid productId, Guid offerId, Money seatPrice, DateTimeOffset now) =>
+        new(productId, offerId, UnitSource.Pooled, seatPrice, now);
+
+    /// RUL-47d: any zakat contribution in its funding makes the unit zakat-funded.
+    public void MarkZakatFunded() => HasZakat = true;
 }

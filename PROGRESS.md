@@ -1,5 +1,5 @@
 # Build progress
-Next: S-23 — Units and pooling
+Next: S-24 — Beneficiary register
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -38,7 +38,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-21 shipments, stock, admin orders | done | S-21 | 78–80, 85, 86, 95–99 | PrintBookEffect; ShipmentShipped/Delivered | ✅ tools/smoke/S-21.http | integrity checks 0 rows; RUL-40 returned-line fix |
 | S-40 LMS progress sync | done | S-40 | — (dev: /dev/lms/progress) | LmsProgressSync; SponsorUnitCompleted via hook (S-25) | ✅ tools/smoke/S-40.http | idempotent over two runs |
 | S-41 low stock alert | done | S-41 | — | LowStockAlert job + message | ✅ tools/smoke/S-41.http | once per format per day; M5 passed |
-| S-23 units and pooling | todo | | — | SponsorUnitsEffect, PoolContributionEffect | | integrity check |
+| S-23 units and pooling | done | S-23 | — | SponsorUnitsEffect, PoolContributionEffect; guard removed | ✅ tools/smoke/S-23.http | 100+150+120 → 1 unit, 20 left; 6 parallel OK; integrity 0 rows |
 | S-24 beneficiary register | todo | | 100–108 | — | | |
 | S-25 allocation | todo | | 109–114 | AllocationAlerts, LapseUnits; SponsorUnitAllocated, AllocationAlert/Escalation, BeneficiaryInvite, UnitLapsed, LmsRevoke | | integrity check |
 | S-26 dedication cards, cause updates | todo | | 45, 81–84, 93 | DedicationCard; CauseUpdatePublished | | |
@@ -339,3 +339,19 @@ Build
 Done when (local smoke)
 - [x] One alert over two runs; archived product skipped
 - [x] **M5 demo** passed (tools/smoke/M5.http)
+
+### S-23 — Sponsored units and pooling
+
+Build
+- [x] `SponsorUnitsEffect`: N `full` units + events (RUL-43), over target allowed (RUL-44), zakat intent marks the units
+- [x] `PoolContributionEffect`: `pool_contribution` + `SponsorshipPool.Add` FIFO conversion loop, `unit_funding`, `has_zakat` propagation (RUL-45); pool row then contributions locked `FOR UPDATE`
+- [x] `funded_units` counter includes pooled units
+- [x] `settlement.effect_missing` guard removed (plan 14 §13.4)
+
+Tests (test phase)
+- [ ] FsCheck: `balance = Σ remaining`, `units × seat price = Σ converted`
+- [ ] 100 + 150 + 120 on a 350 seat → 1 unit, 20 remaining, split 100/150/100
+- [ ] parallel contributions to the same pool → no lost update
+
+Done when (local smoke)
+- [x] Documented example reproduced; 6 concurrent contributions consistent; integrity checks 0 rows

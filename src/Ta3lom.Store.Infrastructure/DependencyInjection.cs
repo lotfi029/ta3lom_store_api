@@ -104,6 +104,7 @@ public static class DependencyInjection
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IStockRepository, StockRepository>();
         services.AddScoped<IGoalProgressRepository, GoalProgressRepository>();
+        services.AddScoped<ISponsorshipPoolRepository, SponsorshipPoolRepository>();
         services.AddScoped<IDocumentNumberAllocator, DocumentNumberAllocator>();
         services.AddScoped<IEnrolmentRepository, EnrolmentRepository>();
         services.AddScoped<IDownloadGrantRepository, DownloadGrantRepository>();

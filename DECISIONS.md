@@ -112,6 +112,11 @@ the owner should confirm.
 | 2026-09-30 | S-40 | Which enrolments sync | 09 §6 | `active` enrolments with an `lms_enrolment_ref`, plus `completed` ones still missing a certificate number; `pending_sync`, `revoked` and never-synced manual enrolments are skipped | nothing to pull for them | |
 | 2026-09-30 | S-40 | Progress semantics | 03 RUL-42/50 | Progress never decreases; `started_at`/`completed_at`/`certificate_no` are set once; completion forces 100 %. A failed LMS call is logged and retried next hour (no outbox row: the job itself is the retry) | idempotent job | |
 | 2026-09-30 | S-41 | Low-stock scope and dedupe | 14 S-41, 09 §6 | Only active print formats of non-archived products; "once per format per day" = no `LowStockAlert` outbox row for that format since 00:00 Riyadh (checked in the job, so a manual `/dev/jobs` run the same day adds nothing) | FR-S43 | |
+| 2026-09-30 | S-23 | Effect guard removed | plan 14 §13.4, 11 §1.6 | `settlement.effect_missing` removed from code, `ErrorCodes`, both resx files, 11 §1.6 and doc 15 §2.3a now that every line kind has an effect; the dispatch is `Single(...)`, so a missing or doubled effect is a programming error that rolls the settlement back (500) | "the check is removed once S-23 is merged" | |
+| 2026-09-30 | S-23 | Pool seat price | 09 §5.5 | Pooled units are priced at the offer's **current** `seat_price` at conversion; full units at the line's `unit_price` (the price paid) | 09 sketch uses `offer.SeatPrice` | |
+| 2026-09-30 | S-23 | funded_units for pooled units | database/01 `goal_progress` | `funded_units` counts every unit created (full via `SettlementLedger` from the line quantity, pooled via the effect); the money is counted once per line by the ledger | "sponsorship units created" | |
+| 2026-09-30 | S-23 | Same-order contributions | database/01 §4.5 | The open-contribution query also returns contributions added earlier in the same unit of work (unsaved), so two amount lines for one offer in one order pool correctly | tracked entities are not in SQL results | |
+| 2026-09-30 | S-23 | Pool row lock query | 09 §5.5 | `SELECT *, xmin … FOR UPDATE`: the pool maps `xmin` as its concurrency token and `SELECT *` does not return system columns (found in the smoke: 500 on the first pooled order) | EF shadow `xmin` | |
 
 ## Bugs found by tests
 
