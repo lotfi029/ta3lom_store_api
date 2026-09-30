@@ -25,18 +25,20 @@ Staging and production share the VPS but use separate containers, volumes, DB ro
 - CHECK constraints, partial indexes, views and grants are added with `migrationBuilder.Sql(...)` or `HasCheckConstraint`/`HasFilter` in the same migration.
 - **Deployment never runs `Database.Migrate()` at app start-up.** CI produces an idempotent script:
   ```bash
-  dotnet ef migrations script --idempotent -p src/Ta3lom.Store.Infrastructure -s src/Ta3lom.Store.Api -o artifacts/migrate.sql
+  dotnet ef migrations script --idempotent -p src/Ta3lom.Store.Infrastructure -s src/Ta3lom.Store.Infrastructure -o artifacts/migrate.sql
+  # or: tools/scripts/migrate-script.sh
   ```
   The deploy job runs it with the `store_owner` role **before** switching containers. It stops on the first error.
 - Destructive changes (dropping or renaming a column) use expand → migrate data → contract across two releases.
-- After each migration, regenerate [`001_store_schema.sql`](../../../database/store/001_store_schema.sql) and the [data dictionary](02-data-dictionary.md).
+- After each migration, update [`001_store_schema.sql`](../../db/reference/001_store_schema.sql) by hand (it keeps its comments) until `SchemaParityTests` passes, then regenerate the [data dictionary](02-data-dictionary.md) with `tools/scripts/regenerate-data-dictionary.sh`. `tools/scripts/regenerate-schema-sql.sh` writes a pg_dump of the migrated schema to `db/reference/generated/` for DBA review. `Model_has_no_changes_missing_a_migration` fails when the model changed without `dotnet ef migrations add`.
+- Grants (§7 of database/01) are in the initial migration and skip roles that do not exist yet; operations create `store_owner`, `store_app` and `store_report` (S-03).
 
 ## 3. Seeding
 
 | Data | Mechanism |
 |---|---|
-| Settings, message templates, document counters, dedication templates | `HasData` / idempotent seeder at startup (`SeedRunner`, runs only missing keys) |
-| Categories and the prototype catalogue | [`002_store_seed.sql`](../../../database/store/002_store_seed.sql) for staging; production catalogue entered by staff |
+| Settings, message templates, document counters, dedication templates | `SeedRunner` in the background after start-up (`Store:Seed:RunOnStartup`), `INSERT … ON CONFLICT DO NOTHING`: inserts only missing rows, never overwrites staff edits |
+| Categories and the prototype catalogue | [`002_store_seed.sql`](../../db/reference/002_store_seed.sql) for staging; production catalogue entered by staff. Its settings/template/counter inserts are `ON CONFLICT DO NOTHING`, so it runs before or after `SeedRunner` |
 | First admin | CLI: `dotnet Ta3lom.Store.Api.dll create-admin --email … ` prints a one-time password; TOTP enrolment forced at first login |
 | Opening goal figures | `goal_progress.seed_*` by admin screen (offline giving before launch), audited |
 

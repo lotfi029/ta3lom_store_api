@@ -64,8 +64,9 @@ All docs live in `store/` in this repo.
 7. **No MediatR, no AutoMapper, no FluentAssertions.** Plain handler interfaces, Scrutor, Shouldly.
 8. **No `Database.Migrate()`** (banned). Migrations ship as the idempotent script run by the deploy job;
    schema changes are expand → migrate → contract.
-9. **DDL names are fixed** (reference schema). After a migration, regenerate the reference SQL and the
-   data dictionary.
+9. **DDL names are fixed** (`db/reference/001_store_schema.sql`, including PostgreSQL's constraint names).
+   After a migration, edit 001 by hand until `SchemaParityTests` passes and regenerate the data dictionary.
+   Every column keeps its SQL default, but EF properties are `ValueGeneratedNever()`: the domain sets values.
 10. **Personal data stays protected.** Beneficiary PII only through the protector, never logged, never in
     a donor DTO; reveal is audited; mobiles masked in logs. `RedactingEnricher` masks
     authorization/cookie/password/secret/token properties and headers.
@@ -94,7 +95,12 @@ All docs live in `store/` in this repo.
 ```bash
 dotnet build Ta3lom.Store.slnx -warnaserror
 dotnet format Ta3lom.Store.slnx --verify-no-changes
-dotnet test --solution Ta3lom.Store.slnx
+dotnet test --solution Ta3lom.Store.slnx                                   # Testcontainers postgres:18 (needs Docker)
+STORE_TEST_DB=external STORE_TEST_DB_CONNECTION="Host=localhost;Username=postgres;Password=…" \
+  dotnet test --solution Ta3lom.Store.slnx                                 # a running PostgreSQL (16 gets a uuidv7() shim)
+dotnet ef migrations add <Intent> -p src/Ta3lom.Store.Infrastructure -s src/Ta3lom.Store.Infrastructure -o Persistence/Migrations
+tools/scripts/migrate-script.sh              # artifacts/migrate.sql (idempotent; what the deploy job runs)
+tools/scripts/regenerate-data-dictionary.sh  # after a migration (PG* env vars); also edit db/reference/001 by hand
 UPDATE_OPENAPI_SNAPSHOT=1 dotnet test --project tests/Ta3lom.Store.Api.IntegrationTests   # accept an OpenAPI change
 ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/Ta3lom.Store.Api          # Scalar UI at /docs
 ```
@@ -102,9 +108,10 @@ ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/Ta3lom.Store.Api    
 ## Environment notes (cloud sessions)
 
 - Only the .NET 10 SDK is installable (`apt-get install -y dotnet-sdk-10.0`); NuGet is reachable.
-- No Docker daemon → Testcontainers cannot run here. From S-02, integration tests use
-  `STORE_TEST_DB=external` against the local PostgreSQL 16 (with a `uuidv7()` shim); Testcontainers
-  `postgres:18` is the CI path (doc 16 §2-F).
+- No Docker daemon → Testcontainers cannot run here. Integration tests use `STORE_TEST_DB=external`
+  against the local PostgreSQL 16 (`pg_ctlcluster 16 main start`); the test fixture creates a `uuidv7()`
+  shim, migrations never do. Testcontainers `postgres:18` is the default and the CI path (doc 16 §2-F).
+  The schema-parity test must pass on both.
 
 ## Definition of done (plan 14 §4.5)
 

@@ -33,6 +33,9 @@ public interface ICurrentActor
 
     /// Staff email or a system job name; null for customers and anonymous callers.
     string? Name { get; }
+
+    /// HMAC of the client IP (audit_log.ip_hash); null outside HTTP requests or until the key exists (S-04).
+    string? IpHash { get; }
 }
 
 /// Typed read of the `setting` table (RUL §M). Implemented in S-02.

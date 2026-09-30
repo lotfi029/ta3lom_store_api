@@ -10,4 +10,6 @@ internal sealed class HttpCurrentActor : ICurrentActor
     public Guid? Id => null;
 
     public string? Name => null;
+
+    public string? IpHash => null;
 }

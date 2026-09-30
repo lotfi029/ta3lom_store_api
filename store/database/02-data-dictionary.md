@@ -1,10 +1,10 @@
 # Store Data Dictionary
 
-**Generated from** [`database/store/001_store_schema.sql`](../../../database/store/001_store_schema.sql) on PostgreSQL · S1 draft · 29 September 2026
+**Generated from** the EF Core migrations (identical to [`db/reference/001_store_schema.sql`](../../db/reference/001_store_schema.sql), checked by `SchemaParityTests`) on PostgreSQL · 2026-09-30
 
 Every column is listed. **Key**: PK primary key, FK→ foreign key target, UQ unique. Types are PostgreSQL types. The EF Core CLR type mapping is in [01-database-design.md §6](01-database-design.md#6-ef-core-mapping).
 
-Regenerate after each migration (`database/store/tools/gen_dictionary_step1.py` then `step2`, against a database built from the DDL) so that this file never drifts from the schema.
+Regenerate after each migration with `tools/scripts/regenerate-data-dictionary.sh` so that this file never drifts from the schema.
 
 ## Contents
 
@@ -894,3 +894,4 @@ Delivery record of each SMS or email sent.
 | `outbox_message_id` | uuid | ✓ |  | FK→outbox_message | dedupe: a retried outbox message never re-sends |
 | `created_at` | timestamp with time zone |  | `now()` |  |  |
 | `sent_at` | timestamp with time zone | ✓ |  |  |  |
+
