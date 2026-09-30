@@ -31,4 +31,16 @@ public static class ErrorCodes
     public const string TotpNotEnrolled = "auth.totp_not_enrolled";
     public const string StaffEmailTaken = "staff.email_taken";
     public const string ProductNotFound = "catalog.product_not_found";
+    public const string ProductSlugTaken = "product.slug_taken";
+    public const string CategorySlugTaken = "category.slug_taken";
+    public const string ProductTypeLocked = "product.type_locked";
+    public const string ProductPublishIncomplete = "product.publish_incomplete";
+    public const string OfferActiveExists = "offer.active_exists";
+    public const string OfferDatesInvalid = "offer.dates_invalid";
+    public const string GeneralFundExists = "cause.general_fund_exists";
+    public const string MediaAltRequired = "media.alt_required";
+    public const string MediaTypeNotAllowed = "media.type_not_allowed";
+    public const string MediaTooLarge = "media.too_large";
+    public const string SettingUnknownKey = "setting.unknown_key";
+    public const string SettingInvalidValue = "setting.invalid_value";
 }

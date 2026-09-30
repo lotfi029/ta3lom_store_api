@@ -38,4 +38,32 @@ public sealed class BookFormat : Entity
     public int? LowStockThreshold { get; private set; }
 
     public Guid? FileAssetId { get; private set; }
+
+    /// RUL-05: print formats carry stock (changed only through stock movements); digital formats need a private
+    /// `book_file` asset. A new print format starts with zero stock.
+    public static BookFormat Create(Guid productId, BookFormatKind kind, string sku, Money price)
+    {
+        var format = new BookFormat(productId, kind, sku, price);
+        if (kind == BookFormatKind.Print)
+        {
+            format.StockOnHand = 0;
+        }
+
+        return format;
+    }
+
+    public void Update(string sku, Money price, Money? compareAtPrice, bool isActive, int? weightGrams, int? lowStockThreshold, Guid? fileAssetId)
+    {
+        Guard.Against(compareAtPrice is { } c && c <= price, "format.compare_at_not_higher");
+        Guard.Against(Kind == BookFormatKind.Digital && fileAssetId is null, "format.digital_file_required");
+        Sku = Guard.NotEmpty(sku);
+        Price = price;
+        CompareAtPrice = compareAtPrice;
+        IsActive = isActive;
+        WeightGrams = Kind == BookFormatKind.Print ? weightGrams : null;
+        LowStockThreshold = Kind == BookFormatKind.Print ? lowStockThreshold : null;
+        FileAssetId = Kind == BookFormatKind.Digital ? fileAssetId : null;
+    }
+
+    public int Available => Math.Max(0, (StockOnHand ?? 0) - StockReserved);
 }

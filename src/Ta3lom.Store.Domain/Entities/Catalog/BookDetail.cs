@@ -24,4 +24,13 @@ public sealed class BookDetail
     public string? Isbn { get; private set; }
 
     public int? PublishedYear { get; private set; }
+
+    public void Update(string authorAr, string? authorEn, int? pages, string? isbn, int? publishedYear)
+    {
+        AuthorAr = Guard.NotEmpty(authorAr);
+        AuthorEn = authorEn;
+        Pages = pages;
+        Isbn = isbn;
+        PublishedYear = publishedYear;
+    }
 }

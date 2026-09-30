@@ -87,6 +87,8 @@ public static class DependencyInjection
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IStaffUserRepository, StaffUserRepository>();
+        services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
     }
 
     private static void AddSecurity(IServiceCollection services)
@@ -132,6 +134,9 @@ public static class DependencyInjection
         services.AddScoped<ICatalogSearch, CatalogSearch>();
         services.AddOptions<FileStorageOptions>().BindConfiguration(FileStorageOptions.Section);
         services.AddSingleton<IFileUrls, FileUrls>();
+        services.AddSingleton<LocalFileStorage>();
+        services.AddSingleton<IFileStorage>(sp => sp.GetRequiredService<LocalFileStorage>());
+        services.AddSingleton<IImageProcessor, SkiaImageProcessor>();
     }
 
     /// Data Protection encrypts beneficiary PII (09 §5.13). Keys persist in `Store:DataProtection:KeysPath`

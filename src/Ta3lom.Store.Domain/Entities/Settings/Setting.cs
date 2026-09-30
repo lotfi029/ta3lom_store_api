@@ -21,4 +21,12 @@ public sealed class Setting
     public DateTimeOffset UpdatedAt { get; private set; }
 
     public string? UpdatedBy { get; private set; }
+
+    /// `value` is the JSON text of the setting (jsonb); the handler validates it per key (RUL §M).
+    public void SetValue(string json, string? updatedBy, DateTimeOffset now)
+    {
+        Value = Guard.NotEmpty(json);
+        UpdatedBy = updatedBy;
+        UpdatedAt = now;
+    }
 }

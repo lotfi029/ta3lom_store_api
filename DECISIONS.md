@@ -47,6 +47,12 @@ the owner should confirm.
 | 2026-09-30 | S-08 | ETag | 11 §1.7 ("hash of the newest updated_at") | Weak ETag = SHA-256 of the JSON body (first 16 bytes); output cache per URL (vary by all query keys, not by language), 60 s content / 15 s live, tag `catalog` for eviction by S-09 | Same client behaviour, no extra query per request | |
 | 2026-09-30 | S-08 | Sorting | 11 §2.3 | featured = `product.sort` then slug; newest = `published_at desc`; price sorts use the card price (books: cheapest active format); sorting is in memory after filtering (catalogue of tens of products) | Book price is computed across formats | |
 | 2026-09-30 | S-08 | Dev catalogue | §2.7 smoke | `tools/scripts/dev-db-migrate.sh --seed-catalogue` loads `db/reference/002_store_seed.sql` into an empty dev DB | The catalogue exists only in 002 | |
+| 2026-09-30 | S-09 | Admin dates | 11 §9.4/§9.3 | Offer and cause dates are input as `startsAtLocal`/`endsAtLocal` (Asia/Riyadh wall time) and stored as UTC `timestamptz`; responses give the instant | Business dates are Riyadh (CLAUDE.md 12); Npgsql rejects non-UTC offsets — bug found in smoke (500), fixed with `ToUniversalTime()` | |
+| 2026-09-30 | S-09 | Close offer | plan 14 §13.2 (#71 split) | `POST /offers/{id}/close` sets `is_active=false`; `sweepPool` accepted, `swept`/`pairId` null until S-42 | Owner fix 5 | |
+| 2026-09-30 | S-09 | Goal seed reason | 11 §9.3 | `reason` is required and stored only in the audit diff (no column in `goal_progress`) | DDL is fixed; audit keeps who/why | |
+| 2026-09-30 | S-09 | Setting values | 11 §9.17, RUL §M | Money keys are `"0.00"` strings on the wire (a stored jsonb number is rendered as a string); ints and bools typed; `seller_vat_no` 15 digits starting and ending with 3; `dedication_templates` ≤ 20 `{key, ar, en?}`. `setting.value` stays a raw JSON string (typed by `StoreSettings`). Bug found in smoke: the seed stores numbers, so the list returned `25.00` as a number while PUT required a string | 11 example shows `"25.00"` | |
+| 2026-09-30 | S-09 | Media | 11 §9.10, 08 | Images (jpeg/png/webp ≤ 10 MB) re-encoded to WebP (quality 85, longest side ≤ 2400 px) with SkiaSharp — re-encoding drops EXIF; `pdf`/`book_file` ≤ 200 MB, `%PDF` magic checked; `book_file` always private; others public under `/files/public` | Addendum 5 packages; `LocalFileStorage` in `artifacts/files` (dev) | REVIEW (object storage in hosting) |
+| 2026-09-30 | S-09 | Category delete | 11 §9.9 | No delete: categories are deactivated (`isActive=false`) | Products keep their FK | |
 
 ## Bugs found by tests
 

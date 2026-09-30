@@ -59,4 +59,36 @@ public sealed class SponsorshipOffer : AggregateRoot
     /// `close_on_target` is set.
     public bool IsOpen(DateTimeOffset now, int fundedUnits) =>
         IsActive && now >= StartsAt && now < EndsAt && !(CloseOnTarget && fundedUnits >= TargetUnits);
+
+    public static SponsorshipOffer Create(Guid productId, Money seatPrice, string unitLabelAr, string unitLabelEn, int targetUnits, string beneficiaryGroup,
+        string groupLabelAr, string? groupLabelEn, bool allowPartial, bool closeOnTarget, DateTimeOffset startsAt, DateTimeOffset endsAt, DateTimeOffset now)
+    {
+        Guard.Against(endsAt <= startsAt, "offer.dates_invalid");
+        var offer = new SponsorshipOffer(productId, seatPrice, targetUnits, beneficiaryGroup, groupLabelAr, endsAt, now);
+        offer.Update(seatPrice, unitLabelAr, unitLabelEn, targetUnits, beneficiaryGroup, groupLabelAr, groupLabelEn, allowPartial, closeOnTarget, startsAt, endsAt);
+        return offer;
+    }
+
+    /// RUL-06: a seat-price change applies to new cart lines only (orders keep their line price).
+    public void Update(Money seatPrice, string unitLabelAr, string unitLabelEn, int targetUnits, string beneficiaryGroup, string groupLabelAr,
+        string? groupLabelEn, bool allowPartial, bool closeOnTarget, DateTimeOffset startsAt, DateTimeOffset endsAt)
+    {
+        Guard.Against(endsAt <= startsAt, "offer.dates_invalid");
+        Guard.Against(!seatPrice.IsPositive, "offer.seat_price_invalid");
+        Guard.Against(targetUnits <= 0, "offer.target_invalid");
+        SeatPrice = seatPrice;
+        UnitLabelAr = Guard.NotEmpty(unitLabelAr);
+        UnitLabelEn = Guard.NotEmpty(unitLabelEn);
+        TargetUnits = targetUnits;
+        BeneficiaryGroup = Guard.NotEmpty(beneficiaryGroup);
+        GroupLabelAr = Guard.NotEmpty(groupLabelAr);
+        GroupLabelEn = groupLabelEn;
+        AllowPartial = allowPartial;
+        CloseOnTarget = closeOnTarget;
+        StartsAt = startsAt;
+        EndsAt = endsAt;
+    }
+
+    /// Staff close (#71) or campaign end (S-42): no new lines; the pool sweep is separate (RUL-46).
+    public void Close() => IsActive = false;
 }

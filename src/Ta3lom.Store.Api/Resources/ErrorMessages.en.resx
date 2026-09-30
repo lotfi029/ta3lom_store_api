@@ -169,4 +169,76 @@
   <data name="catalog.product_not_found.detail" xml:space="preserve">
     <value>This product does not exist or is no longer available.</value>
   </data>
+  <data name="product.slug_taken" xml:space="preserve">
+    <value>Slug taken</value>
+  </data>
+  <data name="product.slug_taken.detail" xml:space="preserve">
+    <value>Another product already uses this slug.</value>
+  </data>
+  <data name="category.slug_taken" xml:space="preserve">
+    <value>Slug taken</value>
+  </data>
+  <data name="category.slug_taken.detail" xml:space="preserve">
+    <value>Another category already uses this slug.</value>
+  </data>
+  <data name="product.type_locked" xml:space="preserve">
+    <value>Type locked</value>
+  </data>
+  <data name="product.type_locked.detail" xml:space="preserve">
+    <value>The product type cannot change after its first order.</value>
+  </data>
+  <data name="product.publish_incomplete" xml:space="preserve">
+    <value>Cannot publish yet</value>
+  </data>
+  <data name="product.publish_incomplete.detail" xml:space="preserve">
+    <value>Complete the required fields before publishing; see the missing list.</value>
+  </data>
+  <data name="offer.active_exists" xml:space="preserve">
+    <value>Active offer exists</value>
+  </data>
+  <data name="offer.active_exists.detail" xml:space="preserve">
+    <value>This product already has an active sponsorship offer.</value>
+  </data>
+  <data name="offer.dates_invalid" xml:space="preserve">
+    <value>Invalid dates</value>
+  </data>
+  <data name="offer.dates_invalid.detail" xml:space="preserve">
+    <value>The end date must be after the start date.</value>
+  </data>
+  <data name="cause.general_fund_exists" xml:space="preserve">
+    <value>General fund exists</value>
+  </data>
+  <data name="cause.general_fund_exists.detail" xml:space="preserve">
+    <value>Another cause is already the general fund.</value>
+  </data>
+  <data name="media.alt_required" xml:space="preserve">
+    <value>Alt text required</value>
+  </data>
+  <data name="media.alt_required.detail" xml:space="preserve">
+    <value>Add an Arabic text description for the image.</value>
+  </data>
+  <data name="media.type_not_allowed" xml:space="preserve">
+    <value>File type not allowed</value>
+  </data>
+  <data name="media.type_not_allowed.detail" xml:space="preserve">
+    <value>This file type cannot be uploaded.</value>
+  </data>
+  <data name="media.too_large" xml:space="preserve">
+    <value>File too large</value>
+  </data>
+  <data name="media.too_large.detail" xml:space="preserve">
+    <value>The file is larger than the allowed limit.</value>
+  </data>
+  <data name="setting.unknown_key" xml:space="preserve">
+    <value>Unknown setting</value>
+  </data>
+  <data name="setting.unknown_key.detail" xml:space="preserve">
+    <value>This setting does not exist.</value>
+  </data>
+  <data name="setting.invalid_value" xml:space="preserve">
+    <value>Invalid value</value>
+  </data>
+  <data name="setting.invalid_value.detail" xml:space="preserve">
+    <value>The value does not fit this setting's type.</value>
+  </data>
 </root>

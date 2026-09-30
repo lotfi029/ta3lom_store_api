@@ -39,4 +39,14 @@ public sealed class GoalProgress
     public DateTimeOffset? LastGiftAt { get; private set; }
 
     public DateTimeOffset UpdatedAt { get; private set; }
+
+    /// Opening balances from offline giving before launch (database/03 §3); audited by the interceptor.
+    public void SetSeed(decimal seedRaised, int seedUnits, int seedDonors, DateTimeOffset now)
+    {
+        Guard.Against(seedRaised < 0 || seedUnits < 0 || seedDonors < 0, "goal.seed_negative");
+        SeedRaised = seedRaised;
+        SeedUnits = seedUnits;
+        SeedDonors = seedDonors;
+        UpdatedAt = now;
+    }
 }

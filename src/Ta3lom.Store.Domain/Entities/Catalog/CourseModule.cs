@@ -24,4 +24,12 @@ public sealed class CourseModule : Entity
     public string? TitleEn { get; private set; }
 
     public int DurationSeconds { get; private set; }
+
+    public static CourseModule Create(Guid productId, int sort, string titleAr, string? titleEn, int durationSeconds)
+    {
+        var module = new CourseModule(productId, sort, titleAr);
+        module.TitleEn = titleEn;
+        module.DurationSeconds = Math.Max(0, durationSeconds);
+        return module;
+    }
 }

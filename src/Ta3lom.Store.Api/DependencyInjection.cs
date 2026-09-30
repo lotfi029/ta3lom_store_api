@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddStoreCors();
         services.AddStoreRateLimiting();
         services.AddStoreOutputCache();
+        services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o => o.MultipartBodyLengthLimit = Endpoints.AdminContentEndpoints.MaxUploadBytes);
         services.AddHsts(o =>
         {
             o.MaxAge = TimeSpan.FromDays(365);

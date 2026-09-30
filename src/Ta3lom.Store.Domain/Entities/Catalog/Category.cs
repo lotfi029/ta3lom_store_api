@@ -24,4 +24,13 @@ public sealed class Category : AggregateRoot
     public int Sort { get; private set; }
 
     public bool IsActive { get; private set; }
+
+    public void Update(string slug, string nameAr, string? nameEn, int sort, bool isActive)
+    {
+        Slug = Guard.NotEmpty(slug);
+        NameAr = Guard.NotEmpty(nameAr);
+        NameEn = nameEn;
+        Sort = sort;
+        IsActive = isActive;
+    }
 }

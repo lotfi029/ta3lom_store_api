@@ -1,0 +1,25 @@
+# M3 — Catalogue (plan 14 §2): "A store manager creates and publishes a course, a book and a cause through the API;
+# public endpoints serve them with ETags; the seed catalogue appears."
+# Result 30 Sep 2026 (local, Development): PASSED — steps run from S-09.http, then:
+#  1. manager@smoke.test (store_manager) created smoke-course, smoke-book (print + digital) and smoke-cause   ✅
+#  2. all three published (publish checks: cover, price/formats, cause target)                               ✅
+#  3. /v1/catalog/products/{slug} → 200 with a weak ETag for every published product (15 seed + 2 new)       ✅
+#  4. smoke-book archived → public 404; the draft stays 404 publicly while /preview is 200                    ✅
+#  5. goal seed 1500.00/12 on smoke-cause visible on the public page and live figures                         ✅
+@base = http://localhost:5080/v1/catalog
+
+### Seed catalogue + new products
+GET {{base}}/products?pageSize=50
+
+### New course, with ETag
+GET {{base}}/products/smoke-course
+
+### Conditional request → 304
+GET {{base}}/products/smoke-course
+If-None-Match: W/"<etag from the previous response>"
+
+### New cause (goal seed visible)
+GET {{base}}/products/smoke-cause
+
+### Archived book → 404
+GET {{base}}/products/smoke-book

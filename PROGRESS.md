@@ -1,5 +1,5 @@
 # Build progress
-Next: S-09 — Admin catalogue and settings
+Next: S-13 — Cart
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -26,7 +26,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-04 customer OTP | done | S-04 | 16–20 | PruneOtp | ✅ tools/smoke/S-04.http | 192 tests green; Build + Done-when ticked below |
 | S-05 staff identity | done | S-05 | 47–52, 123–128 | — | ✅ tools/smoke/S-05.http | 204 tests green; actor bug found and fixed in smoke |
 | S-08 public catalogue | done | S-08 | 1–7, 9 | — | ✅ tools/smoke/S-08.http | seed catalogue served (15 products), ETag/304 |
-| S-09 admin catalogue | todo | | 54–77, 118, 119 | — | | |
+| S-09 admin catalogue | done | S-09 | 54–77, 118, 119 | — | ✅ tools/smoke/S-09.http | 230 tests green; offer/cause UTC bug + money-setting wire bug found and fixed in smoke |
 | S-13 cart | todo | | 10–15 | ExpireGuestCarts | | |
 | S-15 checkout | todo | | 40–42 | — | | |
 | S-16 settlement core | todo | | 87 + dev trigger | ExpireUnpaidOrders; gift/donate effects | | integrity check |
@@ -56,7 +56,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | Milestone | Smoke file | Result |
 |---|---|---|
 | M2 Identity | tools/smoke/M2.http | ✅ passed (OTP sink sign-in, rotation, reuse revokes family, staff TOTP, 403s) |
-| M3 Catalogue | tools/smoke/M3.http | |
+| M3 Catalogue | tools/smoke/M3.http | ✅ passed (store_manager created/published course, book print+digital, cause; public ETags; archive → 404) |
 | M4 First settled order | tools/smoke/M4.http | |
 | M5 Fulfilment | tools/smoke/M5.http | |
 | M6 Giving | tools/smoke/M6.http | |
@@ -155,3 +155,24 @@ Done when (local smoke)
 - [x] The seed catalogue is served (15 products, dev DB)
 - [x] p95 < 150 ms for the product endpoint (local: 2–4 ms cached; k6 load smoke in H-1)
 - [x] S-10/S-11 (frontend) can start against the API (OpenAPI regenerated)
+
+### S-09 — Admin catalogue API
+
+Build
+- [x] Product create/update with the type lock after the first order (RUL-01, `product.type_locked`); duplicate slug → 409
+- [x] Course detail, curriculum replace, book detail; formats: print stock only via movements (created at 0), digital needs a private `book_file` (RUL-05)
+- [x] Cause detail: unit amount ↔ label pairing, one general fund (RUL-07); goal seed (`goal_progress.seed_*`, audited)
+- [x] Publish/archive with validation (Arabic title/summary, cover + alt, price or active formats, cause target, offer/cause dates) → 422 `{missing:[…]}` (RUL-03/04); preview of drafts
+- [x] Sponsorship offers: one active per product (RUL-06), dates, `beneficiary_group` key, no zakat on offers, close → `is_active=false` (sweep in S-42)
+- [x] Categories; media upload (allow-list, size limits, image alt required, `book_file` private, EXIF stripped by WebP re-encode) through `IFileStorage` (`LocalFileStorage`)
+- [x] Settings read/update with typed validation per key (RUL §M); money as `"25.00"` strings; `IStoreSettings` invalidated + catalogue output cache evicted on update
+- [x] Every mutation audited through `ICurrentActor`; staff policies `staff-catalogue` / `staff-admin` / `staff-read`
+- [x] Audit §2.2: `StoreSettings` covers every key (addendum 8); `LocalFileStorage` + `/files/public`; SkiaSharp re-encode
+
+Tests (test phase)
+- [ ] RUL-01, RUL-03, RUL-04, RUL-05, RUL-06, RUL-07, RUL-10 (`close_on_target` in `IsOpen`)
+- [ ] Audit rows for publish, price change, seed change; policy-matrix rows for #54–#77, #118, #119
+
+Done when (local smoke)
+- [x] A `store_manager` creates, publishes and archives one course, one book (print + digital) and one cause (M3)
+- [x] Public endpoints show them within 60 s (output cache evicted on write; shown at once)

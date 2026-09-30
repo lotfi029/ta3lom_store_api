@@ -1,0 +1,178 @@
+# S-09 — Admin catalogue and settings (#54–#77, #118, #119). Result 30 Sep 2026 (local, Development): all as expected.
+# Tokens: store_manager (catalogue), admin (settings), viewer (read only) via /v1/admin/auth login + TOTP (see S-05.http).
+# categories: create 201, list · media: PNG → WebP ≤2400 px (EXIF dropped), public URL 200; text/plain → 415;
+#   book_file PDF private (url null) · products: course create 201, duplicate slug 409 catalog.slug_taken,
+#   compareAt ≤ price → 400, modules replaced, publish without cover → 422 {missing:[…]} then published;
+#   book print + digital (digital without file → 400), published, archived → public 404;
+#   cause: unit amount without label → 400, second general fund → 409, published; goal seed 1500.00/12 shown publicly
+# offers: create 201, second active offer → 409, zakat on an offer → 400, update 180.00/60, ends before start → 400, close
+# preview of a draft 200 while /v1/catalog/products/{slug} is 404 · list by status
+# settings: money values are "25.00" strings; PUT "30.00" → 200 and /v1/catalog/config shows it at once (cache
+#   invalidated); a number for a money key → 422 setting.invalid_value; unknown key → 404 setting.unknown_key
+# roles: viewer → 200 on reads, 403 on product/setting writes; anonymous → 401; every write has an audit_log row
+@base = http://localhost:5080/v1/admin
+@manager = <store_manager access token>
+@admin = <admin access token>
+@viewer = <viewer access token>
+
+### #74 Create category
+POST {{base}}/categories
+Authorization: Bearer {{manager}}
+Content-Type: application/json
+
+{"slug":"smoke-cat","nameAr":"تجربة","nameEn":"Smoke","sort":90,"isActive":true}
+
+### #73 Categories
+GET {{base}}/categories
+Authorization: Bearer {{viewer}}
+
+### #76 Upload an image (multipart: file, kind=image, altAr)
+POST {{base}}/media
+Authorization: Bearer {{manager}}
+Content-Type: multipart/form-data; boundary=b
+
+--b
+Content-Disposition: form-data; name="kind"
+
+image
+--b
+Content-Disposition: form-data; name="altAr"
+
+غلاف
+--b
+Content-Disposition: form-data; name="file"; filename="cover.png"
+Content-Type: image/png
+
+< ./cover.png
+--b--
+
+### #77 Media list / #77b alt text
+GET {{base}}/media?kind=image
+Authorization: Bearer {{viewer}}
+
+### #55 Create course (draft)
+POST {{base}}/products
+Authorization: Bearer {{manager}}
+Content-Type: application/json
+
+{"type":"course","slug":"smoke-course","categoryId":null,"coverAssetId":null,"titleAr":"دورة تجربة","titleEn":"Smoke course",
+ "summaryAr":"ملخص","summaryEn":null,"bodyAr":null,"bodyEn":null,"badge":null,"sort":0,
+ "seoTitleAr":null,"seoTitleEn":null,"seoDescAr":null,"seoDescEn":null}
+
+### #55 Same slug again → 409 catalog.slug_taken
+POST {{base}}/products
+Authorization: Bearer {{manager}}
+Content-Type: application/json
+
+{"type":"course","slug":"smoke-course","titleAr":"x","summaryAr":"x","sort":0}
+
+### #58 Course block (compareAt ≤ price → 400)
+PUT {{base}}/products/{{courseId}}/course
+Authorization: Bearer {{manager}}
+Content-Type: application/json
+
+{"price":"350.00","compareAtPrice":"450.00","lessons":12,"durationMinutes":600,"levelAr":"مبتدئ","levelEn":null,
+ "instructorAr":"د. سارة","instructorEn":null,"accessDays":365,"lmsCourseRef":"LMS-SMOKE","learnerCount":0}
+
+### #59 Replace modules
+PUT {{base}}/products/{{courseId}}/modules
+Authorization: Bearer {{manager}}
+Content-Type: application/json
+
+[{"sort":1,"titleAr":"الوحدة الأولى","titleEn":null,"durationSeconds":1200},{"sort":2,"titleAr":"الوحدة الثانية","titleEn":null,"durationSeconds":900}]
+
+### #65 Publish (no cover → 422 {missing:["cover"]}; after PUT with coverAssetId → 200)
+POST {{base}}/products/{{courseId}}/publish
+Authorization: Bearer {{manager}}
+
+### #60–#62 Book block + print + digital formats
+PUT {{base}}/products/{{bookId}}/book
+Authorization: Bearer {{manager}}
+Content-Type: application/json
+
+{"authorAr":"مؤلف","authorEn":null,"pages":120,"isbn":null,"publishedYear":2025}
+
+### #61
+POST {{base}}/products/{{bookId}}/formats
+Authorization: Bearer {{manager}}
+Content-Type: application/json
+
+{"kind":"digital","sku":"SMK-DIG","price":"40.00","compareAtPrice":null,"isActive":true,"weightGrams":null,"lowStockThreshold":null,"fileAssetId":"{{bookFileId}}"}
+
+### #63 Cause block
+PUT {{base}}/products/{{causeId}}/cause
+Authorization: Bearer {{manager}}
+Content-Type: application/json
+
+{"unitAmount":"100.00","unitLabelAr":"حقيبة","unitLabelEn":"bag","targetAmount":"20000.00","allowCustomAmount":true,"minAmount":"10.00",
+ "zakatEligible":true,"beneficiariesAr":null,"beneficiariesEn":null,"closeOnTarget":false,"isGeneralFund":false,
+ "startsAtLocal":"2026-09-01T00:00:00","endsAtLocal":"2027-01-15T23:59:00"}
+
+### #67 Goal seed
+PUT {{base}}/products/{{causeId}}/goal-seed
+Authorization: Bearer {{manager}}
+Content-Type: application/json
+
+{"seedRaised":"1500.00","seedUnits":12,"seedDonors":9,"reason":"offline donations before launch"}
+
+### #68 Offer (second active → 409 offer.already_active; zakatEligible true → 400)
+POST {{base}}/products/{{courseId}}/offers
+Authorization: Bearer {{manager}}
+Content-Type: application/json
+
+{"seatPrice":"200.00","unitLabelAr":"مقعد","unitLabelEn":"seat","targetUnits":50,"beneficiaryGroup":"rural_teachers",
+ "groupLabelAr":"معلمات القرى","groupLabelEn":null,"allowPartial":true,"zakatEligible":false,"closeOnTarget":false,
+ "startsAtLocal":null,"endsAtLocal":"2027-03-31T23:59:00"}
+
+### #70 Update offer
+PUT {{base}}/offers/{{offerId}}
+Authorization: Bearer {{manager}}
+Content-Type: application/json
+
+{"seatPrice":"180.00","unitLabelAr":"مقعد","unitLabelEn":"seat","targetUnits":60,"beneficiaryGroup":"rural_teachers",
+ "groupLabelAr":"معلمات القرى","groupLabelEn":null,"allowPartial":true,"zakatEligible":false,"closeOnTarget":false,
+ "startsAtLocal":null,"endsAtLocal":"2027-03-31T23:59:00"}
+
+### #71 Close offer (sweep arrives in S-42; swept = null)
+POST {{base}}/offers/{{offerId}}/close
+Authorization: Bearer {{manager}}
+Content-Type: application/json
+
+{"sweepPool":false}
+
+### #64 Preview a draft (public route stays 404)
+GET {{base}}/products/{{draftId}}/preview
+Authorization: Bearer {{viewer}}
+
+### #66 Archive
+POST {{base}}/products/{{bookId}}/archive
+Authorization: Bearer {{manager}}
+
+### #54 List (status filter)
+GET {{base}}/products?status=draft
+Authorization: Bearer {{viewer}}
+
+### #118 Settings
+GET {{base}}/settings
+Authorization: Bearer {{viewer}}
+
+### #119 Update a setting (admin)
+PUT {{base}}/settings/shipping_flat_fee
+Authorization: Bearer {{admin}}
+Content-Type: application/json
+
+{"value":"30.00"}
+
+### #119 Money as a number → 422 setting.invalid_value
+PUT {{base}}/settings/shipping_flat_fee
+Authorization: Bearer {{admin}}
+Content-Type: application/json
+
+{"value":30}
+
+### #119 Viewer → 403
+PUT {{base}}/settings/shipping_flat_fee
+Authorization: Bearer {{viewer}}
+Content-Type: application/json
+
+{"value":"30.00"}

@@ -29,6 +29,25 @@ public static class HttpCaching
     public static RouteHandlerBuilder CachedLive(this RouteHandlerBuilder builder) =>
         builder.CacheOutput(LivePolicy).AddEndpointFilter(new ETagFilter("public, max-age=15"));
 
+    /// Admin catalogue writes evict the public catalogue cache (tag `catalog`) after a successful response.
+    public static TBuilder EvictsCatalogCache<TBuilder>(this TBuilder builder)
+        where TBuilder : IEndpointConventionBuilder => builder.AddEndpointFilter<TBuilder, EvictCatalogFilter>();
+
+    private sealed class EvictCatalogFilter(Microsoft.AspNetCore.OutputCaching.IOutputCacheStore store) : IEndpointFilter
+    {
+        public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+        {
+            var result = await next(context);
+            var status = result is IStatusCodeHttpResult { StatusCode: { } code } ? code : StatusCodes.Status200OK;
+            if (!HttpMethods.IsGet(context.HttpContext.Request.Method) && status is >= 200 and < 300)
+            {
+                await store.EvictByTagAsync(CatalogTag, context.HttpContext.RequestAborted);
+            }
+
+            return result;
+        }
+    }
+
     private sealed class ETagFilter(string cacheControl) : IEndpointFilter
     {
         public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)

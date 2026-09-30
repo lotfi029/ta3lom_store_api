@@ -36,4 +36,27 @@ public sealed class MediaAsset : AggregateRoot
     public string? AltEn { get; private set; }
 
     public DateTimeOffset CreatedAt { get; private set; }
+
+    /// Book files are always private (`ck_media_private_book`); images need Arabic alt text (RUL-03).
+    public static MediaAsset Create(MediaKind kind, string storageKey, string mime, long sizeBytes, int? width, int? height,
+        string? altAr, string? altEn, DateTimeOffset now)
+    {
+        Guard.Against(kind == MediaKind.Image && string.IsNullOrWhiteSpace(altAr), "media.alt_required");
+        var asset = new MediaAsset(kind, storageKey, mime, sizeBytes, now)
+        {
+            IsPublic = kind != MediaKind.BookFile,
+            Width = width,
+            Height = height,
+            AltAr = altAr,
+            AltEn = altEn,
+        };
+        return asset;
+    }
+
+    public void SetAlt(string? altAr, string? altEn)
+    {
+        Guard.Against(Kind == MediaKind.Image && string.IsNullOrWhiteSpace(altAr), "media.alt_required");
+        AltAr = altAr;
+        AltEn = altEn;
+    }
 }

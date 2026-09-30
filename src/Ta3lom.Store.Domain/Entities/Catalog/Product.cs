@@ -61,4 +61,45 @@ public sealed class Product : AggregateRoot
 
     /// RUL-02: only published products appear in the catalogue or accept cart lines.
     public bool IsPublished => Status == ProductStatus.Published;
+
+    /// Staff edit of the common fields (FR-S72). The type is immutable once the product has an order (RUL-01).
+    public void Update(ProductType type, bool hasOrders, string slug, Guid? categoryId, Guid? coverAssetId, string titleAr, string? titleEn,
+        string summaryAr, string? summaryEn, string? bodyAr, string? bodyEn, ProductBadge? badge, int sort,
+        string? seoTitleAr, string? seoTitleEn, string? seoDescAr, string? seoDescEn, DateTimeOffset now)
+    {
+        Guard.Against(type != Type && hasOrders, "product.type_locked");
+        Type = type;
+        Slug = Guard.NotEmpty(slug);
+        CategoryId = categoryId;
+        CoverAssetId = coverAssetId;
+        TitleAr = Guard.NotEmpty(titleAr);
+        TitleEn = titleEn;
+        SummaryAr = Guard.NotEmpty(summaryAr);
+        SummaryEn = summaryEn;
+        BodyAr = bodyAr;
+        BodyEn = bodyEn;
+        Badge = badge;
+        Sort = sort;
+        SeoTitleAr = seoTitleAr;
+        SeoTitleEn = seoTitleEn;
+        SeoDescAr = seoDescAr;
+        SeoDescEn = seoDescEn;
+        UpdatedAt = now;
+    }
+
+    /// RUL-02: the handler has checked completeness (RUL-03) before calling this.
+    public void Publish(DateTimeOffset now)
+    {
+        Status = ProductStatus.Published;
+        PublishedAt ??= now;
+        UpdatedAt = now;
+    }
+
+    public void Archive(DateTimeOffset now)
+    {
+        Status = ProductStatus.Archived;
+        UpdatedAt = now;
+    }
+
+    public void Touch(DateTimeOffset now) => UpdatedAt = now;
 }

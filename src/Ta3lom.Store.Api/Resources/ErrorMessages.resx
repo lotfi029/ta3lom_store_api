@@ -169,4 +169,76 @@
   <data name="catalog.product_not_found.detail" xml:space="preserve">
     <value>لم نجد هذا المنتج، أو لم يعد متاحًا.</value>
   </data>
+  <data name="product.slug_taken" xml:space="preserve">
+    <value>الرابط مستخدم</value>
+  </data>
+  <data name="product.slug_taken.detail" xml:space="preserve">
+    <value>يوجد منتج آخر بهذا الرابط المختصر.</value>
+  </data>
+  <data name="category.slug_taken" xml:space="preserve">
+    <value>الرابط مستخدم</value>
+  </data>
+  <data name="category.slug_taken.detail" xml:space="preserve">
+    <value>يوجد تصنيف آخر بهذا الرابط المختصر.</value>
+  </data>
+  <data name="product.type_locked" xml:space="preserve">
+    <value>لا يمكن تغيير النوع</value>
+  </data>
+  <data name="product.type_locked.detail" xml:space="preserve">
+    <value>لا يمكن تغيير نوع منتج بعد أول طلب عليه.</value>
+  </data>
+  <data name="product.publish_incomplete" xml:space="preserve">
+    <value>بيانات النشر ناقصة</value>
+  </data>
+  <data name="product.publish_incomplete.detail" xml:space="preserve">
+    <value>أكمل الحقول المطلوبة قبل النشر؛ راجع قائمة الحقول الناقصة.</value>
+  </data>
+  <data name="offer.active_exists" xml:space="preserve">
+    <value>توجد كفالة نشطة</value>
+  </data>
+  <data name="offer.active_exists.detail" xml:space="preserve">
+    <value>لهذا المنتج عرض كفالة نشط بالفعل.</value>
+  </data>
+  <data name="offer.dates_invalid" xml:space="preserve">
+    <value>تواريخ غير صحيحة</value>
+  </data>
+  <data name="offer.dates_invalid.detail" xml:space="preserve">
+    <value>يجب أن يكون تاريخ النهاية بعد تاريخ البداية.</value>
+  </data>
+  <data name="cause.general_fund_exists" xml:space="preserve">
+    <value>الصندوق العام موجود</value>
+  </data>
+  <data name="cause.general_fund_exists.detail" xml:space="preserve">
+    <value>يوجد منتج آخر محدد كصندوق عام.</value>
+  </data>
+  <data name="media.alt_required" xml:space="preserve">
+    <value>النص البديل مطلوب</value>
+  </data>
+  <data name="media.alt_required.detail" xml:space="preserve">
+    <value>أضف وصفًا نصيًا عربيًا للصورة.</value>
+  </data>
+  <data name="media.type_not_allowed" xml:space="preserve">
+    <value>نوع الملف غير مسموح</value>
+  </data>
+  <data name="media.type_not_allowed.detail" xml:space="preserve">
+    <value>هذا النوع من الملفات غير مسموح برفعه.</value>
+  </data>
+  <data name="media.too_large" xml:space="preserve">
+    <value>الملف كبير</value>
+  </data>
+  <data name="media.too_large.detail" xml:space="preserve">
+    <value>حجم الملف أكبر من الحد المسموح.</value>
+  </data>
+  <data name="setting.unknown_key" xml:space="preserve">
+    <value>إعداد غير معروف</value>
+  </data>
+  <data name="setting.unknown_key.detail" xml:space="preserve">
+    <value>هذا الإعداد غير موجود.</value>
+  </data>
+  <data name="setting.invalid_value" xml:space="preserve">
+    <value>قيمة غير صحيحة</value>
+  </data>
+  <data name="setting.invalid_value.detail" xml:space="preserve">
+    <value>القيمة لا تناسب نوع هذا الإعداد.</value>
+  </data>
 </root>
