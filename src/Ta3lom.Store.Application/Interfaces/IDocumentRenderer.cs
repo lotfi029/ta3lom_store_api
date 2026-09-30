@@ -6,6 +6,8 @@ public interface IDocumentRenderer
     byte[] RenderInvoice(InvoiceDocument document);
 
     byte[] RenderDonationReceipt(ReceiptDocument document);
+
+    byte[] RenderPackingSlip(PackingSlipDocument document);
 }
 
 /// Seller identity printed on every document (`Store:Documents`).
@@ -33,6 +35,12 @@ public sealed record ReceiptDocument(string Number, DateTimeOffset IssuedAt, str
 
 /// `QuantityLabel`: "5 مقاعد" / "مبلغ"; `Intent`: صدقة | زكاة.
 public sealed record ReceiptDocumentLine(string TitleAr, string QuantityLabel, string Intent, string Amount);
+
+/// FR-S42: order reference, recipient, address snapshot and print lines — no prices; rendered on demand.
+public sealed record PackingSlipDocument(string OrderReference, DateTimeOffset PrintedAt, string RecipientName, string RecipientMobile, string Address,
+    IReadOnlyList<PackingSlipLine> Lines);
+
+public sealed record PackingSlipLine(string Sku, string TitleAr, int Quantity);
 
 /// ZATCA Phase 2 reporting (S2, FR-S65). `NoopEInvoicingGateway` until then: tax invoices stay `pending`.
 public interface IEInvoicingGateway

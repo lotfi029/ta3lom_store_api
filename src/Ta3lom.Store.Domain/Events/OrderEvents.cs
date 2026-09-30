@@ -37,3 +37,9 @@ public sealed record LmsEnrol(Guid EnrolmentId) : IDomainEvent;
 
 /// RUL-50/58: withdraw LMS access.
 public sealed record LmsRevoke(Guid EnrolmentId) : IDomainEvent;
+
+/// FR-S42: SMS `shipment_shipped` (reference, tracking).
+public sealed record ShipmentShipped(Guid ShipmentId, Guid OrderId) : IDomainEvent;
+
+/// FR-S42: SMS `shipment_delivered`.
+public sealed record ShipmentDelivered(Guid ShipmentId, Guid OrderId) : IDomainEvent;

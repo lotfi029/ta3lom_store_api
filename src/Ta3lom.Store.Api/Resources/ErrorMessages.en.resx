@@ -457,4 +457,16 @@
   <data name="download.link_expired.detail" xml:space="preserve">
     <value>This download link has expired. Request a new one from your account.</value>
   </data>
+  <data name="stock.below_reserved" xml:space="preserve">
+    <value>Below reserved</value>
+  </data>
+  <data name="stock.below_reserved.detail" xml:space="preserve">
+    <value>Stock cannot drop below the quantity reserved for orders.</value>
+  </data>
+  <data name="shipment.invalid_transition" xml:space="preserve">
+    <value>Invalid transition</value>
+  </data>
+  <data name="shipment.invalid_transition.detail" xml:space="preserve">
+    <value>The shipment cannot move to this state now.</value>
+  </data>
 </root>

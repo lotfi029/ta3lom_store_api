@@ -79,4 +79,6 @@ public static class ErrorCodes
     public const string DownloadLimitReached = "download.limit_reached";
     public const string DownloadRevoked = "download.revoked";
     public const string DownloadLinkExpired = "download.link_expired";
+    public const string StockBelowReserved = "stock.below_reserved";
+    public const string ShipmentInvalidTransition = "shipment.invalid_transition";
 }

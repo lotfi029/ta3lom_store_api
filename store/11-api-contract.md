@@ -1401,6 +1401,14 @@ and has no `url`. Limits: images 10 MB, PDFs 200 MB (OP-6).
   "onHand": 486, "reserved": 6, "available": 480, "lowStockThreshold": null, "effectiveThreshold": 20, "isLow": false }
 ```
 
+`StockMovement` (newest first; `reason` = `sale`|`restock`|`adjustment`|`return`; sales carry `refType: "order"` and the
+reference; `actor` is the staff e-mail or `settlement`; S-21):
+
+```json
+{ "id": 5, "delta": -2, "reason": "sale", "refType": "order", "refId": "T3-26-004187", "note": null,
+  "at": "2026-09-14T11:02:00Z", "actor": "settlement" }
+```
+
 `sale` and `sponsor_distribution` movements are written by the system only. The threshold is
 `book_format.low_stock_threshold` (set through `PUT /admin/formats/{formatId}`), falling back to the
 setting `low_stock_default_threshold` (20); `LowStockAlert` emails staff daily at 08:00 (FR-S43).
@@ -1432,6 +1440,15 @@ read-only.
 | POST | `/admin/orders/{ref}/cancel` | `staff:finance` | `{ reason }` | `AdminOrderDetail` (`cancelled`, stock released) | `order.cancel_not_allowed` | RUL-29, RUL-30 |
 | POST | `/admin/orders/{ref}/resend-documents` | `staff:resend` | `{ channels: ["sms","email"] }` | `202` | `document.not_ready` | RUL-63 |
 | POST | `/admin/orders/{ref}/payment-review/resolve` | `staff:finance`; `decision: "refund"` also needs `staff:refund` (RUL-56, RUL-62) | `{ decision: "accept"|"refund", note }` | `AdminOrderDetail` | `order.not_in_review` | RUL-35 |
+
+`AdminOrderRow` (S-21; `q` that is a Saudi mobile matches the order's contact mobile, anything else a reference prefix; `from`/`to` are Riyadh dates on
+`placedAt`; the mobile is masked):
+
+```json
+{ "reference": "T3-26-004187", "status": "fulfilled", "placedAt": "2026-09-14T10:58:12Z", "paidAt": "2026-09-14T11:02:00Z",
+  "contactName": "نورة العتيبي", "contactMobile": "05•••••567", "grandTotal": "2605.00", "lineCount": 4,
+  "kinds": ["buy", "sponsor", "donate"] }
+```
 
 `AdminOrderDetail` = customer `OrderDetail` (§5.10) plus:
 
@@ -1532,7 +1549,9 @@ webhook. Errors: `refund.lines_not_refundable` (`lines[]`), `refund.amount_excee
   "carrier": null, "trackingNo": null, "placedAt": "2026-09-14T10:58:12Z", "shippedAt": null, "deliveredAt": null }
 ```
 
-Delivering updates print lines to `delivered` and may complete the order (RUL-40).
+Delivering updates print lines to `delivered` and may complete the order (RUL-40). A return is allowed from `shipped` or `delivered`; the
+line becomes `returned`, which is not terminal (RUL-40: for print lines terminal means `delivered`), so a returned order that
+was not yet `fulfilled` stays `paid` until the payment service refunds it. `deliveredOn` is stored as noon Riyadh of that date.
 
 ### 9.13 Beneficiaries (FR-S52, RUL-51, PDPL)
 

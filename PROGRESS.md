@@ -1,5 +1,5 @@
 # Build progress
-Next: S-21 — Shipments, stock and admin orders
+Next: S-40 — LmsProgressSync job
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -35,7 +35,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-19 enrolment + LMS | done | S-19 | 29 | CourseEnrolmentEffect; LmsEnrol, LmsRevoke | ✅ tools/smoke/S-19.http | 296 tests green; first invoice PDF; dispatcher crash fixed |
 | P0-4 watermark spike | done | P0-4 | — | — | spikes/P0-4 → 301-page book stamped | GO: QuestPDF stamp as PdfSharp form XObject ~0.2 s/300 pages; PdfSharp text cannot shape Arabic; store/spikes/P0-4-watermark.md |
 | S-20 digital downloads | done | S-20 | 32, 46, 94 | DigitalBookEffect | ✅ tools/smoke/S-20.http | 301-page book: 0.75 s first, 0.02 s cached; limit/reset/revoke verified |
-| S-21 shipments, stock, admin orders | todo | | 78–80, 85, 86, 95–99 | PrintBookEffect; ShipmentShipped/Delivered | | integrity check |
+| S-21 shipments, stock, admin orders | done | S-21 | 78–80, 85, 86, 95–99 | PrintBookEffect; ShipmentShipped/Delivered | ✅ tools/smoke/S-21.http | integrity checks 0 rows; RUL-40 returned-line fix |
 | S-40 LMS progress sync | todo | | — | LmsProgressSync; SponsorUnitCompleted | | |
 | S-41 low stock alert | todo | | — | LowStockAlert | | |
 | S-23 units and pooling | todo | | — | SponsorUnitsEffect, PoolContributionEffect | | integrity check |
@@ -294,3 +294,23 @@ Tests (test phase)
 Done when (local smoke)
 - [x] Download works with an Arabic name
 - [x] A 300-page file streams in under the P0-4 time (0.75 s first incl. stamping, 0.02 s cached)
+
+### S-21 — Shipments, stock and admin orders
+
+Build
+- [x] `PrintBookEffect`: commits the reservation (`stock_on_hand −= q`, `stock_reserved −= q`), `stock_movement` `sale`, upserts the `shipment` (`preparing`)
+- [x] Shipment state machine: ship (carrier + tracking), deliver, return (from shipped/delivered, optional restock); outbox `ShipmentShipped` / `ShipmentDelivered` (SMS)
+- [x] Packing slip PDF (QuestPDF, Arabic)
+- [x] Stock list, movements and manual restock/adjustment with a reason (`stock.below_reserved`)
+- [x] Admin order search (reference, mobile, status, date, kind) and detail (lines, payments, events, documents, notifications, shipment)
+- [x] Fulfilment roll-up to `fulfilled` (RUL-40; a `returned` print line is not terminal)
+- [x] Audit §2.2: carrier + tracking, deliver, return; restock/adjust with a reason; admin order detail sections; `shipment.address` owned JSON (owner fix 2)
+
+Tests (test phase)
+- [ ] RUL-30: reserve/commit/release ledger equals counters, integrity check 3 = 0 rows
+- [ ] RUL-40 roll-up
+- [ ] a `fulfilment`-role user can ship, `finance` cannot; policy matrix extended
+
+Done when (local smoke)
+- [x] A print order goes preparing → shipped → delivered with SMS, and the order reaches `fulfilled` (T3-26-001015)
+- [x] Integrity checks 0 rows

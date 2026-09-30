@@ -169,6 +169,52 @@ internal sealed class QuestPdfDocumentRenderer(ISellerProfile seller, IClock clo
         })).GeneratePdf();
     }
 
+    public byte[] RenderPackingSlip(PackingSlipDocument d)
+    {
+        ArgumentNullException.ThrowIfNull(d);
+        EnsureFonts();
+        return Document.Create(doc => doc.Page(page =>
+        {
+            Page(page);
+            page.Header().Element(h => Header(h, "قائمة التعبئة", "Packing slip", d.OrderReference));
+            page.Content().PaddingVertical(10).Column(col =>
+            {
+                col.Spacing(8);
+                col.Item().Text(t =>
+                {
+                    t.Span("المستلم: ").SemiBold();
+                    t.Span($"{d.RecipientName} — {Ltr(d.RecipientMobile)}");
+                });
+                col.Item().Text(t =>
+                {
+                    t.Span("العنوان: ").SemiBold();
+                    t.Span(d.Address);
+                });
+                col.Item().Table(table =>
+                {
+                    table.ColumnsDefinition(c =>
+                    {
+                        c.RelativeColumn(2);
+                        c.RelativeColumn(6);
+                        c.RelativeColumn(1);
+                    });
+                    table.Header(h =>
+                    {
+                        HeaderCell(h, "رمز الصنف");
+                        HeaderCell(h, "الكتاب");
+                        HeaderCell(h, "الكمية");
+                    });
+                    foreach (var l in d.Lines)
+                    {
+                        Row(table, Ltr(l.Sku), l.TitleAr, l.Quantity.ToString(CultureInfo.InvariantCulture));
+                    }
+                });
+                col.Item().Text($"طُبعت: {Date(d.PrintedAt)}").FontSize(9).FontColor(Colors.Grey.Darken1);
+            });
+            Footer(page);
+        })).GeneratePdf();
+    }
+
     /// U+2066 … U+2069 (P0-3): keeps `+966 …`, e-mails and English runs intact inside Arabic lines.
     internal static string Ltr(string value) => "⁦" + value + "⁩";
 

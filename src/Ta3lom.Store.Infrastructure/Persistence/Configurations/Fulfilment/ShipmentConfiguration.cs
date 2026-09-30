@@ -19,7 +19,19 @@ internal sealed class ShipmentConfiguration : IEntityTypeConfiguration<Shipment>
         e.Property(x => x.Status).HasColumnType("text").IsRequired().HasDefaultValueSql("'preparing'::text").ValueGeneratedNever();
         e.Property(x => x.Carrier).HasColumnType("text").IsRequired(false).ValueGeneratedNever();
         e.Property(x => x.TrackingNo).HasColumnType("text").IsRequired(false).ValueGeneratedNever();
-        e.Property(x => x.Address).HasColumnType("jsonb").IsRequired().ValueGeneratedNever();
+        e.OwnsOne(x => x.Address, a =>                           // owned JSON since S-21 (owner fix 2); column stays jsonb NOT NULL
+        {
+            a.ToJson("address");
+            a.Property(x => x.RecipientName).HasJsonPropertyName("recipientName");
+            a.Property(x => x.RecipientMobile).HasJsonPropertyName("recipientMobile");
+            a.Property(x => x.City).HasJsonPropertyName("city");
+            a.Property(x => x.District).HasJsonPropertyName("district");
+            a.Property(x => x.ShortAddress).HasJsonPropertyName("shortAddress");
+            a.Property(x => x.Street).HasJsonPropertyName("street");
+            a.Property(x => x.BuildingNo).HasJsonPropertyName("buildingNo");
+            a.Property(x => x.PostalCode).HasJsonPropertyName("postalCode");
+        });
+        e.Navigation(x => x.Address).IsRequired();
         e.Property(x => x.ShippedAt).HasColumnType("timestamp with time zone").IsRequired(false).ValueGeneratedNever();
         e.Property(x => x.DeliveredAt).HasColumnType("timestamp with time zone").IsRequired(false).ValueGeneratedNever();
         e.Property(x => x.UpdatedBy).HasColumnType("text").IsRequired(false).ValueGeneratedNever();

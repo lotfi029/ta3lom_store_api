@@ -457,4 +457,16 @@
   <data name="download.link_expired.detail" xml:space="preserve">
     <value>انتهت صلاحية رابط التحميل. اطلب رابطًا جديدًا من حسابك.</value>
   </data>
+  <data name="stock.below_reserved" xml:space="preserve">
+    <value>المخزون أقل من المحجوز</value>
+  </data>
+  <data name="stock.below_reserved.detail" xml:space="preserve">
+    <value>لا يمكن أن يقل المخزون عن الكمية المحجوزة للطلبات.</value>
+  </data>
+  <data name="shipment.invalid_transition" xml:space="preserve">
+    <value>تغيير غير مسموح</value>
+  </data>
+  <data name="shipment.invalid_transition.detail" xml:space="preserve">
+    <value>لا يمكن نقل الشحنة إلى هذه الحالة الآن.</value>
+  </data>
 </root>

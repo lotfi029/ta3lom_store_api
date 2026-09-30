@@ -33,4 +33,12 @@ public sealed class StockMovement
     public DateTimeOffset At { get; private set; }
 
     public string Actor { get; private set; } = null!;
+
+    /// RUL-30: every stock change is a ledger row (integrity check 3: Σ delta = `stock_on_hand`).
+    public static StockMovement Record(Guid bookFormatId, int delta, StockMovementReason reason, string refType, string? refId, string? note,
+        string actor, DateTimeOffset now)
+    {
+        Guard.Against(delta == 0, "stock.delta_zero");
+        return new StockMovement(bookFormatId, delta, reason, actor, now) { RefType = refType, RefId = refId, Note = note };
+    }
 }

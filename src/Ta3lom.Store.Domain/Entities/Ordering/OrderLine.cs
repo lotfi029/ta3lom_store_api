@@ -72,9 +72,10 @@ public sealed class OrderLine : Entity
             TitleEn = d.TitleEn,
         };
 
-    /// RUL-40: course `enrolled`, digital `available`, print `delivered` (or `returned`), sponsor `funded`, donate `received`.
+    /// RUL-40: course `enrolled`, digital `available`, print `delivered`, sponsor `funded`, donate `received`. A `returned`
+    /// print line is not terminal ("for print lines, terminal means delivered"); it ends with a refund (payment service).
     public bool IsTerminal => FulfilmentStatus is FulfilmentStatus.Enrolled or FulfilmentStatus.Available or FulfilmentStatus.Delivered
-        or FulfilmentStatus.Returned or FulfilmentStatus.Funded or FulfilmentStatus.Received or FulfilmentStatus.Refunded;
+        or FulfilmentStatus.Funded or FulfilmentStatus.Received or FulfilmentStatus.Refunded;
 
     public void SetFulfilment(FulfilmentStatus status) => FulfilmentStatus = status;
 }

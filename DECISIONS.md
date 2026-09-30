@@ -101,6 +101,13 @@ the owner should confirm.
 | 2026-09-30 | S-20 | Limit race | 03 RUL-41 | The count is taken with a conditional `UPDATE … WHERE download_count < max_downloads AND revoked_at IS NULL` (Infrastructure), so parallel downloads never exceed 5 (the DDL CHECK would otherwise fail) | Row-lock rule | |
 | 2026-09-30 | S-20 | Watermark cache | P0-4 | Stamped once per grant into private `downloads/{grant}.pdf`, then streamed; the stamp is rendered before the count is taken so a rendering failure never costs a download. The cache survives a reset (same buyer) | 09 §4.5 "cached per grant" | |
 | 2026-09-30 | S-20 | Reset reason | 11 §9.11 | `reason` is required (1–500) and validated, but not stored: the grant change is audited (actor, diff) and the reason is kept only in the request log | DDL has no reason column | REVIEW |
+| 2026-09-30 | S-21 | Returned print line | 03 RUL-40 | `returned` is **not** terminal ("for print lines, terminal means `delivered`"): a return before the order is fulfilled leaves it `paid` until the payment service refunds it; a return after delivery leaves `fulfilled` as is. The first build counted `returned` as terminal; fixed during the smoke (dev order T3-26-001016 reset to `paid`) | RUL-40 last sentence | |
+| 2026-09-30 | S-21 | Return transitions | 11 §9.12 | Return is allowed from `shipped` and `delivered` (not from `preparing`: nothing left the warehouse → 409); `note` required; `restock: true` writes a `return` movement per print line | RUL-40 lists `returned` after shipping | |
+| 2026-09-30 | S-21 | Delivery time | 11 §9.12 | `deliveredOn` (a Riyadh date) is stored as noon Riyadh of that date; without it, the clock's now | date-only input vs timestamptz column | |
+| 2026-09-30 | S-21 | AdminOrderRow / StockMovement | 11 §9.7, §9.9 | Shapes were not defined in 11; defined as built (row: reference, status, placedAt, paidAt, contact name, masked mobile, grandTotal, lineCount, kinds) and added to 11 | 11 names the types only | |
+| 2026-09-30 | S-21 | Admin search `q` | 11 §9.9 | `q` that normalises as a Saudi mobile matches `orders.contact_mobile` (E.164); anything else is a reference prefix (`LIKE`, `%` stripped); unknown `status`/`kind` → 400 | "reference or mobile" | |
+| 2026-09-30 | S-21 | Order events | 11 §9.9 | `events` lists `payment_event` rows, which only the payment service writes: empty for dev-settled orders | doc 15 | |
+| 2026-09-30 | S-21 | Endpoint numbering | 11 §12 | #96 is the packing slip, #97 ship, #98 deliver, #99 return (11 §12 index); code comments and smoke labels follow the index | index is canonical | |
 
 ## Bugs found by tests
 

@@ -38,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<Features.Notifications.NotificationDispatch>();
         services.AddScoped<Features.Outbox.Handlers.OrderMessages>();
         services.AddScoped<Features.Documents.OrderDocuments>();
+        services.AddScoped<Features.Fulfilment.FulfilmentReader>();
         services.AddScoped<Features.Settlement.IOrderSettlement, Features.Settlement.OrderSettlement>();
         services.AddScoped<Features.Catalog.CatalogReader>();
         services.AddScoped<Features.AdminCatalog.AdminCatalogReader>();

@@ -55,6 +55,19 @@ internal sealed class StockRepository(StoreDbContext db) : IStockRepository
         return null;
     }
 
+    public Task CommitSaleAsync(Guid bookFormatId, int quantity, CancellationToken ct = default) =>
+        db.Database.ExecuteSqlAsync($"""
+            UPDATE store.book_format
+               SET stock_on_hand = stock_on_hand - {quantity}, stock_reserved = GREATEST(stock_reserved - {quantity}, 0)
+             WHERE id = {bookFormatId}
+            """, ct);
+
+    public async Task<bool> TryAdjustAsync(Guid bookFormatId, int delta, CancellationToken ct = default) =>
+        await db.Database.ExecuteSqlAsync($"""
+            UPDATE store.book_format SET stock_on_hand = coalesce(stock_on_hand, 0) + {delta}
+             WHERE id = {bookFormatId} AND kind = 'print' AND coalesce(stock_on_hand, 0) + {delta} >= stock_reserved
+            """, ct) == 1;
+
     public async Task ReleaseAsync(IReadOnlyList<(Guid BookFormatId, int Quantity)> reservations, CancellationToken ct = default)
     {
         foreach (var (id, quantity) in reservations.GroupBy(r => r.BookFormatId).Select(g => (g.Key, g.Sum(r => r.Quantity))).OrderBy(r => r.Key))

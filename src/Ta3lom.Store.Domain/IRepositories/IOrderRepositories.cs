@@ -27,6 +27,12 @@ public interface IStockRepository
 
     /// RUL-30: gives reserved quantities back (expired / cancelled orders); never below zero.
     Task ReleaseAsync(IReadOnlyList<(Guid BookFormatId, int Quantity)> reservations, CancellationToken ct = default);
+
+    /// RUL-30 on `paid`: `stock_on_hand −= q, stock_reserved −= q` (the reservation becomes a sale).
+    Task CommitSaleAsync(Guid bookFormatId, int quantity, CancellationToken ct = default);
+
+    /// Staff restock/adjustment/return: `stock_on_hand += delta` unless it would drop below `stock_reserved`; false then.
+    Task<bool> TryAdjustAsync(Guid bookFormatId, int delta, CancellationToken ct = default);
 }
 
 /// Goal counters, incremented atomically in the settlement transaction (09 §5.3), never read-modify-write.
