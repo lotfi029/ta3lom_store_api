@@ -1213,6 +1213,11 @@ Never includes the amount (RUL-22). If the order is anonymous and no sender name
 `fromName` is `"فاعل خير"` (RUL-23). Available only once the order is paid; a refunded line returns
 `404`. Errors: `card.not_found`. Serves FR-S60, RUL-22, RUL-23.
 
+As built (S-26): the response carries `X-Robots-Tag: noindex, nofollow` and `Cache-Control: private, no-store`; a token
+that is not 22 characters is `404` without a lookup. If the donor typed no sender name and the order is not anonymous,
+`fromName` is the order's contact name. `messageAr`/`messageEn` come from the `dedication_templates` setting (both are the
+free text for `custom`).
+
 ### 8.2 `GET /v1/downloads/{token}`
 
 The signed link from §5.7. Streams the watermarked PDF (`application/pdf`,
@@ -1428,7 +1433,9 @@ setting `low_stock_default_threshold` (20); `LowStockAlert` emails staff daily a
 ```
 
 `notifyDonors: true` queues `CauseUpdatePublished` once; `notified_at` is then set and the flag is
-read-only.
+read-only. Staff responses are `AdminCauseUpdate` = `{ id, productId, titleAr, titleEn, bodyAr, bodyEn, image,
+unitsDelivered, occurredOn, isPublic, notifyDonors, notifiedAt, createdAt, createdBy }`. The SMS goes to each distinct
+contact mobile of the product's paid gift orders, in the order's locale, with a link to the product page (S-26).
 
 ### 9.9 Orders (FR-S73, FR-S38)
 

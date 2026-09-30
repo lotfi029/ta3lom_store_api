@@ -130,6 +130,11 @@ the owner should confirm.
 | 2026-09-30 | S-25 | Escalation mailbox | 03 RUL-49 | `Store:Email:ManagerAlerts` (placeholder in `store.env.example`); falls back to `StaffAlerts` when empty; the owner sets the manager's address | no address in the docs | REVIEW |
 | 2026-09-30 | S-25 | Invite link | 03 RUL-52 | The SMS links to `{web}/ar/store/account/courses` (sign-in by OTP, then "My courses"); locale `ar` | beneficiaries have no locale | |
 | 2026-09-30 | S-25 | Backlog view column | database/01 `v_allocation_backlog` | `overdue_30` mapped explicitly (the snake-case convention yields `overdue30`); found in the smoke (500) | view column name | |
+| 2026-09-30 | S-26 | Card sender without a typed name | 03 RUL-22/23, 11 §8.1 | Anonymous order → "فاعل خير"; otherwise the order's contact name (RUL-23 hides the name only for anonymous orders) | 11 covers only the anonymous case | |
+| 2026-09-30 | S-26 | Resend semantics | 11 §9.11 #93 | Resend queues a new `DedicationCard` message flagged `resend`, so the "at most once per line" guard does not block it; the automatic path still never re-sends a `sent` card. A correction replaces `to_mobile` (audited, masked) | staff action is explicit | |
+| 2026-09-30 | S-26 | Cause update donors and channel | 03 RUL-54, 09 §4.3 | One SMS per distinct contact mobile of paid gift orders (`donate`/`sponsor`) for the product, in the order's locale; e-mail not used (every donor has a mobile, not every donor an e-mail); private updates can still notify | "SMS or email" | |
+| 2026-09-30 | S-26 | Cards before S-26 in the dev DB | RUL-22 | Dedications of orders paid before S-26 stayed `pending` (the S-17 stub consumed their messages); dev data only — staff resend (#93) sends them | no production data yet | |
+| 2026-09-30 | S-26 | Update assets and product types | 11 §9.8 | `assetId` must be a public media asset; updates are allowed on any product (11 shows them on any product page), not only causes | 11 §2.6 | |
 
 ## Bugs found by tests
 

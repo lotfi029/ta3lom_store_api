@@ -94,4 +94,6 @@ public static class ErrorCodes
     public const string AllocationMobileRequired = "allocation.mobile_required";
     public const string AllocationConflict = "allocation.conflict";
     public const string UnitInvalidTransition = "unit.invalid_transition";
+    public const string CardNotFound = "card.not_found";
+    public const string CauseUpdateAlreadyNotified = "cause_update.already_notified";
 }

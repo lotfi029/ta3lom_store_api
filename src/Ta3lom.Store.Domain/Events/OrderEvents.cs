@@ -18,7 +18,7 @@ public sealed record OrderCancelled(Guid OrderId, string Reference, string Reaso
 public sealed record DocumentsResendRequested(Guid OrderId, IReadOnlyList<string> Channels) : IDomainEvent;
 
 /// RUL-22: the card SMS for one dedicated gift line, after payment.
-public sealed record DedicationCard(Guid DedicationId, Guid OrderId) : IDomainEvent;
+public sealed record DedicationCard(Guid DedicationId, Guid OrderId, bool Resend = false) : IDomainEvent;
 
 /// Staff e-mail (`staff_alert`): `payment_review_amount`, `payment_review_late_capture`, `duplicate_course`,
 /// … Never shown to customers.
@@ -64,3 +64,6 @@ public sealed record UnitLapsed(Guid UnitId, Guid BeneficiaryId, Guid ProductId)
 public sealed record AllocationAlert(Guid ProductId, string Slug, int Units, DateTimeOffset OldestFundedAt, DateOnly Day) : IDomainEvent;
 
 public sealed record AllocationEscalation(Guid ProductId, string Slug, int Units, DateTimeOffset OldestFundedAt, DateOnly Day) : IDomainEvent;
+
+/// RUL-54: SMS to every distinct paid donor of the product, once per update (and once per donor on retry).
+public sealed record CauseUpdatePublished(Guid UpdateId, Guid ProductId) : IDomainEvent;

@@ -35,6 +35,26 @@ public sealed class Dedication : Entity
 
     public DateTimeOffset? SentAt { get; private set; }
 
+    /// RUL-22: the card SMS left (at most once per line; a staff resend is explicit).
+    public void MarkSent(DateTimeOffset now)
+    {
+        SmsStatus = DedicationSmsStatus.Sent;
+        SentAt = now;
+    }
+
+    public void MarkFailed() => SmsStatus = DedicationSmsStatus.Failed;
+
+    /// #93: staff resend, optionally to a corrected mobile (E.164); the card goes out again.
+    public void PrepareResend(string? correctedMobileE164)
+    {
+        if (correctedMobileE164 is not null)
+        {
+            ToMobile = correctedMobileE164;
+        }
+
+        SmsStatus = DedicationSmsStatus.Pending;
+    }
+
     /// Template key of a free-text message (`dedication.template_key` is NOT NULL).
     public const string CustomTemplateKey = "custom";
 

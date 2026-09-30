@@ -1,5 +1,4 @@
 using System.Globalization;
-using Microsoft.Extensions.Logging;
 using Ta3lom.Store.Application.Features.Notifications;
 using Ta3lom.Store.Domain.Events;
 
@@ -17,19 +16,6 @@ internal sealed class FinanceAlertHandler(NotificationDispatch dispatch, IEmailS
                     $"kind: {message.Kind}\norder: {message.Reference ?? message.OrderId?.ToString() ?? "-"}\ndetail: {message.Detail}\nat: {envelope.OccurredAt:O}"),
             },
             message.OrderId, ct);
-}
-
-/// RUL-22 card SMS: stub until S-26 completes the send (the card page and resend come with it).
-internal sealed partial class DedicationCardHandler(ILogger<DedicationCardHandler> logger) : OutboxHandler<DedicationCard>
-{
-    protected override Task HandleAsync(DedicationCard message, OutboxEnvelope envelope, CancellationToken ct)
-    {
-        LogDeferred(logger, message.DedicationId);
-        return Task.CompletedTask;
-    }
-
-    [LoggerMessage(Level = LogLevel.Information, Message = "DedicationCard {DedicationId}: card SMS is sent from S-26 on")]
-    private static partial void LogDeferred(ILogger logger, Guid dedicationId);
 }
 
 /// Metrics-only messages (09 §4.3): nothing is sent to the customer.

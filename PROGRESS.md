@@ -1,5 +1,5 @@
 # Build progress
-Next: S-26 — Dedication cards and cause updates
+Next: S-42 — Close campaigns, pool sweep, goal corrections
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -41,7 +41,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-23 units and pooling | done | S-23 | — | SponsorUnitsEffect, PoolContributionEffect; guard removed | ✅ tools/smoke/S-23.http | 100+150+120 → 1 unit, 20 left; 6 parallel OK; integrity 0 rows |
 | S-24 beneficiary register | done | S-24 | 100–108 | — | ✅ tools/smoke/S-24.http | PII encrypted + masked, SoD reveal audited, atomic import |
 | S-25 allocation | done | S-25 | 109–114 | AllocationAlerts, LapseUnits; BeneficiaryInvite, UnitLapsed, AllocationAlert/Escalation, SponsorUnitAllocated/Completed; S-40 hook filled | ✅ tools/smoke/S-25.http | all-or-nothing, SKIP LOCKED verified; integrity 0 rows |
-| S-26 dedication cards, cause updates | todo | | 45, 81–84, 93 | DedicationCard; CauseUpdatePublished | | |
+| S-26 cards and cause updates | done | S-26 | 45, 81–84, 93 | DedicationCard complete; CauseUpdatePublished | ✅ tools/smoke/S-26.http | card has no amount; notify once per donor |
 | S-42 close campaigns, sweep | todo | | 71 (sweep), 136, 137 | CloseCampaigns; PoolSwept | | integrity check |
 | S-43 zakat ledger, vouchers | todo | | 115, 116 | — | | |
 | S-31 `/v1/me` | todo | | 21–28, 30, 31, 33–39 | — | | |
@@ -392,3 +392,18 @@ Tests (test phase)
 
 Done when (local smoke)
 - [x] All of the above verified with curl and the dev jobs; integrity checks 0 rows
+
+### S-26 — Dedication cards and cause updates
+
+Build
+- [x] `DedicationCard` handler complete: sends once after payment, `sms_status`/`sent_at`, 22-character `card_token`
+- [x] Public card #45: name, message, sender or "فاعل خير", product title, never the amount, `noindex`
+- [x] Staff resend with an optional mobile correction (#93), audited
+- [x] Cause updates CRUD (#81–#84) with a photo via media; `notify_donors` → `CauseUpdatePublished` to distinct paid donors, once per update
+
+Tests (test phase)
+- [ ] RUL-22: card only after payment; retry never re-sends; card DTO has no amount field (reflection)
+- [ ] RUL-54: private update not public; notify sends once per donor
+
+Done when (local smoke)
+- [x] All of the above verified with curl (tools/smoke/S-26.http)

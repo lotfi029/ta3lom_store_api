@@ -547,4 +547,16 @@
   <data name="unit.invalid_transition.detail" xml:space="preserve">
     <value>The unit cannot move to that state now.</value>
   </data>
+  <data name="card.not_found" xml:space="preserve">
+    <value>Card not found</value>
+  </data>
+  <data name="card.not_found.detail" xml:space="preserve">
+    <value>No dedication card for this link.</value>
+  </data>
+  <data name="cause_update.already_notified" xml:space="preserve">
+    <value>Donors already notified</value>
+  </data>
+  <data name="cause_update.already_notified.detail" xml:space="preserve">
+    <value>An update already sent to donors cannot be deleted.</value>
+  </data>
 </root>

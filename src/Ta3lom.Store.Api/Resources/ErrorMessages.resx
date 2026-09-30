@@ -547,4 +547,16 @@
   <data name="unit.invalid_transition.detail" xml:space="preserve">
     <value>لا يمكن نقل الوحدة إلى هذه الحالة الآن.</value>
   </data>
+  <data name="card.not_found" xml:space="preserve">
+    <value>البطاقة غير موجودة</value>
+  </data>
+  <data name="card.not_found.detail" xml:space="preserve">
+    <value>لا توجد بطاقة إهداء بهذا الرابط.</value>
+  </data>
+  <data name="cause_update.already_notified" xml:space="preserve">
+    <value>أُبلغ المتبرعون مسبقًا</value>
+  </data>
+  <data name="cause_update.already_notified.detail" xml:space="preserve">
+    <value>لا يمكن حذف تحديث أُرسل إلى المتبرعين.</value>
+  </data>
 </root>
