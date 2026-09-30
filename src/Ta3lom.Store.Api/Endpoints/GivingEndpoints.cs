@@ -16,7 +16,7 @@ internal sealed class GivingEndpoints : IEndpoint
         app.MapGet("/cards/{token}", CardAsync).WithTags("Cards").AllowAnonymous().RequireRateLimiting(RatePolicies.Public)
             .Produces<CardResponse>().ProducesProblem(StatusCodes.Status404NotFound);
 
-        var admin = app.MapGroup("/admin").WithTags("Admin cause updates");
+        var admin = app.MapGroup("/admin").RequireRateLimiting(RatePolicies.Admin).WithTags("Admin cause updates");
         admin.MapGet("/products/{id:guid}/updates", ListAsync).RequireAuthorization(Policies.StaffRead).Produces<PagedResult<AdminCauseUpdate>>();
         admin.MapPost("/products/{id:guid}/updates", PostAsync).RequireAuthorization(Policies.StaffCatalogue)
             .Produces<AdminCauseUpdate>(StatusCodes.Status201Created).ProducesProblem(StatusCodes.Status404NotFound);

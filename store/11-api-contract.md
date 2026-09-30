@@ -176,7 +176,7 @@ The client switches on `code`, never on `title`.
 | `auth.account_locked` | 423 | staff locked; `lockedUntil` | RUL-62 (FR-53) |
 | `auth.totp_required` / `auth.totp_invalid` / `auth.totp_not_enrolled` | 401 | staff second factor | RUL-62 |
 | `otp.mobile_invalid` | 400 | not a Saudi mobile | RUL-60 |
-| `otp.rate_limited` | 429 | 3 / mobile / 15 min or 10 / IP / hour; `retryAfterSeconds` | RUL-60 |
+| `otp.rate_limited` | 429 | 3 / mobile / 15 min, 10 / IP / hour, or the store-wide daily cap (08 §6.2, H-1); `retryAfterSeconds` | RUL-60 |
 | `otp.invalid` | 400 | wrong code; `attemptsLeft` | RUL-60 |
 | `otp.expired` | 400 | no open code or older than 5 min | RUL-60 |
 | `otp.too_many_attempts` | 429 | 5 wrong attempts on this code | RUL-60 |

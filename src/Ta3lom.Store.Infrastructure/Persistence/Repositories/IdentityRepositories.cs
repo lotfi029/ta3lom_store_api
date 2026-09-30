@@ -34,6 +34,9 @@ internal sealed class OtpChallengeRepository(StoreDbContext db) : GenericReposit
         await Set.AsNoTracking().Where(o => o.IpHash == ipHash && o.CreatedAt >= since)
             .OrderBy(o => o.CreatedAt).Select(o => o.CreatedAt).ToListAsync(ct);
 
+    public Task<int> CountIssuedSinceAsync(DateTimeOffset since, CancellationToken ct = default) =>
+        Set.AsNoTracking().CountAsync(o => o.CreatedAt >= since, ct);
+
     public async Task<OtpChallenge?> LatestOpenForUpdateAsync(string mobileE164, OtpPurpose purpose, CancellationToken ct = default)
     {
         var wire = purpose.ToWire();

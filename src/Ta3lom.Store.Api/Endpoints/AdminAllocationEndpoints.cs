@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Ta3lom.Store.Api.Extensions;
 using Ta3lom.Store.Application.Abstractions.Messaging;
 using Ta3lom.Store.Application.Abstractions.Pagination;
 using Ta3lom.Store.Application.DTOs.Allocation;
@@ -15,7 +16,7 @@ internal sealed class AdminAllocationEndpoints : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/admin/allocation").WithTags("Admin allocation");
+        var group = app.MapGroup("/admin/allocation").RequireRateLimiting(RatePolicies.Admin).WithTags("Admin allocation");
         group.MapGet("/backlog", BacklogAsync).RequireAuthorization(Policies.StaffRead).Produces<IReadOnlyList<BacklogRow>>();
         group.MapGet("/products/{productId:guid}/units", UnitsAsync).RequireAuthorization(Policies.StaffBeneficiaries).Produces<PagedResult<UnitRow>>();
         group.MapGet("/products/{productId:guid}/candidates", CandidatesAsync).RequireAuthorization(Policies.StaffBeneficiaries)

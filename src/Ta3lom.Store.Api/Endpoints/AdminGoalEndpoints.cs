@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Ta3lom.Store.Api.Extensions;
 using Ta3lom.Store.Application.Abstractions.Messaging;
 using Ta3lom.Store.Application.Abstractions.Pagination;
 using Ta3lom.Store.Application.DTOs.Giving;
@@ -12,7 +13,7 @@ internal sealed class AdminGoalEndpoints : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/admin/products/{id:guid}/goal-adjustments").WithTags("Admin goal adjustments").RequireAuthorization(Policies.StaffFinance);
+        var group = app.MapGroup("/admin/products/{id:guid}/goal-adjustments").RequireRateLimiting(RatePolicies.Admin).WithTags("Admin goal adjustments").RequireAuthorization(Policies.StaffFinance);
         group.MapGet("/", ListAsync).Produces<PagedResult<GoalAdjustmentRow>>();
         group.MapPost("/", AddAsync).Produces<GoalCorrectionResponse>(StatusCodes.Status201Created).ProducesProblem(StatusCodes.Status422UnprocessableEntity);
     }

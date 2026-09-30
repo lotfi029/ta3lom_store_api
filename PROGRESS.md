@@ -1,5 +1,5 @@
 # Build progress
-Next: H-1 — code-side hardening (STRIDE walk, package scan, Production config, headers, load smoke, index tuning)
+Next: T-1 — test infrastructure (shared PG fixture with reset, FakeClock factory, sink readers, role tokens, builders, SettleViaDevTrigger)
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -49,7 +49,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-35 templates, retention, integrity | done | S-35 | 120–122 | IntegrityChecks, Retention, PruneIdempotencyKeys | ✅ tools/smoke/S-35.http | Scriban trial render; CatalogChanged → repository_dispatch (debounced) |
 | S-45 sponsor digest | done | S-45 | — | SponsorDigest; outbox SponsorDigest | ✅ tools/smoke/S-45.http | monthly, once per Riyadh month, e-mail or SMS fallback; M7 passed |
 | Close-out 7.1–7.3 | done | Close-out | all 130 answer | 12 jobs + dispatcher; 6 effects; 17/17 outbox types | ✅ tools/smoke/e2e.sh (68 checks from an empty DB) | no blocked session; 2 bugs fixed (malformed JSON → 500; create-admin in Development) |
-| H-1 code-side hardening | todo | | | | | |
+| H-1 code-side hardening | done | H-1 | — | — | ✅ store/sessions/H-1-hardening.md, tools/load/load-smoke.py | STRIDE walk: 2 gaps fixed (OTP daily cap, admin rate limit on 8 groups); packages clean; Production config verified; Permissions-Policy; load smoke passed; no index needed |
 
 ## Milestones (plan 14 §2 demos, local)
 
@@ -69,7 +69,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 - [x] 17 outbox message types of 09 §4.9 handled (all except RefundProcessed; + OrderPlaced, OrderCancelled, OrderExpired, DocumentsResendRequested, CatalogChanged, SponsorDigest)
 - [x] Integrity checks 0 rows after the full smoke scenario (tools/smoke/e2e.sh)
 - [x] Spikes P0-3 and P0-4 written up in store/spikes/
-- [ ] H-1 code-side hardening done
+- [x] H-1 code-side hardening done (store/sessions/H-1-hardening.md)
 - [x] No session left blocked
 
 ## Test phase
@@ -509,3 +509,15 @@ Done when (local smoke)
 - [x] Bugs found and fixed: an unbindable request body (malformed JSON, `{}` for a list) answered 500 → now 400
       `validation.failed` (logged at Information); `create-admin` failed under `ASPNETCORE_ENVIRONMENT=Development`
       (service validation: `IWebLinks` missing in the CLI host)
+
+### H-1 — code-side hardening
+
+- [x] STRIDE walk (08 §6.2) → store/sessions/H-1-hardening.md §1; fixed: store-wide OTP daily cap + one alert (SMS pumping),
+      `admin` rate limit on the 8 admin groups added after S-09; logged: no `orders.ip_hash` in the DDL, `store_app` grants (hosting)
+- [x] Vulnerable-package scan: none
+- [x] Production config: keys required and DEV ONLY refused; `/docs`, `/openapi`, `/dev/*` 404
+- [x] Security headers (+ `Permissions-Policy`)
+- [x] Local load smoke (`tools/load/load-smoke.py`): catalogue p95 62 ms @ ~960 req/s; 20 concurrent checkouts p95 145 ms;
+      50 simultaneous checkouts 50/50 `pending_payment`; 50 settlements in 1.07 s; integrity 0 rows
+- [x] `pg_stat_statements` review: no index needed at this volume (counter lock wait is RUL-59 by design)
+- [x] Plan 14 §15 code-side items (H-1-hardening §7)

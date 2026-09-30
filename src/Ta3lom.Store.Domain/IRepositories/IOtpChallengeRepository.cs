@@ -10,6 +10,9 @@ public interface IOtpChallengeRepository : IGenericRepository<OtpChallenge>
     /// Codes requested from one hashed IP since <paramref name="since"/>, oldest first (RUL-60: 10 per hour).
     Task<IReadOnlyList<DateTimeOffset>> IssuedForIpSinceAsync(string ipHash, DateTimeOffset since, CancellationToken ct = default);
 
+    /// All codes issued since <paramref name="since"/> (08 §6.2 daily global cap; rows live 24 h).
+    Task<int> CountIssuedSinceAsync(DateTimeOffset since, CancellationToken ct = default);
+
     /// The newest unconsumed challenge, locked `FOR UPDATE` so parallel verifies count attempts correctly.
     Task<OtpChallenge?> LatestOpenForUpdateAsync(string mobileE164, OtpPurpose purpose, CancellationToken ct = default);
 

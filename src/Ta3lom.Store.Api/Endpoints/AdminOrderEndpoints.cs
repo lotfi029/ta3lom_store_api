@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Ta3lom.Store.Api.Extensions;
 using Ta3lom.Store.Application.Abstractions.Messaging;
 using Ta3lom.Store.Application.Abstractions.Pagination;
 using Ta3lom.Store.Application.DTOs.Fulfilment;
@@ -15,7 +16,7 @@ internal sealed class AdminOrderEndpoints : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/admin/orders").WithTags("Admin orders");
+        var group = app.MapGroup("/admin/orders").RequireRateLimiting(RatePolicies.Admin).WithTags("Admin orders");
         group.MapGet("/", async (string? q, string? status, DateOnly? from, DateOnly? to, string? kind, int? page, int? pageSize,
                 [FromServices] IQueryHandler<SearchOrdersQuery, PagedResult<AdminOrderRow>> h, CancellationToken ct) =>
                 (await h.HandleAsync(new SearchOrdersQuery(q, status, from, to, kind, page ?? 1, pageSize ?? 20), ct)).ToHttp())

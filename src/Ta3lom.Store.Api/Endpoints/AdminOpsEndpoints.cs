@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Ta3lom.Store.Api.Extensions;
 using Ta3lom.Store.Application.Abstractions.Messaging;
 using Ta3lom.Store.Application.Abstractions.Pagination;
 using Ta3lom.Store.Application.DTOs.AdminOps;
@@ -13,7 +14,7 @@ internal sealed class AdminOpsEndpoints : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        var admin = app.MapGroup("/admin").WithTags("Admin operations");
+        var admin = app.MapGroup("/admin").RequireRateLimiting(RatePolicies.Admin).WithTags("Admin operations");
         admin.MapGet("/dashboard", async ([FromServices] IQueryHandler<DashboardQuery, DashboardResponse> h, CancellationToken ct) =>
             (await h.HandleAsync(new DashboardQuery(), ct)).ToHttp()).RequireAuthorization(Policies.StaffRead).Produces<DashboardResponse>();
 

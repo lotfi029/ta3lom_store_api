@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Ta3lom.Store.Api.Extensions;
 using Ta3lom.Store.Application.Abstractions.Messaging;
 using Ta3lom.Store.Application.DTOs.Giving;
 using Ta3lom.Store.Application.Features.Giving;
@@ -11,7 +12,7 @@ internal sealed class AdminZakatEndpoints : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/admin/zakat").WithTags("Admin zakat").RequireAuthorization(Policies.StaffFinance);
+        var group = app.MapGroup("/admin/zakat").RequireRateLimiting(RatePolicies.Admin).WithTags("Admin zakat").RequireAuthorization(Policies.StaffFinance);
         group.MapGet("/", LedgerAsync).Produces<ZakatLedgerResponse>();
         group.MapPost("/disbursements", VoucherAsync).Produces<ZakatEntry>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);

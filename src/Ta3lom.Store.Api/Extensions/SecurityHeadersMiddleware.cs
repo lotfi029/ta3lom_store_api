@@ -23,6 +23,7 @@ internal sealed class SecurityHeadersMiddleware(RequestDelegate next, IHostEnvir
             var headers = context.Response.Headers;
             headers.XContentTypeOptions = "nosniff";
             headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+            headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()";    // H-1: a JSON API needs none
             if (!docsExempt)
             {
                 headers.XFrameOptions = "DENY";

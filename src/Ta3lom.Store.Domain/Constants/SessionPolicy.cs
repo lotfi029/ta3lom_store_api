@@ -10,6 +10,9 @@ public static class SessionPolicy
     public const int OtpMaxPerIp = 10;
     public static readonly TimeSpan OtpRetention = TimeSpan.FromHours(24);
 
+    /// SMS-pumping guard (08 §6.2): codes issued store-wide per Riyadh day; above it requests get 429 and staff one alert.
+    public const int OtpDailyGlobalCap = 2000;
+
     public static readonly TimeSpan CustomerAccessLifetime = TimeSpan.FromMinutes(15);
     public static readonly TimeSpan CustomerRefreshLifetime = TimeSpan.FromDays(60);
     public static readonly TimeSpan StaffAccessLifetime = TimeSpan.FromMinutes(10);

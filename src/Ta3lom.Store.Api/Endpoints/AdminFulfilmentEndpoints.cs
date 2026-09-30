@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Ta3lom.Store.Api.Extensions;
 using Ta3lom.Store.Application.Abstractions.Messaging;
 using Ta3lom.Store.Application.Abstractions.Pagination;
 using Ta3lom.Store.Application.DTOs.Account;
@@ -14,7 +15,7 @@ internal sealed class AdminFulfilmentEndpoints : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        var admin = app.MapGroup("/admin").WithTags("Admin fulfilment");
+        var admin = app.MapGroup("/admin").RequireRateLimiting(RatePolicies.Admin).WithTags("Admin fulfilment");
         admin.MapPost("/download-grants/{id:guid}/reset", ResetAsync).RequireAuthorization(Policies.StaffResend)
             .Produces<DownloadGrantResponse>().ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status410Gone);
 
