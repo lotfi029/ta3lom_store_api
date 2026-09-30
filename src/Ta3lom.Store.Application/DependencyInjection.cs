@@ -23,6 +23,9 @@ public static class DependencyInjection
         services.AddValidatorsFromAssemblyContaining<ApplicationAssemblyMarker>(includeInternalTypes: true);
         services.AddHandlerDecorators();
         services.AddMapping();
+
+        // Hooks later sessions replace (S-13 registers the real cart merge with Replace()).
+        services.AddScoped<ICartMergeHook, Features.CustomerAuth.NoCartMergeHook>();
         return services;
     }
 

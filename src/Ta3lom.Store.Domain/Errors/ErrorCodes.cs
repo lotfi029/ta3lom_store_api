@@ -14,4 +14,14 @@ public static class ErrorCodes
     public const string ConcurrencyConflict = "concurrency.conflict";
     public const string HttpError = "http.error";
     public const string ServerError = "server.error";
+    public const string AccountBlocked = "auth.account_blocked";
+    public const string RefreshInvalid = "auth.refresh_invalid";
+    public const string RefreshExpired = "auth.refresh_expired";
+    public const string RefreshReused = "auth.refresh_reused";
+    public const string RefreshRace = "auth.refresh_race";
+    public const string OtpMobileInvalid = "otp.mobile_invalid";
+    public const string OtpRateLimited = "otp.rate_limited";
+    public const string OtpInvalid = "otp.invalid";
+    public const string OtpExpired = "otp.expired";
+    public const string OtpTooManyAttempts = "otp.too_many_attempts";
 }

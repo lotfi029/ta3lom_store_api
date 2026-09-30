@@ -67,4 +67,64 @@
   <data name="server.error.detail" xml:space="preserve">
     <value>حدث خطأ غير متوقع. حاول مرة أخرى لاحقًا.</value>
   </data>
+  <data name="auth.account_blocked" xml:space="preserve">
+    <value>الحساب موقوف</value>
+  </data>
+  <data name="auth.account_blocked.detail" xml:space="preserve">
+    <value>هذا الحساب موقوف ولا يمكنه تسجيل الدخول أو إتمام الشراء. تواصل مع الدعم.</value>
+  </data>
+  <data name="auth.refresh_invalid" xml:space="preserve">
+    <value>الجلسة غير صالحة</value>
+  </data>
+  <data name="auth.refresh_invalid.detail" xml:space="preserve">
+    <value>تعذّر التحقق من الجلسة. سجّل الدخول من جديد.</value>
+  </data>
+  <data name="auth.refresh_expired" xml:space="preserve">
+    <value>انتهت الجلسة</value>
+  </data>
+  <data name="auth.refresh_expired.detail" xml:space="preserve">
+    <value>انتهت صلاحية الجلسة. سجّل الدخول من جديد.</value>
+  </data>
+  <data name="auth.refresh_reused" xml:space="preserve">
+    <value>أُنهيت الجلسات</value>
+  </data>
+  <data name="auth.refresh_reused.detail" xml:space="preserve">
+    <value>استُخدم رمز جلسة قديم، فأُنهيت كل الجلسات احتياطًا. سجّل الدخول من جديد.</value>
+  </data>
+  <data name="auth.refresh_race" xml:space="preserve">
+    <value>تحديث متزامن</value>
+  </data>
+  <data name="auth.refresh_race.detail" xml:space="preserve">
+    <value>تم تحديث الجلسة للتو من نافذة أخرى. أعد المحاولة.</value>
+  </data>
+  <data name="otp.mobile_invalid" xml:space="preserve">
+    <value>رقم الجوال غير صحيح</value>
+  </data>
+  <data name="otp.mobile_invalid.detail" xml:space="preserve">
+    <value>أدخل رقم جوال سعودي بالصيغة 05XXXXXXXX.</value>
+  </data>
+  <data name="otp.rate_limited" xml:space="preserve">
+    <value>طلبات كثيرة</value>
+  </data>
+  <data name="otp.rate_limited.detail" xml:space="preserve">
+    <value>طلبت رموزًا كثيرة. انتظر قليلًا ثم أعد المحاولة.</value>
+  </data>
+  <data name="otp.invalid" xml:space="preserve">
+    <value>الرمز غير صحيح</value>
+  </data>
+  <data name="otp.invalid.detail" xml:space="preserve">
+    <value>الرمز المدخل غير صحيح. تحقّق منه وأعد المحاولة.</value>
+  </data>
+  <data name="otp.expired" xml:space="preserve">
+    <value>انتهت صلاحية الرمز</value>
+  </data>
+  <data name="otp.expired.detail" xml:space="preserve">
+    <value>لا يوجد رمز صالح. اطلب رمزًا جديدًا.</value>
+  </data>
+  <data name="otp.too_many_attempts" xml:space="preserve">
+    <value>محاولات كثيرة</value>
+  </data>
+  <data name="otp.too_many_attempts.detail" xml:space="preserve">
+    <value>تجاوزت عدد المحاولات لهذا الرمز. اطلب رمزًا جديدًا.</value>
+  </data>
 </root>

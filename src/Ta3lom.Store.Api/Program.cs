@@ -40,6 +40,8 @@ app.UseStoreRequestLogging();
 app.UseRequestLocalization(app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>().Value);
 app.UseRouting();
 app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseRateLimiter();
 
 // ── Endpoints ───────────────────────────────────────────────────────────────────────────────────

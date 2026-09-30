@@ -10,7 +10,13 @@ public interface IUnitOfWork
     /// Runs <paramref name="work"/> in one database transaction and commits it (saving changes first).
     Task ExecuteInTransactionAsync(Func<CancellationToken, Task> work, CancellationToken ct = default);
 
-    /// Same, returning the body's result; a failed <see cref="Result"/> rolls the transaction back.
+    /// Runs <paramref name="work"/> and returns its result; a failed <see cref="Result"/> rolls the transaction back unless
+    /// <paramref name="commitOnFailure"/> is set (a wrong OTP must still persist `attempts + 1`, 09 §5.7;
+    /// refresh-token reuse must still persist the family revocation, 09 §5.8).
+    Task<TResult> ExecuteInTransactionAsync<TResult>(Func<CancellationToken, Task<TResult>> work, bool commitOnFailure, CancellationToken ct = default)
+        where TResult : Result;
+
+    /// Same, rolling back on a failed result.
     Task<TResult> ExecuteInTransactionAsync<TResult>(Func<CancellationToken, Task<TResult>> work, CancellationToken ct = default)
         where TResult : Result;
 }

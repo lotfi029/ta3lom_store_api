@@ -1751,6 +1751,17 @@ Lookup is by exact mobile or email only (no browsing of the customer base).
 
 Serves FR-S83 (09 §8.3).
 
+### 10.1 Development-only routes (`/dev/*`)
+
+Mapped **only** when `ASPNETCORE_ENVIRONMENT` is `Development` or `Staging` (plan 14 §4.3); they return 404 in
+Production and are excluded from the OpenAPI document. They are test tooling, not part of the contract:
+
+| Method | Path | Purpose | Session |
+|---|---|---|---|
+| GET | `/dev/sms?count=50` | Latest messages of the SMS sink (`[{ sentAt, to, body }]`), newest first | S-04 |
+| GET | `/dev/mail` | Latest `.eml` files of the email sink | S-17 |
+| POST | `/dev/orders/{ref}/confirm-payment` | Simulated payment confirmation through `IOrderSettlement` (`{ amount?, confirmationId? }`) | S-16 |
+
 ---
 
 ## 11. TypeScript types

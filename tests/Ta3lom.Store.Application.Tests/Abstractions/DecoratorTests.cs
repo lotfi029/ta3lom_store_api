@@ -72,7 +72,8 @@ public sealed class DecoratorTests
 
         services.AddApplication();
 
-        using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
+        // ValidateOnBuild is off since S-04: the real handlers of this assembly need Infrastructure ports.
+        using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
         using var scope = provider.CreateScope();
         var handler = scope.ServiceProvider.GetRequiredService<ICommandHandler<RegisterMobile, Unit>>();
         handler.ShouldBeOfType<LoggingDecorator.CommandHandler<RegisterMobile, Unit>>();

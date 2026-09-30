@@ -3,6 +3,7 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 using Ta3lom.Store.Api.Options;
+using Ta3lom.Store.Application.Interfaces;
 using Ta3lom.Store.Domain.Errors;
 
 namespace Ta3lom.Store.Api.Extensions;
@@ -32,11 +33,43 @@ public static class RateLimitingSetup
                     QueueLimit = 0,
                     AutoReplenishment = true,
                 }));
+
+            var r = store.Value.RateLimits;
+            AddFixed(o, RatePolicies.OtpRequest, r.OtpRequest, ClientKey);
+            AddFixed(o, RatePolicies.OtpVerify, r.OtpVerify, ClientKey);
+            AddSliding(o, RatePolicies.AuthRefresh, r.AuthRefresh, ClientKey);
+            AddFixed(o, RatePolicies.StaffLogin, r.StaffLogin, ClientKey);
+            AddSliding(o, RatePolicies.Cart, r.Cart, ClientKey);
+            AddFixed(o, RatePolicies.Checkout, r.Checkout, SubjectOrClientKey);
+            AddSliding(o, RatePolicies.Me, r.Me, SubjectOrClientKey);
+            AddFixed(o, RatePolicies.Download, r.Download, SubjectOrClientKey);
+            AddSliding(o, RatePolicies.Admin, r.Admin, SubjectOrClientKey);
         });
         return services;
     }
 
-    private static string ClientKey(HttpContext http) => http.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+    private static void AddFixed(RateLimiterOptions o, string name, WindowSettings s, Func<HttpContext, string> key) =>
+        o.AddPolicy(name, http => RateLimitPartition.GetFixedWindowLimiter(key(http), _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = s.PermitLimit,
+            Window = TimeSpan.FromSeconds(s.WindowSeconds),
+            QueueLimit = 0,
+        }));
+
+    private static void AddSliding(RateLimiterOptions o, string name, WindowSettings s, Func<HttpContext, string> key) =>
+        o.AddPolicy(name, http => RateLimitPartition.GetSlidingWindowLimiter(key(http), _ => new SlidingWindowRateLimiterOptions
+        {
+            PermitLimit = s.PermitLimit,
+            Window = TimeSpan.FromSeconds(s.WindowSeconds),
+            SegmentsPerWindow = 6,
+            QueueLimit = 0,
+        }));
+
+    /// The HMAC'd client IP (09 §5.15): the raw IP never becomes a partition key held in memory.
+    private static string ClientKey(HttpContext http) =>
+        http.Connection.RemoteIpAddress is { } ip ? http.RequestServices.GetRequiredService<IPseudonymizer>().HashIp(ip.ToString()) : "unknown";
+
+    private static string SubjectOrClientKey(HttpContext http) => http.User.FindFirst("sub")?.Value ?? ClientKey(http);
 
     private static async ValueTask OnRejectedAsync(OnRejectedContext ctx, CancellationToken ct)
     {

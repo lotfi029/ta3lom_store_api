@@ -11,13 +11,17 @@ using Microsoft.Extensions.Options;
 using Quartz;
 using Ta3lom.Store.Application.Abstractions.Data;
 using Ta3lom.Store.Application.Abstractions.Time;
+using Ta3lom.Store.Application.Interfaces;
 using Ta3lom.Store.Domain.IRepositories;
 using Ta3lom.Store.Infrastructure.Persistence;
 using Ta3lom.Store.Infrastructure.Persistence.Interceptors;
 using Ta3lom.Store.Infrastructure.Persistence.Repositories;
 using Ta3lom.Store.Infrastructure.Persistence.Seeders;
 using Ta3lom.Store.Infrastructure.Services.Health;
+using Ta3lom.Store.Infrastructure.Services.Jobs;
 using Ta3lom.Store.Infrastructure.Services.Security;
+using Ta3lom.Store.Infrastructure.Services.Sms;
+using Ta3lom.Store.Infrastructure.Services.Templates;
 using Ta3lom.Store.Infrastructure.Services.Time;
 
 namespace Ta3lom.Store.Infrastructure;
@@ -37,9 +41,15 @@ public static class DependencyInjection
 
         AddPersistence(services);
         AddDataProtection(services);
+        AddRepositories(services);
+        AddSecurity(services);
+        AddMessaging(services);
 
-        // Jobs (09 §6) are registered by the sessions that own them. RAM store, in-process.
-        services.AddQuartz();
+        // Jobs (09 §6): RAM store, in-process, Riyadh cron; each session adds its jobs here.
+        services.AddQuartz(q =>
+        {
+            q.AddStoreJob<PruneOtpJob>(PruneOtpJob.Cron);
+        });
         services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
         return services;
     }
@@ -65,6 +75,50 @@ public static class DependencyInjection
         services.AddHostedService<SeedHostedService>();
 
         services.AddHealthChecks().AddCheck<PostgresHealthCheck>(PostgresHealthCheck.Name, tags: [HealthTags.Ready]);
+    }
+
+    private static void AddRepositories(IServiceCollection services)
+    {
+        services.AddScoped<ICustomerRepository, CustomerRepository>();
+        services.AddScoped<IOtpChallengeRepository, OtpChallengeRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
+    }
+
+    private static void AddSecurity(IServiceCollection services)
+    {
+        services.AddOptions<JwtOptions>().BindConfiguration(JwtOptions.Section).ValidateOnStart();
+        services.AddOptions<OtpOptions>().BindConfiguration(OtpOptions.Section).ValidateOnStart();
+        services.AddOptions<TokenKeyOptions>().BindConfiguration(TokenKeyOptions.Section).ValidateOnStart();
+        services.AddOptions<DownloadKeyOptions>().BindConfiguration(DownloadKeyOptions.Section).ValidateOnStart();
+        services.AddSingleton<KeyOptionsSetup>();
+        services.AddSingleton<IPostConfigureOptions<JwtOptions>>(sp => sp.GetRequiredService<KeyOptionsSetup>());
+        services.AddSingleton<IPostConfigureOptions<OtpOptions>>(sp => sp.GetRequiredService<KeyOptionsSetup>());
+        services.AddSingleton<IPostConfigureOptions<TokenKeyOptions>>(sp => sp.GetRequiredService<KeyOptionsSetup>());
+        services.AddSingleton<IPostConfigureOptions<DownloadKeyOptions>>(sp => sp.GetRequiredService<KeyOptionsSetup>());
+        services.AddSingleton<IValidateOptions<JwtOptions>>(sp => sp.GetRequiredService<KeyOptionsSetup>());
+        services.AddSingleton<IValidateOptions<OtpOptions>>(sp => sp.GetRequiredService<KeyOptionsSetup>());
+        services.AddSingleton<IValidateOptions<TokenKeyOptions>>(sp => sp.GetRequiredService<KeyOptionsSetup>());
+        services.AddSingleton<IValidateOptions<DownloadKeyOptions>>(sp => sp.GetRequiredService<KeyOptionsSetup>());
+
+        services.AddSingleton<IOtpHasher, OtpHasher>();
+        services.AddSingleton<IRefreshTokenCodec, RefreshTokenCodec>();
+        services.AddSingleton<IPseudonymizer, Pseudonymizer>();
+        services.AddSingleton<IAccessTokenIssuer, JwtTokenIssuer>();
+    }
+
+    /// SMS (sink unless `Store:Sms:Provider = unifonic`) and templates.
+    private static void AddMessaging(IServiceCollection services)
+    {
+        services.AddOptions<SmsOptions>().BindConfiguration(SmsOptions.Section);
+        services.AddSingleton<SinkSmsSender>();
+        services.AddSingleton<IDevSmsInbox>(sp => sp.GetRequiredService<SinkSmsSender>());
+        services.AddHttpClient<UnifonicSmsSender>(c => c.Timeout = TimeSpan.FromSeconds(10));
+        services.AddScoped<ISmsSender>(sp =>
+            string.Equals(sp.GetRequiredService<IOptions<SmsOptions>>().Value.Provider, "unifonic", StringComparison.OrdinalIgnoreCase)
+                ? sp.GetRequiredService<UnifonicSmsSender>()
+                : sp.GetRequiredService<SinkSmsSender>());
+        services.AddScoped<ITemplateRenderer, ScribanTemplateRenderer>();
     }
 
     /// Data Protection encrypts beneficiary PII (09 §5.13). Keys persist in `Store:DataProtection:KeysPath`

@@ -1,6 +1,7 @@
 namespace Ta3lom.Store.Domain.Entities.Identity;
 
-/// Table `refresh_token` (db/reference/001_store_schema.sql). State only in S-02; behaviour arrives with its session.
+/// Table `refresh_token` (09 §5.8): only the SHA-256 of the raw token is stored; rotation keeps the family,
+/// reuse of a rotated token revokes the whole family (RUL-60, FR-S28).
 public sealed class RefreshToken : AggregateRoot
 {
     public RefreshToken(TokenSubjectType subjectType, Guid subjectId, string tokenHash, Guid familyId, DateTimeOffset expiresAt, DateTimeOffset now) : base(Guid.CreateVersion7())
@@ -16,6 +17,9 @@ public sealed class RefreshToken : AggregateRoot
     private RefreshToken()
     {
     }
+
+    public static RefreshToken Issue(TokenSubjectType subjectType, Guid subjectId, string tokenHash, Guid familyId, DateTimeOffset expiresAt, string? userAgent, DateTimeOffset now) =>
+        new(subjectType, subjectId, tokenHash, familyId, expiresAt, now) { UserAgent = Truncate(userAgent) };
 
     public TokenSubjectType SubjectType { get; private set; }
 
@@ -34,4 +38,14 @@ public sealed class RefreshToken : AggregateRoot
     public DateTimeOffset CreatedAt { get; private set; }
 
     public string? UserAgent { get; private set; }
+
+    public bool IsRevoked => RevokedAt is not null;
+
+    public void Revoke(DateTimeOffset now, Guid? replacedBy = null)
+    {
+        RevokedAt ??= now;
+        ReplacedBy ??= replacedBy;
+    }
+
+    private static string? Truncate(string? userAgent) => userAgent is { Length: > 300 } ? userAgent[..300] : userAgent;
 }

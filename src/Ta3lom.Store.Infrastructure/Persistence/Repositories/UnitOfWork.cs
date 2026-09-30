@@ -23,7 +23,10 @@ internal sealed class UnitOfWork(StoreDbContext db) : IUnitOfWork
             ct);
     }
 
-    public async Task<TResult> ExecuteInTransactionAsync<TResult>(Func<CancellationToken, Task<TResult>> work, CancellationToken ct = default)
+    public Task<TResult> ExecuteInTransactionAsync<TResult>(Func<CancellationToken, Task<TResult>> work, CancellationToken ct = default)
+        where TResult : Result => ExecuteInTransactionAsync(work, commitOnFailure: false, ct);
+
+    public async Task<TResult> ExecuteInTransactionAsync<TResult>(Func<CancellationToken, Task<TResult>> work, bool commitOnFailure, CancellationToken ct = default)
         where TResult : Result
     {
         ArgumentNullException.ThrowIfNull(work);
@@ -45,7 +48,7 @@ internal sealed class UnitOfWork(StoreDbContext db) : IUnitOfWork
 
                 await using var transaction = await db.Database.BeginTransactionAsync(token);
                 var result = await work(token);
-                if (result.IsFailure)
+                if (result.IsFailure && !commitOnFailure)
                 {
                     await transaction.RollbackAsync(token);
                     db.ChangeTracker.Clear();

@@ -1,5 +1,5 @@
 # Build progress
-Next: S-03a-lite — CI workflow
+Next: S-05 — Staff identity and roles
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -22,8 +22,8 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | STEP 0 | done | — | — | — | — | baseline above |
 | S-RUN run mode | done | S-RUN | — | — | — | state files, run mode, review files copied |
 | S-02b DMS alignment | done | 2868161 | — | — | ✅ health, 404 problem, /docs, seed (tools/smoke/S-02b.http) | 172 tests green; no migration needed; OpenAPI unchanged |
-| S-03a-lite CI | todo | | — | — | | |
-| S-04 customer OTP | todo | | 16–20 | PruneOtp | | |
+| S-03a-lite CI | done | e96bd7d | — | — | n/a (workflow file; runs on push) | `.github/workflows/ci.yml` accepted by the push |
+| S-04 customer OTP | done | S-04 | 16–20 | PruneOtp | ✅ tools/smoke/S-04.http | 192 tests green; Build + Done-when ticked below |
 | S-05 staff identity | todo | | 47–52, 123–128 | — | | |
 | S-08 public catalogue | todo | | 1–7, 9 | — | | |
 | S-09 admin catalogue | todo | | 54–77, 118, 119 | — | | |
@@ -95,3 +95,25 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 
 Copied from plan 14 (Build / Tests / Done when) plus Plan-14-coverage-audit §2.2 when each session starts.
 Build and Done-when boxes are ticked in the session; Tests boxes in the test phase.
+
+### S-04 — Customer identity (OTP)
+
+Build
+- [x] Domain: `Customer` (create by mobile, block/unblock, anonymise stub), `OtpChallenge` (attempts, expiry, consume), `RefreshToken` (family, rotate, revoke)
+- [x] Application: `RequestOtp`, `VerifyOtp` (creates the customer on first login; cart-merge hook `ICartMergeHook`, no-op until S-13), `RefreshSession`, `Logout`, `LogoutAll`; Saudi mobile `05XXXXXXXX` → E.164 (`SaudiMobile`)
+- [x] Infrastructure: `OtpHasher` (HMAC-SHA256 + pepper, constant-time); `JwtTokenIssuer` (`store-customer`, 15 min); refresh rotation 60 d with reuse detection → family revoked; `SinkSmsSender` + `UnifonicSmsSender` behind `Store:Sms:Provider`; `PruneOtp` job (hourly, Riyadh)
+- [x] Api: `/v1/auth/*` group; cookie `t3s_rt` (HttpOnly, Secure, SameSite=Lax, `Path=/v1/auth`); rate policies `otp-request` (10/h per IP) and `otp-verify`, `auth-refresh`; per-mobile 3/15 min and per-IP 10/h in the handler (DB-backed); Origin check on cookie endpoints
+- [x] Audit §2.2: E.164 validator; Origin check; blocked customer can't verify (RUL-61); OTP never logged (sink logs masked mobile + length only)
+- [x] Endpoints #16–#20 mapped; `/dev/sms` (Development/Staging)
+
+Tests (test phase)
+- [ ] RUL-60: expiry, 5 wrong attempts, per-mobile and per-IP limits, hash not reversible, code never logged
+- [ ] RUL-61: blocked customer cannot verify
+- [ ] Refresh reuse revokes the family
+- [ ] Cookie has the exact attributes
+- [ ] OTP SMS is sent directly, not via the outbox (RUL-63 exception)
+
+Done when (local smoke)
+- [x] Sign-in works with the sink (request → /dev/sms → verify → session)
+- [x] The 4th code within 15 minutes returns `otp.rate_limited` (429, `retryAfterSeconds`)
+- [x] Replaying an old refresh token logs out every session of that customer (`auth.refresh_reused`, current cookie then 401)
