@@ -1,5 +1,5 @@
 # Build progress
-Next: T-2 — settlement tests (repeat 5×, parallel, amount mismatch, expiry, duplicate course, zakat, counters, only IOrderSettlement sets paid)
+Next: T-3 — pooling tests (FsCheck invariants, 100+150+120 on a 350 seat, parallel contributions)
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -77,7 +77,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | Step | Status | Commits | Notes |
 |---|---|---|---|
 | T-1 test infrastructure | done | T-1 | `ScenarioFactory` (own migrated + seeded DB per class, FakeClock, sinks, outbox/jobs on demand, minted customer/staff tokens, `SettleAsync`), `Shop` builders; 2 self-tests |
-| T-2 settlement | todo | | |
+| T-2 settlement | done | T-2 | `SettlementTests` (7) + `SettlementPathTests` (IL scan: only `OrderSettlement` calls `Order.MarkPaid`); RUL-13, 20, 29, 30, 35, 39 in ImplementedRules.txt |
 | T-3 pooling | todo | | |
 | T-4 allocation | todo | | |
 | T-5 RUL tests + ImplementedRules.txt | todo | | |
@@ -231,10 +231,10 @@ Build
 - [x] Audit §2.2: staff cancel; expiry restores the cart; retry on serialization failure; `FinanceAlert`; doc 15 updated to the code
 
 Tests (test phase)
-- [ ] Same confirmation 5× → one state change and one set of effects; two confirmations in parallel → one settlement
-- [ ] Amount mismatch → `payment_review`, no effects; confirmation after expiry → `payment_review`
-- [ ] Expiry releases stock and restores the lines; duplicate course race → no second enrolment, line flagged, `FinanceAlert` (S-19)
-- [ ] Donate with zakat → `zakat_ledger in`; goal counters once per product per order; architecture test: only `IOrderSettlement` sets `paid`
+- [x] Same confirmation 5× → one state change and one set of effects; two confirmations in parallel → one settlement
+- [x] Amount mismatch → `payment_review`, no effects; confirmation after expiry → `payment_review`
+- [x] Expiry releases stock and restores the lines; duplicate course race → no second enrolment, line flagged, `FinanceAlert` (S-19)
+- [x] Donate with zakat → `zakat_ledger in`; goal counters once per product per order; architecture test: only `IOrderSettlement` sets `paid`
 
 Done when (local smoke)
 - [x] The dev trigger settles an order → `paid`/`fulfilled`, with effects and outbox messages

@@ -32,8 +32,18 @@ public class ScenarioFactory : StoreApiFactory
 
     private static int _mobileCounter;
 
-    private readonly Lazy<string> _database = new(() => CreateDatabaseAsync().GetAwaiter().GetResult());
+    private readonly Lazy<string> _database;
     private readonly string _mailFolder = Path.Combine(Path.GetTempPath(), $"ta3lom-store-mail-{Guid.NewGuid():N}");
+
+    public ScenarioFactory()
+    {
+        _database = new(() =>
+        {
+            var cs = CreateDatabaseAsync().GetAwaiter().GetResult();
+            Clock.Set(DateTimeOffset.UtcNow.AddSeconds(1));   // after the seed: campaigns seeded with starts_at = now() have started
+            return cs;
+        });
+    }
 
     public FakeClock Clock { get; } = new(DateTimeOffset.UtcNow);
 
