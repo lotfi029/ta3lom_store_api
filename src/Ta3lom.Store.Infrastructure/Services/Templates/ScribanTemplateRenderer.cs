@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Scriban;
+using Scriban.Parsing;
 using Scriban.Runtime;
 using Ta3lom.Store.Application.Interfaces;
 using Ta3lom.Store.Domain.Enums;
@@ -33,7 +34,26 @@ internal sealed class ScribanTemplateRenderer(StoreDbContext db) : ITemplateRend
             return new TemplateSyntaxError(first.Message, first.Span.Start.Line + 1, first.Span.Start.Column + 1);
         }
 
-        // An unclosed `{{` parses as code up to the end and only fails when rendered: try once with no values.
+        // An unclosed `{{` parses as code up to the end of the text without an error: find the unmatched code block.
+        var open = (TextPosition?)null;
+        foreach (var token in new Lexer(text))
+        {
+            if (token.Type == TokenType.CodeEnter)
+            {
+                open = token.Start;
+            }
+            else if (token.Type == TokenType.CodeExit)
+            {
+                open = null;
+            }
+        }
+
+        if (open is { } start)
+        {
+            return new TemplateSyntaxError("A code block opened with '{{' is not closed with '}}'.", start.Line + 1, start.Column + 1);
+        }
+
+        // Some errors (an unknown function, a bad call) only appear when rendered: try once with no values.
         try
         {
             parsed.Render(new TemplateContext { StrictVariables = false });

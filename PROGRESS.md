@@ -131,7 +131,7 @@ Build
 
 Tests (test phase)
 - [ ] RUL-62 policy matrix (every endpoint group × every role → 200/403), extended by later sessions
-- [ ] Lockout; TOTP window ±1 step; staff and customer tokens not interchangeable (audience)
+- [x] Lockout; TOTP window ±1 step; staff and customer tokens not interchangeable (audience)
 
 Done when (local smoke)
 - [x] `create-admin` works (dev DB)
@@ -324,7 +324,7 @@ Build
 - [x] Dev: `/dev/lms/progress` feeds the internal adapter
 
 Tests (test phase)
-- [ ] idempotent over two runs; completion propagates to the unit exactly once
+- [x] idempotent over two runs; completion propagates to the unit exactly once
 
 Done when (local smoke)
 - [x] Progress and completion reach the enrolment; a second run changes nothing
@@ -366,7 +366,7 @@ Build
 
 Tests (test phase)
 - [x] a DB dump contains no plaintext name or mobile; reveal writes `audit_log`; an `admin` without `allocation_officer` cannot reveal (RUL-62)
-- [ ] import is atomic per file with a dry run; a duplicate mobile is rejected via `mobile_hash`
+- [x] import is atomic per file with a dry run; a duplicate mobile is rejected via `mobile_hash`
 
 Done when (local smoke)
 - [x] All of the above verified with curl (tools/smoke/S-24.http)
@@ -416,7 +416,7 @@ Build
 - [x] Finance `correction` adjustments (#136, #137), audited
 
 Tests (test phase)
-- [ ] after a sweep, integrity checks 4 and 6 return 0 rows; running the job twice sweeps once
+- [x] after a sweep, integrity checks 4 and 6 return 0 rows; running the job twice sweeps once
 
 Done when (local smoke)
 - [x] Verified with curl and the dev job (tools/smoke/S-42.http); integrity checks 0 rows
@@ -428,7 +428,7 @@ Build
 - [x] Disbursement voucher (#116, `staff:finance`): `zakat_ledger` `out` with a voucher reference, amount, date and purpose; rejected above the balance
 
 Tests (test phase)
-- [ ] a voucher above the balance → `zakat.balance_insufficient`; `v_zakat_balance` never negative (integrity check 7)
+- [x] a voucher above the balance → `zakat.balance_insufficient`; `v_zakat_balance` never negative (integrity check 7)
 
 Done when (local smoke)
 - [x] Verified with curl including parallel vouchers (tools/smoke/S-43.http); **M6 demo** passed (tools/smoke/M6.http)
@@ -444,7 +444,7 @@ Build
 
 Tests (test phase)
 - [ ] donor DTO never contains a beneficiary name or mobile (reflection + snapshot); export contains every personal field
-- [ ] after delete, sign-in with the old mobile creates a new empty account and the orders show "محذوف / deleted"; another customer's document → 404
+- [x] after delete, sign-in with the old mobile creates a new empty account and the orders show "محذوف / deleted"; another customer's document → 404
 
 Done when (local smoke)
 - [x] Verified with curl (tools/smoke/S-31.http); integrity checks 0 rows
@@ -457,7 +457,7 @@ Build
 - [x] Audit log query (#133); customer lookup, detail, block/unblock (#129–#132)
 
 Tests (test phase)
-- [ ] report totals equal the integrity-check sums on seeded scenarios; the CSV opens with Arabic intact (BOM present)
+- [x] report totals equal the integrity-check sums on seeded scenarios; the CSV opens with Arabic intact (BOM present)
 - [x] blocked customer → OTP verify refused (RUL-61)
 
 Done when (local smoke)
@@ -474,9 +474,9 @@ Build
 - [x] Remaining RUL-63 events verified end to end (order paid, shipped/delivered, allocation, completion, cause update, card, pool swept, low stock, integrity)
 
 Tests (test phase)
-- [ ] an invalid template is rejected at save
-- [ ] the integrity job raises an alert on a deliberately corrupted counter
-- [ ] retention scrubs `payment_event.payload` older than 18 months
+- [x] an invalid template is rejected at save
+- [x] the integrity job raises an alert on a deliberately corrupted counter
+- [x] retention scrubs `payment_event.payload` older than 18 months
 
 Done when (local smoke)
 - [x] Verified with curl (tools/smoke/S-35.http); integrity checks 0 rows
@@ -488,8 +488,8 @@ Build
 - [x] E-mail, with an SMS fallback without e-mail; skips sponsors with no change; records the last digest time (the `SponsorDigest` outbox row, kept 13 months)
 
 Tests (test phase)
-- [ ] a digest never contains beneficiary identity
-- [ ] running twice in a month sends once
+- [x] a digest never contains beneficiary identity
+- [x] running twice in a month sends once
 
 Done when (local smoke)
 - [x] Verified with curl (tools/smoke/S-45.http); **M7 demo** passed (tools/smoke/M7.http)

@@ -175,3 +175,4 @@ the owner should confirm.
 
 | Test | Rule | Fix commit |
 |---|---|---|
+| `OperationsTests.An_invalid_template_is_rejected_at_save` — a template with an unclosed `{{` (e.g. "طلبك {{ reference") was saved (200): Scriban parses it without errors and the S-35 trial render with non-strict variables renders it as empty. `ScribanTemplateRenderer.Check` now walks the lexer tokens and refuses an unmatched `CodeEnter` → 422 `template.render_failed` with line/column; valid templates still save. (The S-35 smoke's 422 came from the runtime-error branch, not from this case.) | RUL-63, FR-S77 | T-5 operations tests commit |
