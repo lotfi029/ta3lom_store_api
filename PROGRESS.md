@@ -1,5 +1,5 @@
 # Build progress
-Next: T-6 — policy matrix (every admin route × every role → 200/403, segregation of duties)
+Next: T-7 — endpoint integration (130 endpoints: success, 400, 401/403, business code; Mapster Compile; OpenAPI vs 11; redaction; /dev 404 in Production)
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -81,7 +81,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | T-3 pooling | done | T-3/T-4 | FsCheck property (100 random scenarios: balance = Σ remaining, units × seat = Σ converted = Σ funding, zakat propagation), documented example, sweep keeps zakat; parallel contributions (API) |
 | T-4 allocation | done | T-3/T-4 | RUL-47 (a)–(e) on `AllocationPolicy`; API: all-or-nothing 422, admin 403 (SoD), parallel officers distinct units, FIFO, invite + customer row (RUL-52), lapse → front of queue + SMS |
 | T-5 RUL tests + ImplementedRules.txt | done | T-5 (7 commits) | 54/54 backend rules of §13.1 tagged and listed; Cart, Checkout, Catalogue, FulfilmentAndGiving, Identity, Operations, special-host classes; 1 bug fixed (unclosed Scriban block) |
-| T-6 policy matrix | todo | | |
+| T-6 policy matrix | done | T-6 | 80 admin routes (read from the endpoint table) × 6 roles + anonymous = 560 calls: in-policy never 401/403/5xx, out-of-policy 403, anonymous 401; SoD table asserted; customer/staff tokens not interchangeable |
 | T-7 endpoint integration | todo | | |
 | T-8 documents and outputs | todo | | |
 | T-9 coverage + Build-report.md | todo | | |
@@ -130,7 +130,7 @@ Build
 - [x] Audit §2.2: lockout per FR-53; placeholder allocate route for the policy matrix → built with the matrix in T-6
 
 Tests (test phase)
-- [ ] RUL-62 policy matrix (every endpoint group × every role → 200/403), extended by later sessions
+- [x] RUL-62 policy matrix (every endpoint group × every role → 200/403), extended by later sessions
 - [x] Lockout; TOTP window ±1 step; staff and customer tokens not interchangeable (audience)
 
 Done when (local smoke)
@@ -309,7 +309,7 @@ Build
 Tests (test phase)
 - [x] RUL-30: reserve/commit/release ledger equals counters, integrity check 3 = 0 rows
 - [x] RUL-40 roll-up
-- [ ] a `fulfilment`-role user can ship, `finance` cannot; policy matrix extended
+- [x] a `fulfilment`-role user can ship, `finance` cannot; policy matrix extended
 
 Done when (local smoke)
 - [x] A print order goes preparing → shipped → delivered with SMS, and the order reaches `fulfilled` (T3-26-001015)
