@@ -439,4 +439,22 @@
   <data name="enrolment.not_active.detail" xml:space="preserve">
     <value>لا يمكن فتح هذه الدورة الآن.</value>
   </data>
+  <data name="download.limit_reached" xml:space="preserve">
+    <value>انتهت مرات التحميل</value>
+  </data>
+  <data name="download.limit_reached.detail" xml:space="preserve">
+    <value>استخدمت كل مرات التحميل المتاحة لهذا الكتاب. تواصل معنا لإعادة تفعيلها.</value>
+  </data>
+  <data name="download.revoked" xml:space="preserve">
+    <value>التحميل ملغى</value>
+  </data>
+  <data name="download.revoked.detail" xml:space="preserve">
+    <value>أُلغي حق تحميل هذا الكتاب.</value>
+  </data>
+  <data name="download.link_expired" xml:space="preserve">
+    <value>انتهت صلاحية الرابط</value>
+  </data>
+  <data name="download.link_expired.detail" xml:space="preserve">
+    <value>انتهت صلاحية رابط التحميل. اطلب رابطًا جديدًا من حسابك.</value>
+  </data>
 </root>

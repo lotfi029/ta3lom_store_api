@@ -48,3 +48,10 @@ public interface IEnrolmentRepository : IGenericRepository<Entities.Fulfilment.E
     /// `ON CONFLICT DO NOTHING`, so two settlements racing for the same course never fail). False = duplicate.
     Task<bool> TryAddLiveAsync(Entities.Fulfilment.Enrolment enrolment, CancellationToken ct = default);
 }
+
+public interface IDownloadGrantRepository : IGenericRepository<Entities.Fulfilment.DownloadGrant>
+{
+    /// RUL-41: `UPDATE … SET download_count = download_count + 1 WHERE not revoked AND download_count &lt; max_downloads`;
+    /// false when the limit is reached or the grant is revoked (two parallel downloads can never pass the limit).
+    Task<bool> TryConsumeAsync(Guid grantId, CancellationToken ct = default);
+}

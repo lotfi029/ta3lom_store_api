@@ -104,6 +104,7 @@ public static class DependencyInjection
         services.AddScoped<IGoalProgressRepository, GoalProgressRepository>();
         services.AddScoped<IDocumentNumberAllocator, DocumentNumberAllocator>();
         services.AddScoped<IEnrolmentRepository, EnrolmentRepository>();
+        services.AddScoped<IDownloadGrantRepository, DownloadGrantRepository>();
     }
 
     private static void AddSecurity(IServiceCollection services)
@@ -162,6 +163,8 @@ public static class DependencyInjection
         services.AddSingleton<ISellerProfile, SellerProfile>();
         services.AddSingleton<IDocumentRenderer, QuestPdfDocumentRenderer>();
         services.AddSingleton<IEInvoicingGateway, NoopEInvoicingGateway>();
+        services.AddSingleton<IPdfWatermarker, PdfSharpWatermarker>();
+        services.AddSingleton<IDownloadLinks, DownloadLinks>();
         services.AddOptions<Services.Lms.LmsOptions>().BindConfiguration(Services.Lms.LmsOptions.Section);
         services.AddSingleton<ILmsGateway, Services.Lms.InternalAccessLmsGateway>();
 

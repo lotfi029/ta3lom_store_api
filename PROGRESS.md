@@ -1,5 +1,5 @@
 # Build progress
-Next: S-20 — Digital downloads
+Next: S-21 — Shipments, stock and admin orders
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -34,7 +34,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-17 outbox, documents | done | S-17 | 88 | OutboxDispatcher; OrderPaid, RenderDocuments, FinanceAlert, DedicationCard (stub), DocumentsResendRequested, lifecycle no-ops | ✅ tools/smoke/S-17.http | 294 tests green; retry after provider outage verified; path-resolution bug fixed |
 | S-19 enrolment + LMS | done | S-19 | 29 | CourseEnrolmentEffect; LmsEnrol, LmsRevoke | ✅ tools/smoke/S-19.http | 296 tests green; first invoice PDF; dispatcher crash fixed |
 | P0-4 watermark spike | done | P0-4 | — | — | spikes/P0-4 → 301-page book stamped | GO: QuestPDF stamp as PdfSharp form XObject ~0.2 s/300 pages; PdfSharp text cannot shape Arabic; store/spikes/P0-4-watermark.md |
-| S-20 digital downloads | todo | | 32, 46, 94 | DigitalBookEffect | | |
+| S-20 digital downloads | done | S-20 | 32, 46, 94 | DigitalBookEffect | ✅ tools/smoke/S-20.http | 301-page book: 0.75 s first, 0.02 s cached; limit/reset/revoke verified |
 | S-21 shipments, stock, admin orders | todo | | 78–80, 85, 86, 95–99 | PrintBookEffect; ShipmentShipped/Delivered | | integrity check |
 | S-40 LMS progress sync | todo | | — | LmsProgressSync; SponsorUnitCompleted | | |
 | S-41 low stock alert | todo | | — | LowStockAlert | | |
@@ -278,3 +278,19 @@ Tests (test phase)
 Done when (local smoke)
 - [x] A paid course shows as active and launches
 - [x] With the LMS adapter forced to fail, it becomes active after recovery
+
+### S-20 — Digital downloads
+
+Build
+- [x] `DigitalBookEffect` (creates `download_grant`, `download_limit` = 5)
+- [x] `CreateDownloadLink` (#32 — signed token, 10 min, bound to the grant and customer)
+- [x] `GET /v1/downloads/{token}` (#46 — limit and revocation, watermarked PDF: buyer name, masked mobile, order reference via `PdfSharpWatermarker`, cached per grant)
+- [x] `download_log` (hashed IP); staff reset (#94)
+- [x] Audit §2.2: watermark on every page; cached per grant
+
+Tests (test phase)
+- [ ] RUL-41: 6th download refused; expired link refused; another customer's token refused; the watermark text is present on every page
+
+Done when (local smoke)
+- [x] Download works with an Arabic name
+- [x] A 300-page file streams in under the P0-4 time (0.75 s first incl. stamping, 0.02 s cached)

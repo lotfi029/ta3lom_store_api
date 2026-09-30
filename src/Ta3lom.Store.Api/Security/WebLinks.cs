@@ -14,6 +14,8 @@ internal sealed class WebLinks(IOptions<StoreOptions> options) : IWebLinks
 
     public string Card(string locale, string cardToken) => $"{Base}/{locale}/store/card/{Uri.EscapeDataString(cardToken)}";
 
+    public string ApiDownload(string token) => $"{options.Value.PublicBaseUrl.TrimEnd('/')}/v1/downloads/{Uri.EscapeDataString(token)}";
+
     public string Learn(string locale, string courseSlug, string token) =>
         $"{Base}/{locale}/learn/{Uri.EscapeDataString(courseSlug)}?t={Uri.EscapeDataString(token)}";
 }

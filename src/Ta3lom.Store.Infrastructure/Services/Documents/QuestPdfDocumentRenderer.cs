@@ -242,7 +242,7 @@ internal sealed class QuestPdfDocumentRenderer(ISellerProfile seller, IClock clo
     }
 
     /// Community licence (P0-3, REVIEW) and the embedded fonts, once per process.
-    private static void EnsureFonts()
+    internal static void EnsureFonts()
     {
         lock (FontLock)
         {

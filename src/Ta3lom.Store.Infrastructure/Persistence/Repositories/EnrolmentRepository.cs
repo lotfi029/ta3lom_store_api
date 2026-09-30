@@ -22,3 +22,12 @@ internal sealed class EnrolmentRepository(StoreDbContext db) : GenericRepository
         return inserted == 1;
     }
 }
+
+internal sealed class DownloadGrantRepository(StoreDbContext db) : GenericRepository<DownloadGrant>(db), IDownloadGrantRepository
+{
+    public async Task<bool> TryConsumeAsync(Guid grantId, CancellationToken ct = default) =>
+        await Db.Database.ExecuteSqlAsync($"""
+            UPDATE store.download_grant SET download_count = download_count + 1
+             WHERE id = {grantId} AND revoked_at IS NULL AND download_count < max_downloads
+            """, ct) == 1;
+}

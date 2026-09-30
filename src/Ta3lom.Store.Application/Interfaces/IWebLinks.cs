@@ -9,6 +9,9 @@ public interface IWebLinks
     /// `{web}/{locale}/store/card/{token}` (RUL-22).
     string Card(string locale, string cardToken);
 
+    /// `{api}/v1/downloads/{token}` (RUL-41, 11 §8.2).
+    string ApiDownload(string token);
+
     /// `{web}/{locale}/learn/{slug}?t={token}` — the internal course player (InternalAccessLmsGateway).
     string Learn(string locale, string courseSlug, string token);
 }

@@ -76,4 +76,7 @@ public static class ErrorCodes
     public const string DocumentNotFound = "document.not_found";
     public const string DocumentNotReady = "document.not_ready";
     public const string EnrolmentNotActive = "enrolment.not_active";
+    public const string DownloadLimitReached = "download.limit_reached";
+    public const string DownloadRevoked = "download.revoked";
+    public const string DownloadLinkExpired = "download.link_expired";
 }

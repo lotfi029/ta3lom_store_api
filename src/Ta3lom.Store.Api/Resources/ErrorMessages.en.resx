@@ -439,4 +439,22 @@
   <data name="enrolment.not_active.detail" xml:space="preserve">
     <value>This course cannot be opened now.</value>
   </data>
+  <data name="download.limit_reached" xml:space="preserve">
+    <value>Download limit reached</value>
+  </data>
+  <data name="download.limit_reached.detail" xml:space="preserve">
+    <value>You have used all downloads for this book. Contact us to reset them.</value>
+  </data>
+  <data name="download.revoked" xml:space="preserve">
+    <value>Download revoked</value>
+  </data>
+  <data name="download.revoked.detail" xml:space="preserve">
+    <value>The download right for this book was revoked.</value>
+  </data>
+  <data name="download.link_expired" xml:space="preserve">
+    <value>Link expired</value>
+  </data>
+  <data name="download.link_expired.detail" xml:space="preserve">
+    <value>This download link has expired. Request a new one from your account.</value>
+  </data>
 </root>

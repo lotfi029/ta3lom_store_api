@@ -8,7 +8,7 @@ internal sealed class SecurityHeadersMiddleware(RequestDelegate next, IHostEnvir
 
     /// Everything with a cookie or bearer token is never cached (11 §1.7).
     private static readonly string[] NoStorePrefixes =
-        ["/v1/me", "/v1/auth", "/v1/admin", "/v1/checkout", "/v1/cart", "/v1/orders"];
+        ["/v1/me", "/v1/auth", "/v1/admin", "/v1/checkout", "/v1/cart", "/v1/orders", "/v1/downloads"];
 
     private static readonly string[] DocsPrefixes = ["/docs", "/openapi"];
 

@@ -20,4 +20,6 @@ public sealed class DownloadLogEntry
     public DateTimeOffset At { get; private set; }
 
     public string? IpHash { get; private set; }
+
+    public static DownloadLogEntry For(Guid grantId, string? ipHash, DateTimeOffset now) => new(grantId, now) { IpHash = ipHash };
 }
