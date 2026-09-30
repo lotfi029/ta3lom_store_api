@@ -2536,6 +2536,205 @@
         }
       }
     },
+    "/v1/checkout/quote": {
+      "post": {
+        "tags": [
+          "Checkout"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/QuoteRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/checkout": {
+      "post": {
+        "tags": [
+          "Checkout"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orders/{reference}/status": {
+      "get": {
+        "tags": [
+          "Checkout"
+        ],
+        "parameters": [
+          {
+            "name": "reference",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "t",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderStatusResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/me": {
+      "get": {
+        "tags": [
+          "Admin · Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffMeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/auth/otp/request": {
       "post": {
         "tags": [
@@ -2881,35 +3080,6 @@
         "responses": {
           "204": {
             "description": "No Content"
-          }
-        }
-      }
-    },
-    "/v1/admin/me": {
-      "get": {
-        "tags": [
-          "Admin · Auth"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/StaffMeResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
           }
         }
       }
@@ -3350,6 +3520,60 @@
               {
                 "$ref": "#/components/schemas/DedicationInput"
               }
+            ]
+          }
+        }
+      },
+      "AddressInput": {
+        "required": [
+          "recipientName",
+          "recipientMobile",
+          "city",
+          "district",
+          "shortAddress",
+          "street",
+          "buildingNo",
+          "postalCode"
+        ],
+        "type": "object",
+        "properties": {
+          "recipientName": {
+            "type": "string"
+          },
+          "recipientMobile": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "district": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "shortAddress": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "street": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "buildingNo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "postalCode": {
+            "type": [
+              "null",
+              "string"
             ]
           }
         }
@@ -4976,6 +5200,173 @@
           }
         }
       },
+      "CheckoutContact": {
+        "required": [
+          "fullName",
+          "email"
+        ],
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "CheckoutPayment": {
+        "required": [
+          "paymentId",
+          "provider",
+          "method",
+          "redirectUrl",
+          "sdkPayload",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "paymentId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "provider": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "method": {
+            "type": "string"
+          },
+          "redirectUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sdkPayload": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CheckoutRequest": {
+        "required": [
+          "contact",
+          "isAnonymous",
+          "shippingAddressId",
+          "shippingAddress",
+          "saveAddress",
+          "paymentMethod",
+          "acceptTerms",
+          "expectedGrandTotal",
+          "locale"
+        ],
+        "type": "object",
+        "properties": {
+          "contact": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CheckoutContact"
+              }
+            ]
+          },
+          "isAnonymous": {
+            "type": "boolean"
+          },
+          "shippingAddressId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "shippingAddress": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AddressInput"
+              }
+            ]
+          },
+          "saveAddress": {
+            "type": "boolean"
+          },
+          "paymentMethod": {
+            "type": "string"
+          },
+          "acceptTerms": {
+            "type": "boolean"
+          },
+          "expectedGrandTotal": {
+            "type": "string"
+          },
+          "locale": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "CheckoutResponse": {
+        "required": [
+          "orderId",
+          "reference",
+          "status",
+          "grandTotal",
+          "paymentDueAt",
+          "statusToken",
+          "payment"
+        ],
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "grandTotal": {
+            "type": "string"
+          },
+          "paymentDueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "statusToken": {
+            "type": "string"
+          },
+          "payment": {
+            "$ref": "#/components/schemas/CheckoutPayment"
+          }
+        }
+      },
       "CloseOfferInput": {
         "required": [
           "sweepPool"
@@ -6281,6 +6672,127 @@
           }
         }
       },
+      "OrderPaymentStatus": {
+        "required": [
+          "status",
+          "method",
+          "failureMessage"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "method": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "failureMessage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "OrderStatusResponse": {
+        "required": [
+          "reference",
+          "status",
+          "grandTotal",
+          "paidAt",
+          "paymentDueAt",
+          "payment",
+          "canRetry",
+          "cartRestored",
+          "summary"
+        ],
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "grandTotal": {
+            "type": "string"
+          },
+          "paidAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "paymentDueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "payment": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OrderPaymentStatus"
+              }
+            ]
+          },
+          "canRetry": {
+            "type": "boolean"
+          },
+          "cartRestored": {
+            "type": "boolean"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/OrderStatusSummary"
+          }
+        }
+      },
+      "OrderStatusSummary": {
+        "required": [
+          "purchases",
+          "gifts",
+          "dedications",
+          "documents"
+        ],
+        "type": "object",
+        "properties": {
+          "purchases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatusPurchase"
+            }
+          },
+          "gifts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatusGift"
+            }
+          },
+          "dedications": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/StatusDedication"
+            }
+          },
+          "documents": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/StatusDocument"
+            }
+          }
+        }
+      },
       "OtpRequestedResponse": {
         "required": [
           "expiresInSeconds"
@@ -6878,6 +7390,120 @@
           }
         }
       },
+      "QuoteLine": {
+        "required": [
+          "lineId",
+          "status",
+          "code",
+          "previousUnitPrice",
+          "unitPrice",
+          "amount",
+          "vatAmount"
+        ],
+        "type": "object",
+        "properties": {
+          "lineId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "previousUnitPrice": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unitPrice": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "vatAmount": {
+            "type": "string"
+          }
+        }
+      },
+      "QuoteRequest": {
+        "required": [
+          "shippingAddressId"
+        ],
+        "type": "object",
+        "properties": {
+          "shippingAddressId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "QuoteResponse": {
+        "required": [
+          "lines",
+          "purchasesTotal",
+          "shippingTotal",
+          "giftsTotal",
+          "vatTotal",
+          "grandTotal",
+          "priceChanged",
+          "requiresShipping",
+          "hasGifts",
+          "valid",
+          "cartIssues"
+        ],
+        "type": "object",
+        "properties": {
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuoteLine"
+            }
+          },
+          "purchasesTotal": {
+            "type": "string"
+          },
+          "shippingTotal": {
+            "type": "string"
+          },
+          "giftsTotal": {
+            "type": "string"
+          },
+          "vatTotal": {
+            "type": "string"
+          },
+          "grandTotal": {
+            "type": "string"
+          },
+          "priceChanged": {
+            "type": "boolean"
+          },
+          "requiresShipping": {
+            "type": "boolean"
+          },
+          "hasGifts": {
+            "type": "boolean"
+          },
+          "valid": {
+            "type": "boolean"
+          },
+          "cartIssues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "RelatedProduct": {
         "required": [
           "slug",
@@ -7371,6 +7997,94 @@
           }
         }
       },
+      "StatusDedication": {
+        "required": [
+          "toName",
+          "cardUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "toName": {
+            "type": "string"
+          },
+          "cardUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "StatusDocument": {
+        "required": [
+          "kind",
+          "number",
+          "ready"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "ready": {
+            "type": "boolean"
+          }
+        }
+      },
+      "StatusGift": {
+        "required": [
+          "titleAr",
+          "titleEn",
+          "units",
+          "next"
+        ],
+        "type": "object",
+        "properties": {
+          "titleAr": {
+            "type": "string"
+          },
+          "titleEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "units": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "next": {
+            "type": "string"
+          }
+        }
+      },
+      "StatusPurchase": {
+        "required": [
+          "titleAr",
+          "titleEn",
+          "next"
+        ],
+        "type": "object",
+        "properties": {
+          "titleAr": {
+            "type": "string"
+          },
+          "titleEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "next": {
+            "type": "string"
+          }
+        }
+      },
       "TotpEnrolResponse": {
         "required": [
           "otpauthUri",
@@ -7472,10 +8186,13 @@
       "name": "Catalog"
     },
     {
-      "name": "Auth"
+      "name": "Checkout"
     },
     {
       "name": "Admin · Auth"
+    },
+    {
+      "name": "Auth"
     },
     {
       "name": "Admin · Staff"

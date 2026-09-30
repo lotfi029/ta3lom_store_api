@@ -1,6 +1,6 @@
 namespace Ta3lom.Store.Domain.Entities.Ordering;
 
-/// Table `order_line` (db/reference/001_store_schema.sql). State only in S-02; behaviour arrives with its session.
+/// Table `order_line`: an immutable snapshot of a repriced cart line (RUL-15), fulfilled by the settlement effects.
 public sealed class OrderLine : Entity
 {
     public OrderLine(Guid orderId, short lineNo, Guid productId, ProductType productType, LineKind kind, LineMode mode, int quantity, Money unitPrice, Money amount, string titleAr) : base(Guid.CreateVersion7())
@@ -60,4 +60,15 @@ public sealed class OrderLine : Entity
     public FulfilmentStatus FulfilmentStatus { get; private set; }
 
     public Money RefundedAmount { get; private set; }
+
+    internal static OrderLine FromDraft(Guid orderId, short lineNo, OrderLineDraft d) =>
+        new(orderId, lineNo, d.ProductId, d.ProductType, d.Kind, d.Mode, d.Quantity, d.UnitPrice, d.Amount, d.TitleAr)
+        {
+            BookFormatId = d.BookFormatId,
+            SponsorshipOfferId = d.Kind == LineKind.Sponsor ? d.SponsorshipOfferId : null,
+            VatRate = d.Kind == LineKind.Buy ? d.VatRate : 0m,
+            VatAmount = d.Kind == LineKind.Buy ? d.VatAmount : Money.Zero,               // ck_line_buy_vat
+            Intent = d.Kind == LineKind.Buy ? null : d.Intent,
+            TitleEn = d.TitleEn,
+        };
 }

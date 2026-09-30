@@ -91,6 +91,8 @@ public static class DependencyInjection
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<ICartRepository, CartRepository>();
+        services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<IStockRepository, StockRepository>();
     }
 
     private static void AddSecurity(IServiceCollection services)
@@ -112,6 +114,9 @@ public static class DependencyInjection
         services.AddSingleton<IOtpHasher, OtpHasher>();
         services.AddSingleton<IRefreshTokenCodec, RefreshTokenCodec>();
         services.AddSingleton<IPseudonymizer, Pseudonymizer>();
+        services.AddSingleton<IOrderStatusTokens, OrderStatusTokens>();
+        services.AddScoped<IIdempotencyStore, Services.Idempotency.IdempotencyStore>();
+        services.AddSingleton<IPaymentInitiator, Services.Payments.NullPaymentInitiator>();     // plan 14 §0: no gateway here
         services.AddSingleton<IAccessTokenIssuer, JwtTokenIssuer>();
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
         services.AddSingleton<ITotpService, TotpService>();

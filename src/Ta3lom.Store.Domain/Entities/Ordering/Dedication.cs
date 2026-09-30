@@ -1,6 +1,6 @@
 namespace Ta3lom.Store.Domain.Entities.Ordering;
 
-/// Table `dedication` (db/reference/001_store_schema.sql). State only in S-02; behaviour arrives with its session.
+/// Table `dedication` (RUL-21, RUL-22): snapshot of a gift line's dedication with its public card token.
 public sealed class Dedication : Entity
 {
     public Dedication(Guid orderLineId, string toName, string toMobile, string templateKey, string cardToken) : base(Guid.CreateVersion7())
@@ -34,4 +34,18 @@ public sealed class Dedication : Entity
     public DedicationSmsStatus SmsStatus { get; private set; }
 
     public DateTimeOffset? SentAt { get; private set; }
+
+    /// Template key of a free-text message (`dedication.template_key` is NOT NULL).
+    public const string CustomTemplateKey = "custom";
+
+    internal static Dedication ForLine(Guid orderLineId, CartDedication d) =>
+        new(orderLineId, d.ToName, d.ToMobile, d.TemplateKey ?? CustomTemplateKey, NewCardToken())
+        {
+            FromName = string.IsNullOrWhiteSpace(d.FromName) ? null : d.FromName,
+            CustomText = d.Text,
+        };
+
+    /// 22-character url-safe random token (16 random bytes, base64url without padding).
+    private static string NewCardToken() =>
+        Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 }

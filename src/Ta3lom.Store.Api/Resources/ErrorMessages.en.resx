@@ -337,4 +337,76 @@
   <data name="cart.line_not_found.detail" xml:space="preserve">
     <value>This line is not in your cart.</value>
   </data>
+  <data name="idempotency.key_required" xml:space="preserve">
+    <value>Idempotency key required</value>
+  </data>
+  <data name="idempotency.key_required.detail" xml:space="preserve">
+    <value>Send an Idempotency-Key header with this request.</value>
+  </data>
+  <data name="idempotency.key_reused" xml:space="preserve">
+    <value>Idempotency key reused</value>
+  </data>
+  <data name="idempotency.key_reused.detail" xml:space="preserve">
+    <value>This key was used for a different request. Create a new key.</value>
+  </data>
+  <data name="idempotency.in_progress" xml:space="preserve">
+    <value>Request in progress</value>
+  </data>
+  <data name="idempotency.in_progress.detail" xml:space="preserve">
+    <value>A request with the same key is still running. Try again shortly.</value>
+  </data>
+  <data name="checkout.cart_empty" xml:space="preserve">
+    <value>Cart is empty</value>
+  </data>
+  <data name="checkout.cart_empty.detail" xml:space="preserve">
+    <value>There is nothing to pay for.</value>
+  </data>
+  <data name="checkout.lines_invalid" xml:space="preserve">
+    <value>Some lines are invalid</value>
+  </data>
+  <data name="checkout.lines_invalid.detail" xml:space="preserve">
+    <value>Some cart lines are no longer available. Please review your cart.</value>
+  </data>
+  <data name="checkout.price_changed" xml:space="preserve">
+    <value>Price changed</value>
+  </data>
+  <data name="checkout.price_changed.detail" xml:space="preserve">
+    <value>The total has changed. Review the new amount before paying.</value>
+  </data>
+  <data name="checkout.out_of_stock" xml:space="preserve">
+    <value>Out of stock</value>
+  </data>
+  <data name="checkout.out_of_stock.detail" xml:space="preserve">
+    <value>The quantity is no longer available.</value>
+  </data>
+  <data name="checkout.address_required" xml:space="preserve">
+    <value>Address required</value>
+  </data>
+  <data name="checkout.address_required.detail" xml:space="preserve">
+    <value>Add a shipping address for printed books.</value>
+  </data>
+  <data name="checkout.contact_required" xml:space="preserve">
+    <value>Contact required</value>
+  </data>
+  <data name="checkout.contact_required.detail" xml:space="preserve">
+    <value>Name and email are required.</value>
+  </data>
+  <data name="checkout.terms_not_accepted" xml:space="preserve">
+    <value>Terms not accepted</value>
+  </data>
+  <data name="checkout.terms_not_accepted.detail" xml:space="preserve">
+    <value>You must accept the terms and conditions.</value>
+  </data>
+  <data name="checkout.gateway_unavailable" xml:space="preserve">
+    <value>Payment unavailable</value>
+  </data>
+  <data name="checkout.gateway_unavailable.detail" xml:space="preserve">
+    <value>The order was created but the payment page could not be opened. Please retry.</value>
+  </data>
+  <data name="order.not_found" xml:space="preserve">
+    <value>Order not found</value>
+  </data>
+  <data name="order.not_found.detail" xml:space="preserve">
+    <value>No order with this reference.</value>
+  </data>
 </root>

@@ -38,4 +38,20 @@ public sealed class CustomerAddress : Entity
     public bool IsDefault { get; private set; }
 
     public DateTimeOffset CreatedAt { get; private set; }
+
+    /// A National Address saved from checkout (`saveAddress`) or `/v1/me/addresses` (S-31).
+    public static CustomerAddress Create(Guid customerId, ShippingAddress a, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(a);
+        return new CustomerAddress(customerId, a.RecipientName, a.RecipientMobile, a.City, now)
+        {
+            District = a.District,
+            ShortAddress = a.ShortAddress,
+            Street = a.Street,
+            BuildingNo = a.BuildingNo,
+            PostalCode = a.PostalCode,
+        };
+    }
+
+    public ShippingAddress ToShippingAddress() => new(RecipientName, RecipientMobile, City, District, ShortAddress, Street, BuildingNo, PostalCode);
 }

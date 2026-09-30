@@ -36,6 +36,7 @@ public static class DependencyInjection
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentActor, HttpCurrentActor>();
         services.AddSingleton<CartCookie>();
+        services.AddSingleton<IWebLinks, WebLinks>();
         services.AddStoreAuthentication();
 
         services.AddStoreLogging();

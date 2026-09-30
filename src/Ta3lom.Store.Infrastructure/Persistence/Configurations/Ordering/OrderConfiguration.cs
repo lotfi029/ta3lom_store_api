@@ -33,7 +33,20 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         e.Property(x => x.ContactName).HasColumnType("text").IsRequired().ValueGeneratedNever();
         e.Property(x => x.ContactMobile).HasColumnType("text").IsRequired().ValueGeneratedNever();
         e.Property(x => x.ContactEmail).HasColumnType("citext").IsRequired().ValueGeneratedNever();
-        e.Property(x => x.ShippingAddress).HasColumnType("jsonb").IsRequired(false).ValueGeneratedNever();
+        e.OwnsOne(x => x.ShippingAddress, a =>                   // RUL-26 snapshot; owned JSON since S-15 (column stays jsonb)
+        {
+            a.ToJson("shipping_address");
+            a.Property(x => x.RecipientName).HasJsonPropertyName("recipientName");
+            a.Property(x => x.RecipientMobile).HasJsonPropertyName("recipientMobile");
+            a.Property(x => x.City).HasJsonPropertyName("city");
+            a.Property(x => x.District).HasJsonPropertyName("district");
+            a.Property(x => x.ShortAddress).HasJsonPropertyName("shortAddress");
+            a.Property(x => x.Street).HasJsonPropertyName("street");
+            a.Property(x => x.BuildingNo).HasJsonPropertyName("buildingNo");
+            a.Property(x => x.PostalCode).HasJsonPropertyName("postalCode");
+        });
+        e.HasMany(x => x.Lines).WithOne().HasForeignKey(l => l.OrderId).HasConstraintName("order_line_order_id_fkey").OnDelete(DeleteBehavior.Cascade);
+        e.Navigation(x => x.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
         e.Property(x => x.SourceCartId).HasColumnType("uuid").IsRequired(false).ValueGeneratedNever();
         e.Property(x => x.TermsAcceptedAt).HasColumnType("timestamp with time zone").IsRequired().ValueGeneratedNever();
         e.Property(x => x.PlacedAt).HasColumnType("timestamp with time zone").IsRequired().HasDefaultValueSql("now()").ValueGeneratedNever();

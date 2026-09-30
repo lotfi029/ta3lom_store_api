@@ -1028,6 +1028,9 @@ cookie or customer. Body optional: `{ "shippingAddressId": "…" }`.
 ```
 
 A failing line has `"status": "invalid", "code": "cart.campaign_ended"` and `valid` is false.
+Cart-level failures that belong to no line (RUL-18: more than 50 lines, total above `cart_max_total`) are
+listed in `cartIssues` (`["cart.total_exceeded"]`), also with `valid: false`; `POST /v1/checkout` returns them
+inside `checkout.lines_invalid` `lines[]` with `lineId` `00000000-…`. Without a cart: `409 checkout.cart_empty`.
 Serves FR-S31, RUL-15, RUL-24, RUL-26, RUL-27, RUL-31.
 
 ### 6.2 `POST /v1/checkout`
@@ -1075,6 +1078,12 @@ accepted only when the cart has gifts (RUL-23). `acceptTerms` must be `true`; th
 }
 ```
 
+Until the payment service exists (plan 14 §0, doc 15 §3) the backend runs `NullPaymentInitiator`: no
+`payment` row is created, `payment.paymentId`, `provider`, `redirectUrl` and `sdkPayload` are `null`, `method`
+echoes the request and `expiresAt` = `paymentDueAt`; the order stays `pending_payment` (settle it in
+Development with `POST /dev/orders/{ref}/confirm-payment`). A replayed `Idempotency-Key` returns the stored body
+with `Idempotent-Replayed: true` (no `Location`).
+
 The client redirects to `redirectUrl`; the gateway returns the browser to
 `/{locale}/store/orders/T3-26-004187/thanks?t=st_7Hq2LmX9vB4kPz1R`. That return is never proof of
 payment (RUL-33). If the gateway session fails after the order is created, the response is
@@ -1116,7 +1125,9 @@ Poll every 2 s for up to 60 s, then every 10 s.
 }
 ```
 
-With the status token only, `summary` omits `dedications` and document numbers. `status` values
+With the status token only, `summary` omits `dedications` and document numbers (both `null`). Neither a
+customer bearer nor `t` → `401 auth.unauthenticated`; another customer's order or a wrong token → `404
+order.not_found`. `status` values
 per RUL-29; `payment_failed` + `canRetry: true` shows the retry button. When the order `expired` or
 failed for good, its lines are back in the active cart (`"cartRestored": true`; products already in
 the cart are skipped, RUL-29). Errors: `order.not_found`.

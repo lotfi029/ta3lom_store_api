@@ -1,5 +1,5 @@
 # Build progress
-Next: S-15 — Checkout and order creation
+Next: S-16 — Settlement core and payment hand-off
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -28,7 +28,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-08 public catalogue | done | S-08 | 1–7, 9 | — | ✅ tools/smoke/S-08.http | seed catalogue served (15 products), ETag/304 |
 | S-09 admin catalogue | done | S-09 | 54–77, 118, 119 | — | ✅ tools/smoke/S-09.http | 230 tests green; offer/cause UTC bug + money-setting wire bug found and fixed in smoke |
 | S-13 cart | done | S-13 | 10–15 | ExpireGuestCarts | ✅ tools/smoke/S-13.http | 262 tests green; S-04 merge hook filled (RUL-17); dedication owned JSON |
-| S-15 checkout | todo | | 40–42 | — | | |
+| S-15 checkout | done | S-15 | 40–42 | — | ✅ tools/smoke/S-15.http | 286 tests green; last-copy race: one 201, one 409 |
 | S-16 settlement core | todo | | 87 + dev trigger | ExpireUnpaidOrders; gift/donate effects | | integrity check |
 | P0-3 Arabic PDF spike | todo | | — | — | | |
 | S-17 outbox, documents | todo | | 88 | OutboxDispatcher; OrderPaid, RenderDocuments, FinanceAlert, DedicationCard (stub) | | |
@@ -195,3 +195,25 @@ Tests (test phase)
 Done when (local smoke)
 - [x] A guest adds the prototype's mixed cart, signs in and keeps it (merge verified, cookie removed)
 - [x] FR-S12: a 100 SAR share of a 350 SAR seat → one `amount` line; 5 seats → a `units` line of 1,750 SAR
+
+### S-15 — Checkout and order creation
+
+Build
+- [x] `CheckoutQuote` reprices from the catalogue, per-line `ok`/`changed`/`invalid` + `priceChanged` (RUL-15, RUL-24)
+- [x] `PlaceOrder` re-validates everything (RUL-24) incl. a course in an unpaid order (RUL-13); `acceptTerms` → `terms_accepted_at`
+- [x] Shipping address only with print lines (RUL-26); `VatCalculator` (RUL-27); shipping and totals (RUL-31, `ck_order_total`)
+- [x] Reference `T3-YY-NNNNNN` from `order_ref_seq` (RUL-28); lines and dedications snapshotted; `shipping_address` owned JSON
+- [x] Print stock reserved with `FOR UPDATE` + conditional `UPDATE … WHERE available ≥ q` inside the transaction (RUL-30)
+- [x] `payment_due_at` = placed + `order_payment_timeout_min`; cart → `converted`
+- [x] After commit `IPaymentInitiator.StartAsync` (doc 15 §3) → `NullPaymentInitiator` (no redirect)
+- [x] `Idempotency-Key` filter on `idempotency_key` (09 §5.16); per-order status token (HMAC) for #42
+- [x] `GET /v1/orders/{ref}/status` by bearer or status token, never by reference alone
+- [x] Audit §2.2: `acceptTerms` → `terms_accepted_at`; address only with print; totals; `payment_due_at`; cart converted; status never by reference alone
+
+Tests (test phase)
+- [ ] RUL-24 matrix (unpublished, ended, closed offer, stock out, limit, owned course); RUL-27 350 @ 15 % → 45.65 / 304.35; RUL-28 format
+- [ ] RUL-30 two concurrent checkouts for the last copy → exactly one succeeds; RUL-31 `ck_order_total` never violated
+- [ ] Same `Idempotency-Key` + same body → same response; different body → 422; status without a token → 401/404
+
+Done when (local smoke)
+- [x] The prototype cart becomes order `T3-26-001000` in `pending_payment`, with stock reserved and a status token

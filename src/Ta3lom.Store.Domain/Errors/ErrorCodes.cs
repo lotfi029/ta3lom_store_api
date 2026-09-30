@@ -59,4 +59,16 @@ public static class ErrorCodes
     public const string CartTooManyLines = "cart.too_many_lines";
     public const string CartTotalExceeded = "cart.total_exceeded";
     public const string CartLineNotFound = "cart.line_not_found";
+    public const string IdempotencyKeyRequired = "idempotency.key_required";
+    public const string IdempotencyKeyReused = "idempotency.key_reused";
+    public const string IdempotencyInProgress = "idempotency.in_progress";
+    public const string CheckoutCartEmpty = "checkout.cart_empty";
+    public const string CheckoutLinesInvalid = "checkout.lines_invalid";
+    public const string CheckoutPriceChanged = "checkout.price_changed";
+    public const string CheckoutOutOfStock = "checkout.out_of_stock";
+    public const string CheckoutAddressRequired = "checkout.address_required";
+    public const string CheckoutContactRequired = "checkout.contact_required";
+    public const string CheckoutTermsNotAccepted = "checkout.terms_not_accepted";
+    public const string CheckoutGatewayUnavailable = "checkout.gateway_unavailable";
+    public const string OrderNotFound = "order.not_found";
 }

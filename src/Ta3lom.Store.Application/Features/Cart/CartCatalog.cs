@@ -4,6 +4,7 @@ using Ta3lom.Store.Application.Abstractions.Data;
 using Ta3lom.Store.Application.DTOs.Cart;
 using Ta3lom.Store.Application.Features.Settings;
 using Ta3lom.Store.Domain.Entities.Carts;
+using Ta3lom.Store.Domain.Services;
 using CartEntity = Ta3lom.Store.Domain.Entities.Carts.Cart;
 
 namespace Ta3lom.Store.Application.Features.Cart;
@@ -119,17 +120,16 @@ internal sealed class CartCatalog(IApplicationDbContext db, IStoreSettings setti
         return new CartBadgeResponse(summary.LineCount, summary.GrandTotal);
     }
 
-    /// Totals of 11 §3.1: shipping when a print line exists (RUL-26); VAT informational (RUL-27).
+    /// Totals of 11 §3.1: shipping when a print line exists (RUL-26); VAT informational, shipping included (RUL-26/27).
     public static CartSummaryResponse Summary(IReadOnlyList<CartLine> lines, StoreSettings s, IReadOnlySet<Guid> printFormats)
     {
         var purchases = lines.Where(l => l.Kind == LineKind.Buy).ToList();
         var purchasesTotal = purchases.Select(l => l.Amount).Sum();
         var giftsTotal = lines.Where(l => l.IsGift).Select(l => l.Amount).Sum();
-        var vat = s.VatEnabled
-            ? purchases.Select(l => Money.Round(l.Amount.Amount * s.VatRate / (100m + s.VatRate))).Sum()
-            : Money.Zero;
         var requiresShipping = purchases.Any(l => l.BookFormatId is { } f && printFormats.Contains(f));
         var shipping = requiresShipping ? s.ShippingFlatFee : Money.Zero;
+        var rate = s.VatEnabled ? s.VatRate : 0m;                                        // same figure as the checkout quote
+        var vat = purchases.Select(l => VatCalculator.Included(l.Amount, rate)).Sum() + VatCalculator.Included(shipping, rate);
         return new CartSummaryResponse(purchasesTotal.ToWire(), vat.ToWire(), shipping.ToWire(), giftsTotal.ToWire(),
             (purchasesTotal + shipping + giftsTotal).ToWire(), lines.Count, requiresShipping, lines.Any(l => l.IsGift));
     }
