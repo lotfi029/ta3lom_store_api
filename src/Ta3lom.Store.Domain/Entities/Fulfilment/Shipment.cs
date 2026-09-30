@@ -75,4 +75,8 @@ public sealed class Shipment : AggregateRoot
         UpdatedBy = actor;
         return true;
     }
+
+    /// PDPL erasure of the ordering account (database/03 §7): recipient replaced, city kept.
+    public void AnonymiseRecipient() =>
+        Address = new ShippingAddress(Ordering.Order.DeletedContact, Ordering.Order.DeletedContact, Address.City, null, null, null, null, null);
 }

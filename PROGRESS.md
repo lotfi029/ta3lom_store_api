@@ -1,5 +1,5 @@
 # Build progress
-Next: S-31 — /v1/me account
+Next: S-33 — Dashboard, reports and admin operations
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -44,7 +44,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-26 cards and cause updates | done | S-26 | 45, 81–84, 93 | DedicationCard complete; CauseUpdatePublished | ✅ tools/smoke/S-26.http | card has no amount; notify once per donor |
 | S-42 close/sweep/corrections | done | S-42 | 71 (sweep), 136, 137 | CloseCampaigns; PoolSwept | ✅ tools/smoke/S-42.http | sweeps once; zakat stays; integrity 0 rows |
 | S-43 zakat ledger | done | S-43 | 115, 116 | — | ✅ tools/smoke/S-43.http | balance guard serialised; M6 passed |
-| S-31 `/v1/me` | todo | | 21–28, 30, 31, 33–39 | — | | |
+| S-31 /v1/me | done | S-31 | 21–28, 30, 31, 33–39 | — | ✅ tools/smoke/S-31.http | delete = anonymise; donor views without beneficiary identity |
 | S-33 dashboard, reports, admin ops | todo | | 53, 117, 129–133 | — | | |
 | S-35 templates, retention, integrity | todo | | 120–122 | IntegrityChecks, Retention, PruneIdempotencyKeys | | |
 | S-45 sponsor digest | todo | | — | SponsorDigest | | |
@@ -432,3 +432,19 @@ Tests (test phase)
 
 Done when (local smoke)
 - [x] Verified with curl including parallel vouchers (tools/smoke/S-43.http); **M6 demo** passed (tools/smoke/M6.http)
+
+### S-31 — Customer account `/v1/me`
+
+Build
+- [x] Profile get/update; addresses CRUD and default (Saudi National Address validation)
+- [x] Enrolments (#28) and certificate (#30); books and downloads (#31, re-uses #32)
+- [x] Giving summary and line detail (#33, #34: unit statuses with group and region only, pooled share, sweep note, cause update timeline)
+- [x] Orders and detail (#35, #36); document download (#37, owner-checked, private file stream)
+- [x] Data export (#38); delete (#39): anonymise per database/03 §7, revoke tokens, keep financial rows
+
+Tests (test phase)
+- [ ] donor DTO never contains a beneficiary name or mobile (reflection + snapshot); export contains every personal field
+- [ ] after delete, sign-in with the old mobile creates a new empty account and the orders show "محذوف / deleted"; another customer's document → 404
+
+Done when (local smoke)
+- [x] Verified with curl (tools/smoke/S-31.http); integrity checks 0 rows

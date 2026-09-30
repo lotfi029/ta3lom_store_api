@@ -189,6 +189,22 @@ public sealed class Order : AggregateRoot
         }
     }
 
+    /// Contact text left on the orders of a deleted account (database/03 §7).
+    public const string DeletedContact = "محذوف / deleted";
+
+    /// PDPL erasure (database/03 §7): the financial record stays, the person does not — contact and recipient replaced;
+    /// the city is kept for the shipping record.
+    public void AnonymiseContact()
+    {
+        ContactName = DeletedContact;
+        ContactMobile = DeletedContact;
+        ContactEmail = DeletedContact;
+        if (ShippingAddress is { } a)
+        {
+            ShippingAddress = new ShippingAddress(DeletedContact, DeletedContact, a.City, null, null, null, null, null);
+        }
+    }
+
     public bool CanBeCancelled => Status is OrderStatus.PendingPayment or OrderStatus.PaymentFailed;
 
     /// RUL-29: staff cancel, only from `pending_payment` / `payment_failed`. The caller releases the stock (RUL-30).

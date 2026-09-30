@@ -1,0 +1,74 @@
+# S-31 — Customer account /v1/me (#21–#28, #30, #31, #33–#39). Result 30 Sep 2026 (local, Development): all as expected.
+# every route: Cache-Control no-store; no token → 401; another customer's id/reference/number → 404
+# #21 profile · #22 PATCH name/email/locale/marketing + pdplConsent → pdplConsentAt set; locale "fr" + bad e-mail → 400
+# #24 first address → default (shortAddress upper-cased QBRA2929, mobile shown 05…) · #27 set default (the other loses it,
+#   ux_address_default) · #25 update · #26 delete the default → the newest remaining becomes default · 11th → 400 (10 max)
+#   bad mobile / empty city / short address / postal code → 400 · other customer PUT/DELETE/default → 404
+# #28 enrolments (product, source, status, canLaunch) · #30 active → 409 enrolment.not_active; completed with certificate
+#   T3C-2026-0200 → 302 {web}/ar/store/certificates/T3C-2026-0200 (dev DB, reset afterwards); other customer → 404
+# #31 books: download grant (1 of 5) + delivered shipment with its print line
+# #35 orders (summary: lineCount, hasInvoice, hasReceipt) · #36 detail · #37 INV-2026-000008 → application/pdf; another
+#   customer → 404 document.not_found; lower-case number accepted
+# #33 giving (0551110060): totals {given 700.00, unitsSponsored 2}, units {awaiting 0, allocated 1, completed 1}, group labels
+#   · M6 donor: pooled {converted 0.00, remaining 0.00, seatPrice 450.00, shareOfSeat 0.22, sweptToFundAt}, dedication card
+#   · 0551110601: donate line with latestUpdate and dedication
+# #34 line detail: U-1 completed / U-2 allocated with region القصيم and group only, timeline incl. allocated → lapsed →
+#   awaiting_allocation → allocated; donate line → the cause's updates; the JSON has no beneficiary code, name or mobile
+# #38 export → attachment ta3lom-store-export.json {exportedAt, profile, addresses (10), orders (1), giving, enrolments,
+#   downloadGrants, dedicationsSent}
+# #39 DELETE {} → 400 (confirm) · {confirm:true} → 204, t3s_rt cleared; customer anonymised (+9665… placeholder, name/e-mail
+#   null), addresses deleted, refresh tokens revoked, orders' contact + shipping recipient and the shipment recipient →
+#   "محذوف / deleted" (city kept), purchased enrolment revoked + LmsRevoke; sign in again with 0551110050 → a new empty
+#   account (no orders). The old access token keeps working until it expires (≤ 15 min, stateless JWT)
+# integrity checks → 10 × 0 rows
+@base = http://localhost:5080/v1/me
+@token = <customer access token>
+
+### #21 Profile
+GET {{base}}
+Authorization: Bearer {{token}}
+
+### #22 Update profile
+PATCH {{base}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"fullName":"نورة العتيبي","email":"noura@example.com","locale":"ar","marketingOptIn":true,"pdplConsent":true}
+
+### #23 / #24 Addresses
+POST {{base}}/addresses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"recipientName":"نورة العتيبي","recipientMobile":"0551234567","city":"بريدة","district":"الريان","shortAddress":"QBRA2929","street":"طريق الملك عبدالعزيز","buildingNo":"8123","postalCode":"52361"}
+
+### #27 Default
+POST {{base}}/addresses/{{addressId}}/default
+Authorization: Bearer {{token}}
+
+### #28 Enrolments / #30 certificate
+GET {{base}}/enrolments/{{enrolmentId}}/certificate
+Authorization: Bearer {{token}}
+
+### #31 Books
+GET {{base}}/books
+Authorization: Bearer {{token}}
+
+### #33 Giving / #34 line
+GET {{base}}/giving/lines/{{orderLineId}}
+Authorization: Bearer {{token}}
+
+### #35 Orders / #36 detail / #37 document
+GET {{base}}/documents/INV-2026-000008
+Authorization: Bearer {{token}}
+
+### #38 Export
+GET {{base}}/export
+Authorization: Bearer {{token}}
+
+### #39 Delete
+DELETE {{base}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"confirm":true}

@@ -4866,6 +4866,270 @@
         }
       }
     },
+    "/v1/me": {
+      "get": {
+        "tags": [
+          "Me"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Me"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Me"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DeleteAccountRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/v1/me/addresses": {
+      "get": {
+        "tags": [
+          "Me"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AddressResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Me"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddressInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/addresses/{id}": {
+      "put": {
+        "tags": [
+          "Me"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddressInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Me"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/addresses/{id}/default": {
+      "post": {
+        "tags": [
+          "Me"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/enrolments": {
+      "get": {
+        "tags": [
+          "Me"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EnrolmentItem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/me/enrolments/{id}/launch": {
       "post": {
         "tags": [
@@ -4909,6 +5173,68 @@
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/enrolments/{id}/certificate": {
+      "get": {
+        "tags": [
+          "Me"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Found"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/books": {
+      "get": {
+        "tags": [
+          "Me"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BooksResponse"
                 }
               }
             }
@@ -4969,6 +5295,240 @@
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/giving": {
+      "get": {
+        "tags": [
+          "Me"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GivingResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/giving/lines/{orderLineId}": {
+      "get": {
+        "tags": [
+          "Me"
+        ],
+        "parameters": [
+          {
+            "name": "orderLineId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GivingLineDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/orders": {
+      "get": {
+        "tags": [
+          "Me"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedResultOfOrderSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/orders/{reference}": {
+      "get": {
+        "tags": [
+          "Me"
+        ],
+        "parameters": [
+          {
+            "name": "reference",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDetailResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/documents/{number}": {
+      "get": {
+        "tags": [
+          "Me"
+        ],
+        "parameters": [
+          {
+            "name": "number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/export": {
+      "get": {
+        "tags": [
+          "Me"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeExport"
                 }
               }
             }
@@ -5635,6 +6195,69 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "AddressResponse": {
+        "required": [
+          "id",
+          "recipientName",
+          "recipientMobile",
+          "city",
+          "district",
+          "shortAddress",
+          "street",
+          "buildingNo",
+          "postalCode",
+          "isDefault"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recipientName": {
+            "type": "string"
+          },
+          "recipientMobile": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "district": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "shortAddress": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "street": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "buildingNo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "postalCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isDefault": {
+            "type": "boolean"
           }
         }
       },
@@ -7450,6 +8073,59 @@
           }
         }
       },
+      "BookDownloadItem": {
+        "required": [
+          "grantId",
+          "slug",
+          "titleAr",
+          "titleEn",
+          "orderRef",
+          "downloadCount",
+          "maxDownloads",
+          "revoked"
+        ],
+        "type": "object",
+        "properties": {
+          "grantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "titleAr": {
+            "type": "string"
+          },
+          "titleEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "orderRef": {
+            "type": "string"
+          },
+          "downloadCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "maxDownloads": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "revoked": {
+            "type": "boolean"
+          }
+        }
+      },
       "BookFormatInput": {
         "required": [
           "kind",
@@ -7555,6 +8231,106 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "BookShipmentItem": {
+        "required": [
+          "orderRef",
+          "status",
+          "carrier",
+          "trackingNo",
+          "shippedAt",
+          "deliveredAt",
+          "lines"
+        ],
+        "type": "object",
+        "properties": {
+          "orderRef": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "carrier": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "trackingNo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "shippedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "deliveredAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookShipmentLine"
+            }
+          }
+        }
+      },
+      "BookShipmentLine": {
+        "required": [
+          "titleAr",
+          "titleEn",
+          "quantity"
+        ],
+        "type": "object",
+        "properties": {
+          "titleAr": {
+            "type": "string"
+          },
+          "titleEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "quantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "BooksResponse": {
+        "required": [
+          "downloads",
+          "shipments"
+        ],
+        "type": "object",
+        "properties": {
+          "downloads": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookDownloadItem"
+            }
+          },
+          "shipments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookShipmentItem"
+            }
           }
         }
       },
@@ -9091,6 +9867,17 @@
           }
         }
       },
+      "DeleteAccountRequest": {
+        "required": [
+          "confirm"
+        ],
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "boolean"
+          }
+        }
+      },
       "DeliverRequest": {
         "required": [
           "deliveredOn"
@@ -9203,6 +9990,157 @@
           }
         }
       },
+      "EnrolmentItem": {
+        "required": [
+          "id",
+          "product",
+          "source",
+          "status",
+          "progressPct",
+          "grantedAt",
+          "expiresAt",
+          "startedAt",
+          "completedAt",
+          "certificateNo",
+          "canLaunch"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "product": {
+            "$ref": "#/components/schemas/EnrolmentProduct"
+          },
+          "source": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "progressPct": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "grantedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "startedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "certificateNo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "canLaunch": {
+            "type": "boolean"
+          }
+        }
+      },
+      "EnrolmentProduct": {
+        "required": [
+          "slug",
+          "titleAr",
+          "titleEn",
+          "coverUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "titleAr": {
+            "type": "string"
+          },
+          "titleEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "coverUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ExportDedication": {
+        "required": [
+          "orderRef",
+          "toName",
+          "toMobile",
+          "fromName",
+          "templateKey",
+          "text",
+          "smsStatus",
+          "sentAt"
+        ],
+        "type": "object",
+        "properties": {
+          "orderRef": {
+            "type": "string"
+          },
+          "toName": {
+            "type": "string"
+          },
+          "toMobile": {
+            "type": "string"
+          },
+          "fromName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "templateKey": {
+            "type": "string"
+          },
+          "text": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "smsStatus": {
+            "type": "string"
+          },
+          "sentAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "FormatPrice": {
         "required": [
           "kind",
@@ -9289,6 +10227,482 @@
           "at": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "GivingDedication": {
+        "required": [
+          "toName",
+          "cardUrl",
+          "smsStatus"
+        ],
+        "type": "object",
+        "properties": {
+          "toName": {
+            "type": "string"
+          },
+          "cardUrl": {
+            "type": "string"
+          },
+          "smsStatus": {
+            "type": "string"
+          }
+        }
+      },
+      "GivingItem": {
+        "required": [
+          "orderLineId",
+          "orderRef",
+          "paidAt",
+          "kind",
+          "mode",
+          "slug",
+          "titleAr",
+          "titleEn",
+          "quantity",
+          "amount",
+          "intent",
+          "units",
+          "groupLabelAr",
+          "groupLabelEn",
+          "pooled",
+          "latestUpdate",
+          "dedication"
+        ],
+        "type": "object",
+        "properties": {
+          "orderLineId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderRef": {
+            "type": "string"
+          },
+          "paidAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "titleAr": {
+            "type": "string"
+          },
+          "titleEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "quantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "intent": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "units": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GivingUnits"
+              }
+            ]
+          },
+          "groupLabelAr": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "groupLabelEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pooled": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GivingPooled"
+              }
+            ]
+          },
+          "latestUpdate": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GivingLatestUpdate"
+              }
+            ]
+          },
+          "dedication": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GivingDedication"
+              }
+            ]
+          }
+        }
+      },
+      "GivingLatestUpdate": {
+        "required": [
+          "titleAr",
+          "titleEn",
+          "occurredOn"
+        ],
+        "type": "object",
+        "properties": {
+          "titleAr": {
+            "type": "string"
+          },
+          "titleEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "occurredOn": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "GivingLineDetail": {
+        "required": [
+          "orderLineId",
+          "kind",
+          "units",
+          "updates"
+        ],
+        "type": "object",
+        "properties": {
+          "orderLineId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "units": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GivingUnitView"
+            }
+          },
+          "updates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GivingUpdateView"
+            }
+          }
+        }
+      },
+      "GivingPooled": {
+        "required": [
+          "converted",
+          "remaining",
+          "seatPrice",
+          "shareOfSeat",
+          "sweptToFundAt"
+        ],
+        "type": "object",
+        "properties": {
+          "converted": {
+            "type": "string"
+          },
+          "remaining": {
+            "type": "string"
+          },
+          "seatPrice": {
+            "type": "string"
+          },
+          "shareOfSeat": {
+            "type": "string"
+          },
+          "sweptToFundAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "GivingResponse": {
+        "required": [
+          "totals",
+          "items",
+          "total",
+          "page",
+          "pageSize"
+        ],
+        "type": "object",
+        "properties": {
+          "totals": {
+            "$ref": "#/components/schemas/GivingTotals"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GivingItem"
+            }
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "GivingTotals": {
+        "required": [
+          "given",
+          "zakat",
+          "unitsSponsored",
+          "pooledContributions",
+          "dedications"
+        ],
+        "type": "object",
+        "properties": {
+          "given": {
+            "type": "string"
+          },
+          "zakat": {
+            "type": "string"
+          },
+          "unitsSponsored": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pooledContributions": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "dedications": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "GivingUnits": {
+        "required": [
+          "awaitingAllocation",
+          "allocated",
+          "completed"
+        ],
+        "type": "object",
+        "properties": {
+          "awaitingAllocation": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "allocated": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "completed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "GivingUnitStep": {
+        "required": [
+          "status",
+          "at"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "GivingUnitView": {
+        "required": [
+          "ref",
+          "status",
+          "region",
+          "groupLabelAr",
+          "fundedAt",
+          "allocatedAt",
+          "completedAt",
+          "share",
+          "timeline"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "region": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "groupLabelAr": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fundedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "allocatedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "share": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "timeline": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GivingUnitStep"
+            }
+          }
+        }
+      },
+      "GivingUpdateView": {
+        "required": [
+          "titleAr",
+          "titleEn",
+          "bodyAr",
+          "bodyEn",
+          "unitsDelivered",
+          "occurredOn"
+        ],
+        "type": "object",
+        "properties": {
+          "titleAr": {
+            "type": "string"
+          },
+          "titleEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bodyAr": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bodyEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unitsDelivered": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "occurredOn": {
+            "type": "string",
+            "format": "date"
           }
         }
       },
@@ -10103,6 +11517,64 @@
           }
         }
       },
+      "MeExport": {
+        "required": [
+          "exportedAt",
+          "profile",
+          "addresses",
+          "orders",
+          "giving",
+          "enrolments",
+          "downloadGrants",
+          "dedicationsSent"
+        ],
+        "type": "object",
+        "properties": {
+          "exportedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/ProfileResponse"
+          },
+          "addresses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AddressResponse"
+            }
+          },
+          "orders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderDetailResponse"
+            }
+          },
+          "giving": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GivingItem"
+            }
+          },
+          "enrolments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EnrolmentItem"
+            }
+          },
+          "downloadGrants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookDownloadItem"
+            }
+          },
+          "dedicationsSent": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportDedication"
+            }
+          }
+        }
+      },
       "OfferInput": {
         "required": [
           "seatPrice",
@@ -10289,6 +11761,94 @@
           }
         }
       },
+      "OrderDetailResponse": {
+        "required": [
+          "reference",
+          "status",
+          "placedAt",
+          "paidAt",
+          "purchasesTotal",
+          "shippingTotal",
+          "giftsTotal",
+          "vatTotal",
+          "grandTotal",
+          "refundedTotal",
+          "isAnonymous",
+          "lines",
+          "payments",
+          "documents",
+          "shipment"
+        ],
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "placedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "paidAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "purchasesTotal": {
+            "type": "string"
+          },
+          "shippingTotal": {
+            "type": "string"
+          },
+          "giftsTotal": {
+            "type": "string"
+          },
+          "vatTotal": {
+            "type": "string"
+          },
+          "grandTotal": {
+            "type": "string"
+          },
+          "refundedTotal": {
+            "type": "string"
+          },
+          "isAnonymous": {
+            "type": "boolean"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderLineResponse"
+            }
+          },
+          "payments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderPaymentItem"
+            }
+          },
+          "documents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderDocumentItem"
+            }
+          },
+          "shipment": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OrderShipmentInfo"
+              }
+            ]
+          }
+        }
+      },
       "OrderDocumentItem": {
         "required": [
           "kind",
@@ -10414,6 +11974,33 @@
                 "$ref": "#/components/schemas/OrderLineDedication"
               }
             ]
+          }
+        }
+      },
+      "OrderPaymentItem": {
+        "required": [
+          "method",
+          "status",
+          "amount",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "method": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -10560,6 +12147,47 @@
             "items": {
               "$ref": "#/components/schemas/StatusDocument"
             }
+          }
+        }
+      },
+      "OrderSummary": {
+        "required": [
+          "reference",
+          "placedAt",
+          "status",
+          "grandTotal",
+          "lineCount",
+          "hasInvoice",
+          "hasReceipt"
+        ],
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string"
+          },
+          "placedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "grandTotal": {
+            "type": "string"
+          },
+          "lineCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "hasInvoice": {
+            "type": "boolean"
+          },
+          "hasReceipt": {
+            "type": "boolean"
           }
         }
       },
@@ -10838,6 +12466,47 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/MediaAssetResponse"
+            }
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "PagedResultOfOrderSummary": {
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderSummary"
             }
           },
           "total": {
@@ -11485,6 +13154,61 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "ProfileResponse": {
+        "required": [
+          "id",
+          "mobile",
+          "fullName",
+          "email",
+          "locale",
+          "anonymousDefault",
+          "marketingOptIn",
+          "pdplConsentAt",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mobile": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "locale": {
+            "type": "string"
+          },
+          "anonymousDefault": {
+            "type": "boolean"
+          },
+          "marketingOptIn": {
+            "type": "boolean"
+          },
+          "pdplConsentAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -12622,6 +14346,55 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "UpdateProfileRequest": {
+        "required": [
+          "fullName",
+          "email",
+          "locale",
+          "anonymousDefault",
+          "marketingOptIn",
+          "pdplConsent"
+        ],
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "locale": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "anonymousDefault": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "marketingOptIn": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "pdplConsent": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },

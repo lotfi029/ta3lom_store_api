@@ -14,6 +14,11 @@ internal sealed class NotificationDispatch(
     public async Task SendOnceAsync(OutboxEnvelope envelope, MessageChannel channel, string recipient, string templateKey, string locale,
         object model, Guid? relatedOrderId, CancellationToken ct, IReadOnlyList<EmailAttachment>? attachments = null, string? storedRecipient = null)
     {
+        if (channel == MessageChannel.Sms ? !SaudiMobile.IsValid(recipient) : !recipient.Contains('@', StringComparison.Ordinal))
+        {
+            return;                                                                         // e.g. "محذوف / deleted" after an account deletion
+        }
+
         // `storedRecipient`: what `notification.recipient` keeps when the address itself is protected (beneficiary mobiles, PDPL).
         var row = await notifications.TryClaimAsync(envelope.Id, channel, storedRecipient ?? recipient, templateKey, locale, relatedOrderId, clock.UtcNow, ct);
         if (row is null)

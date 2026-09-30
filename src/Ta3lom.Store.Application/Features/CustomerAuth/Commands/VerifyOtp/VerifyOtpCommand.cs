@@ -53,6 +53,13 @@ internal sealed class VerifyOtpCommandHandler(
                 challenge.Consume(now);
 
                 var customer = await customers.FindByMobileAsync(mobile, token);
+                if (customer is { IsAnonymised: true })
+                {
+                    customer.ReleaseMobile(now);                                                // a deleted account never signs in again (RUL-61)
+                    await uow.SaveChangesAsync(token);
+                    customer = null;
+                }
+
                 var isNew = customer is null;
                 if (customer is null)
                 {

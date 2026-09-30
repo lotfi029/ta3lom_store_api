@@ -1004,6 +1004,20 @@ Beneficiary data is never included. Serves FR-S27, RUL-61 (database/03 §7).
 tokens revoked, `status = 'anonymised'`), clears the refresh cookie. Financial records are kept
 (RUL-61). Serves FR-S27. Whether deletion needs a fresh OTP is OP-4.
 
+As built (S-31): the mobile placeholder is a random `+9665XXXXXXXX` (the column CHECK needs the E.164 shape; `status =
+anonymised` marks it). If a real person later signs in with a number an anonymised account happens to hold, that account is
+moved to another placeholder first. Orders keep `contact_*` = "محذوف / deleted" and the recipient of `shipping_address` and
+`shipment.address` is replaced the same way (city kept). Messages to such contacts are skipped. Access tokens already issued
+stay valid until they expire (≤ 15 min).
+
+As built (S-31) for §5.1–§5.11: addresses are limited to 10; the first is the default; deleting the default promotes the
+newest; `shortAddress` is accepted in either case and stored upper-case. `GET …/certificate` redirects to
+`{web}/{locale}/store/certificates/{certificateNo}` (`409 enrolment.not_active` before completion, `404` without a number).
+`GivingItem` carries `units`, `groupLabelAr/En`, `pooled`, `latestUpdate` and `dedication` (null when not applicable);
+`awaitingAllocation` counts lapsed seats being re-allocated; `shareOfSeat` = contribution ÷ seat price. `GivingLineDetail`
+units add `share` (this line's part of a pooled seat). Document numbers are matched case-insensitively. The export is
+`{ exportedAt, profile, addresses, orders (OrderDetail), giving, enrolments, downloadGrants, dedicationsSent }`.
+
 ---
 
 ## 6. Checkout and orders

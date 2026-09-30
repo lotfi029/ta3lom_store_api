@@ -1,6 +1,7 @@
 namespace Ta3lom.Store.Domain.Entities.Identity;
 
-/// Table `customer_address` (db/reference/001_store_schema.sql). State only in S-02; behaviour arrives with its session.
+/// Table `customer_address` (FR-S22, RUL-26): a saved Saudi National Address; at most one default per customer
+/// (`ux_address_default`).
 public sealed class CustomerAddress : Entity
 {
     public CustomerAddress(Guid customerId, string recipientName, string recipientMobile, string city, DateTimeOffset now) : base(Guid.CreateVersion7())
@@ -52,6 +53,21 @@ public sealed class CustomerAddress : Entity
             PostalCode = a.PostalCode,
         };
     }
+
+    public void Update(ShippingAddress a)
+    {
+        ArgumentNullException.ThrowIfNull(a);
+        RecipientName = Guard.NotNull(a.RecipientName);
+        RecipientMobile = Guard.NotNull(a.RecipientMobile);
+        City = Guard.NotNull(a.City);
+        District = a.District;
+        ShortAddress = a.ShortAddress;
+        Street = a.Street;
+        BuildingNo = a.BuildingNo;
+        PostalCode = a.PostalCode;
+    }
+
+    public void SetDefault(bool isDefault) => IsDefault = isDefault;
 
     public ShippingAddress ToShippingAddress() => new(RecipientName, RecipientMobile, City, District, ShortAddress, Street, BuildingNo, PostalCode);
 }

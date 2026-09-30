@@ -20,4 +20,7 @@ public interface IWebLinks
 
     /// `{web}/{locale}/store/products/{slug}` (cause update SMS, RUL-54).
     string Product(string locale, string slug);
+
+    /// `{web}/{locale}/store/certificates/{no}` — where a course certificate is shown (OP-3: LMS or store; #30 redirects).
+    string Certificate(string locale, string certificateNo);
 }

@@ -98,15 +98,29 @@ public sealed class Customer : AggregateRoot
         UpdatedAt = now;
     }
 
-    /// PDPL erasure (database/03 §7, S-31): personal fields are cleared, financial rows keep the id.
-    /// The mobile is replaced by a unique non-routable placeholder so the unique login is released.
+    public bool IsAnonymised => Status == CustomerStatus.Anonymised;
+
+    /// PDPL erasure (database/03 §7, S-31): personal fields are cleared, financial rows keep the id. The mobile becomes a
+    /// random `+9665` placeholder (the DDL CHECK needs the E.164 shape; `status = anonymised` marks it), so the login is freed.
     public void Anonymise(DateTimeOffset now)
     {
         Status = CustomerStatus.Anonymised;
         FullName = null;
         Email = null;
-        Mobile = "anonymised:" + Id.ToString("N");
+        Mobile = RandomPlaceholderMobile();
         MarketingOptIn = false;
+        AnonymousDefault = false;
         UpdatedAt = now;
     }
+
+    /// A real person signed in with the placeholder an anonymised account happened to receive: move the placeholder away.
+    public void ReleaseMobile(DateTimeOffset now)
+    {
+        Guard.Against(!IsAnonymised, "customer.not_anonymised");
+        Mobile = RandomPlaceholderMobile();
+        UpdatedAt = now;
+    }
+
+    private static string RandomPlaceholderMobile() =>
+        "+9665" + System.Security.Cryptography.RandomNumberGenerator.GetInt32(0, 100_000_000).ToString("D8", System.Globalization.CultureInfo.InvariantCulture);
 }
