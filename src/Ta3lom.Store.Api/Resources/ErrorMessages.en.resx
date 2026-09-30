@@ -433,4 +433,10 @@
   <data name="document.not_ready.detail" xml:space="preserve">
     <value>The document is still being prepared. Try again shortly.</value>
   </data>
+  <data name="enrolment.not_active" xml:space="preserve">
+    <value>Course not available</value>
+  </data>
+  <data name="enrolment.not_active.detail" xml:space="preserve">
+    <value>This course cannot be opened now.</value>
+  </data>
 </root>

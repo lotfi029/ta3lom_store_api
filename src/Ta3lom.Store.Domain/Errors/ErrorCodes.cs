@@ -75,4 +75,5 @@ public static class ErrorCodes
     public const string OrderCancelNotAllowed = "order.cancel_not_allowed";
     public const string DocumentNotFound = "document.not_found";
     public const string DocumentNotReady = "document.not_ready";
+    public const string EnrolmentNotActive = "enrolment.not_active";
 }

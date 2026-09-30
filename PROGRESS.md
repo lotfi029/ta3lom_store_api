@@ -1,5 +1,5 @@
 # Build progress
-Next: S-19 — Enrolment and LMS access
+Next: P0-4 — PdfSharp watermark spike (then S-20)
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -32,7 +32,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-16 settlement core | done | S-16 | 87 + dev trigger | ExpireUnpaidOrders; DonateLineEffect + ledger | ✅ tools/smoke/S-16.http | 290 tests green; integrity checks 0 rows; doc 15 updated |
 | P0-3 Arabic PDF spike | done | P0-3 | — | — | spikes/P0-3 → 2 PDFs | GO: shaping, table, QR ok; LRI/PDI isolates for phones/English; store/spikes/P0-3-arabic-pdf.md |
 | S-17 outbox, documents | done | S-17 | 88 | OutboxDispatcher; OrderPaid, RenderDocuments, FinanceAlert, DedicationCard (stub), DocumentsResendRequested, lifecycle no-ops | ✅ tools/smoke/S-17.http | 294 tests green; retry after provider outage verified; path-resolution bug fixed |
-| S-19 enrolment + LMS | todo | | 29 | CourseEnrolmentEffect; LmsEnrol | | |
+| S-19 enrolment + LMS | done | S-19 | 29 | CourseEnrolmentEffect; LmsEnrol, LmsRevoke | ✅ tools/smoke/S-19.http | 296 tests green; first invoice PDF; dispatcher crash fixed |
 | P0-4 watermark spike | todo | | — | — | | |
 | S-20 digital downloads | todo | | 32, 46, 94 | DigitalBookEffect | | |
 | S-21 shipments, stock, admin orders | todo | | 78–80, 85, 86, 95–99 | PrintBookEffect; ShipmentShipped/Delivered | | integrity check |
@@ -262,3 +262,19 @@ Tests (test phase)
 Done when (local smoke)
 - [x] An order settled through the dev trigger produces its PDF(s), the SMS lands in the sink and the e-mail in the mail sink (invoice path: M5)
 - [x] Stopping the SMS provider → messages retry and are delivered after it recovers
+
+### S-19 — Course enrolment and LMS adapter
+
+Build
+- [x] `ILmsGateway` (enrol, revoke, launch URL, progress) + `InternalAccessLmsGateway` (default, Q-05)
+- [x] `CourseEnrolmentEffect : ILineSettlementEffect` (enrolment source `purchase`, outbox `LmsEnrol`); duplicate → no enrolment + `FinanceAlert`
+- [x] `pending_sync` on LMS failure, retried through the outbox; `LmsEnrol`/`LmsRevoke` handlers
+- [x] `POST /v1/me/enrolments/{id}/launch` (#29) returns a short-lived launch URL
+- [x] Audit §2.2: short-lived launch URL; `LmsEnrol` retries through the dispatcher
+
+Tests (test phase)
+- [ ] RUL-42: lifetime vs `access_days`; LMS down → `pending_sync` → recovers; never a second enrolment (`ux_enrolment_live`)
+
+Done when (local smoke)
+- [x] A paid course shows as active and launches
+- [x] With the LMS adapter forced to fail, it becomes active after recovery

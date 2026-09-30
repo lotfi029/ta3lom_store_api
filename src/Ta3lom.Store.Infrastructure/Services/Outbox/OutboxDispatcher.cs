@@ -66,6 +66,7 @@ internal sealed partial class OutboxDispatcher(
         }
 
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        Task? tick = null, nudged = null;                      // kept across loops: a PeriodicTimer allows one pending wait only
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -82,7 +83,22 @@ internal sealed partial class OutboxDispatcher(
                 LogLoopFailed(logger, ex);                                               // e.g. database down: try again next tick
             }
 
-            await Task.WhenAny(timer.WaitForNextTickAsync(stoppingToken).AsTask(), signal.WaitAsync(stoppingToken));
+            tick ??= timer.WaitForNextTickAsync(stoppingToken).AsTask();
+            nudged ??= signal.WaitAsync(stoppingToken);
+            var woke = await Task.WhenAny(tick, nudged);
+            if (woke.IsCanceled)
+            {
+                return;
+            }
+
+            if (woke == tick)
+            {
+                tick = null;
+            }
+            else
+            {
+                nudged = null;
+            }
         }
     }
 

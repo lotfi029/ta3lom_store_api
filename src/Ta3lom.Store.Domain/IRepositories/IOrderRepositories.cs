@@ -41,3 +41,10 @@ public interface IDocumentNumberAllocator
 {
     Task<string> NextAsync(DocumentSeries series, int riyadhYear, CancellationToken ct = default);
 }
+
+public interface IEnrolmentRepository : IGenericRepository<Entities.Fulfilment.Enrolment>
+{
+    /// RUL-13/47c: inserts unless the customer already has a live enrolment for the course (`ux_enrolment_live`,
+    /// `ON CONFLICT DO NOTHING`, so two settlements racing for the same course never fail). False = duplicate.
+    Task<bool> TryAddLiveAsync(Entities.Fulfilment.Enrolment enrolment, CancellationToken ct = default);
+}

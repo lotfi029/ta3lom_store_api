@@ -31,3 +31,9 @@ public static class FinanceAlertKinds
     public const string DuplicateCourse = "duplicate_course";
     public const string EffectMissing = "settlement_effect_missing";
 }
+
+/// RUL-42: grant LMS access for an enrolment (retried by the dispatcher until the LMS accepts; adapter keyed by id).
+public sealed record LmsEnrol(Guid EnrolmentId) : IDomainEvent;
+
+/// RUL-50/58: withdraw LMS access.
+public sealed record LmsRevoke(Guid EnrolmentId) : IDomainEvent;

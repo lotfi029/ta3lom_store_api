@@ -433,4 +433,10 @@
   <data name="document.not_ready.detail" xml:space="preserve">
     <value>المستند قيد الإعداد. حاول بعد قليل.</value>
   </data>
+  <data name="enrolment.not_active" xml:space="preserve">
+    <value>الدورة غير متاحة</value>
+  </data>
+  <data name="enrolment.not_active.detail" xml:space="preserve">
+    <value>لا يمكن فتح هذه الدورة الآن.</value>
+  </data>
 </root>
