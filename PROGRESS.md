@@ -1,5 +1,5 @@
 # Build progress
-Next: T-8 — documents and outputs (PDF text + Arabic, QR TLV decode, gapless numbering under 20 parallel settlements, CSV BOM, donor DTOs never carry beneficiary identity)
+Next: T-9 — coverage (Domain ≥ 90 %, Application ≥ 80 %), then store/sessions/Build-report.md
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -83,7 +83,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | T-5 RUL tests + ImplementedRules.txt | done | T-5 (7 commits) | 54/54 backend rules of §13.1 tagged and listed; Cart, Checkout, Catalogue, FulfilmentAndGiving, Identity, Operations, special-host classes; 1 bug fixed (unclosed Scriban block) |
 | T-6 policy matrix | done | T-6 | 80 admin routes (read from the endpoint table) × 6 roles + anonymous = 560 calls: in-policy never 401/403/5xx, out-of-policy 403, anonymous 401; SoD table asserted; customer/staff tokens not interchangeable |
 | T-7 endpoint integration | done | T-7 | sweeps over the live endpoint table: every JSON endpoint → malformed body 400 `validation.failed`; every parameterless GET → 200; every customer route anonymous → 401; Mapster `Compile()`; 128 routes of 11 §12 in OpenAPI; /dev/* 404 in Production; Arabic search + ETag 304 + 15 products; audit actor; PII not logged. Success and business codes per endpoint: scenario classes T-2 … T-6 |
-| T-8 documents and outputs | todo | | |
+| T-8 documents and outputs | done | T-8 | PdfPig text (numbers, reference, totals, Arabic), ZATCA QR decoded from the PDF image (ZXing) = stored TLV, five fields; gapless INV/DR under 20 parallel settlements; watermark text; outbox retry sends once; template en → ar fallback; donor DTO reflection + giving JSON without beneficiary identity; CSV BOM (T-5) |
 | T-9 coverage + Build-report.md | todo | | |
 
 - [ ] T-1…T-9 done
@@ -256,8 +256,8 @@ Build
 - [x] Audit §4c: `SinkEmailSender` + `/dev/mail`, `SmtpEmailSender`, `IEInvoicingGateway` + `NoopEInvoicingGateway`
 
 Tests (test phase)
-- [ ] RUL-59: mixed order → one INV + one DR; numbers gapless under 20 parallel settlements
-- [ ] Outbox retry does not duplicate an SMS; template fallback to Arabic; the QR decodes to the five TLV fields; PDF text snapshot
+- [x] RUL-59: mixed order → one INV + one DR; numbers gapless under 20 parallel settlements
+- [x] Outbox retry does not duplicate an SMS; template fallback to Arabic; the QR decodes to the five TLV fields; PDF text snapshot
 
 Done when (local smoke)
 - [x] An order settled through the dev trigger produces its PDF(s), the SMS lands in the sink and the e-mail in the mail sink (invoice path: M5)
@@ -289,7 +289,7 @@ Build
 - [x] Audit §2.2: watermark on every page; cached per grant
 
 Tests (test phase)
-- [ ] RUL-41: 6th download refused; expired link refused; another customer's token refused; the watermark text is present on every page
+- [x] RUL-41: 6th download refused; expired link refused; another customer's token refused; the watermark text is present on every page
 
 Done when (local smoke)
 - [x] Download works with an Arabic name
@@ -443,7 +443,7 @@ Build
 - [x] Data export (#38); delete (#39): anonymise per database/03 §7, revoke tokens, keep financial rows
 
 Tests (test phase)
-- [ ] donor DTO never contains a beneficiary name or mobile (reflection + snapshot); export contains every personal field
+- [x] donor DTO never contains a beneficiary name or mobile (reflection + snapshot); export contains every personal field
 - [x] after delete, sign-in with the old mobile creates a new empty account and the orders show "محذوف / deleted"; another customer's document → 404
 
 Done when (local smoke)

@@ -170,6 +170,7 @@ the owner should confirm.
 | 2026-09-30 | H-1 | Permissions-Policy | 08 §6.3 headers | `camera=(), microphone=(), geolocation=(), payment=()` on every response | standard header-scan item for a JSON API | |
 | 2026-09-30 | T-1 | Test isolation | Run-plan-review §3 T-1 ("shared fixture with a reset") | One migrated + seeded database per test class (`ScenarioFactory` as `IClassFixture`) instead of Respawn resets; tokens minted with the app's `IAccessTokenIssuer` (OTP/TOTP flows keep their own S-04/S-05 tests); outbox and Quartz off, run on demand | classes run in parallel without sharing state; no extra package | |
 | 2026-09-30 | T-3 | FsCheck adapter | Run-plan-review §3 (FsCheck allowed) | Plain `FsCheck` 3.4.0 (`Prop.ForAll(...).QuickCheckThrowOnFailure()` inside `[Fact]`), not `FsCheck.Xunit.v3` | keeps the `[Rule]` attribute on an ordinary xUnit fact and avoids an adapter tied to an xUnit version | |
+| 2026-09-30 | T-8 | QR decoding | Run-plan-review §3 T-8 ("a QR decoder if needed") | `ZXing.Net` core (Apache-2.0) over pixels read with the app's SkiaSharp; `PdfPig` (Apache-2.0) extracts text and the QR image | the ZXing SkiaSharp binding targets SkiaSharp 2.x, the app uses 4.x | |
 
 ## Bugs found by tests
 
