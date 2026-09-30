@@ -1,0 +1,21 @@
+# S-45 — SponsorDigest job (RUL-63, FR-S25). Result 30 Sep 2026 (local, Development): all as expected.
+# /dev/jobs lists 12 scheduled jobs; SponsorDigestJob "0 0 9 1 * ?" (1st of the month, 09:00 Riyadh)
+# run 1 (period 2026-09, first digest window from 2026-08-01 Riyadh): 23 active customers with settled gift lines → 19 digests
+#   queued (4 without any change skipped) → 19 e-mails `sponsor_digest` sent (subject "أثر رعايتك هذا الشهر"), e.g.
+#   • «مهارات المذاكرة الذكية» (طلاب الأسر المستفيدة من الضمان الاجتماعي): خُصّص 1 مقعد — الرياض
+#   • «مهارات المذاكرة الذكية»: ساهمت بـ 50.00 ر.س في تمويل 1 مقعد مجمّع (0.42 من مقعد)
+#   plus completions, lapses ("أُعيد 1 مقعد للتخصيص…"), sweeps to the general fund and cause updates; link …/ar/store/account/giving
+# no beneficiary identity: the 19 mails contain no beneficiary code (B-0000…), name or mobile — region and group label only
+# run 2 in the same month → 0 queued (19 SponsorDigest rows, unchanged)
+# SMS fallback: a sponsor without e-mail (digest row of the period removed in the dev DB) → SMS
+#   "ملخص رعايتك الشهري: 1 تحديث. التفاصيل: …/ar/store/account/giving" (email restored afterwards)
+# integrity checks (db/reference/003) → 0 rows; no errors in the API log
+
+### Run the digest now (Development)
+POST http://localhost:5080/dev/jobs/SponsorDigestJob/run
+
+### The digests (e-mail sink)
+GET http://localhost:5080/dev/mail
+
+### SMS fallback (SMS sink)
+GET http://localhost:5080/dev/sms

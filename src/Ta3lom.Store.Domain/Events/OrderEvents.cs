@@ -56,6 +56,10 @@ public sealed record SponsorUnitAllocated(Guid UnitId, Guid ProductId, Guid? Ord
 
 public sealed record SponsorUnitCompleted(Guid UnitId, Guid ProductId, Guid? OrderLineId) : IDomainEvent;
 
+/// RUL-63 `SponsorDigest` job (S-45): one monthly digest for a sponsor covering `(Since, Until]`; `Period` (Riyadh `yyyy-MM`)
+/// makes a second run in the same month a no-op, and `Until` is the sponsor's "last digest" time for the next run.
+public sealed record SponsorDigest(Guid CustomerId, string Period, DateTimeOffset Since, DateTimeOffset Until) : IDomainEvent;
+
 /// RUL-50: short SMS to the former beneficiary (or guardian) of a lapsed seat.
 public sealed record UnitLapsed(Guid UnitId, Guid BeneficiaryId, Guid ProductId) : IDomainEvent;
 

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Ta3lom.Store.Application.Abstractions.Data;
 using Ta3lom.Store.Application.Features.Giving;
+using Ta3lom.Store.Application.Features.Giving.Commands;
 using Ta3lom.Store.Application.Features.Notifications;
 using Ta3lom.Store.Domain.Entities.Ordering;
 using Ta3lom.Store.Domain.Events;
@@ -85,6 +86,40 @@ internal sealed class CauseUpdatePublishedHandler(IApplicationDbContext db, Noti
 internal sealed class PoolSweptHandler : OutboxHandler<PoolSwept>
 {
     protected override Task HandleAsync(PoolSwept message, OutboxEnvelope envelope, CancellationToken ct) => Task.CompletedTask;
+}
+
+/// RUL-63 monthly digest (S-45): e-mail when the account has an address, otherwise a one-line SMS; at most once per message
+/// and recipient. Sent only if something still changed in the window and the account is active.
+internal sealed class SponsorDigestHandler(IApplicationDbContext db, SponsorDigestReader reader, NotificationDispatch dispatch, IWebLinks links)
+    : OutboxHandler<SponsorDigest>
+{
+    protected override async Task HandleAsync(SponsorDigest message, OutboxEnvelope envelope, CancellationToken ct)
+    {
+        var customer = await db.Customers.AsNoTracking().Where(c => c.Id == message.CustomerId && c.Status == CustomerStatus.Active)
+            .Select(c => new { c.Mobile, c.Email, c.Locale, c.FullName }).FirstOrDefaultAsync(ct);
+        if (customer is null)
+        {
+            return;
+        }
+
+        var content = await reader.ReadAsync(message.CustomerId, message.Since, message.Until, ct);
+        if (content.IsEmpty)
+        {
+            return;
+        }
+
+        var link = links.MyGiving(customer.Locale);
+        if (!string.IsNullOrWhiteSpace(customer.Email))
+        {
+            await dispatch.SendOnceAsync(envelope, MessageChannel.Email, customer.Email, "sponsor_digest", customer.Locale,
+                new { body = SponsorDigestText.EmailBody(content, customer.Locale, customer.FullName, message.Since, message.Until, link), link }, null, ct);
+        }
+        else
+        {
+            await dispatch.SendOnceAsync(envelope, MessageChannel.Sms, customer.Mobile, "sponsor_digest", customer.Locale,
+                new { summary = SponsorDigestText.Summary(content, customer.Locale), link }, null, ct);
+        }
+    }
 }
 
 /// Plan 14 S-35: asks ta3lom-web to rebuild after a publish/archive (debounced at enqueue); a failed dispatch is retried.

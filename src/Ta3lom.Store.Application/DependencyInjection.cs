@@ -32,6 +32,7 @@ public static class DependencyInjection
         services.AddScoped<ISponsoredUnitCompletion, Features.Allocation.Commands.SponsoredUnitCompletion>();   // RUL-50 (S-25 fills the S-40 hook)
         services.AddScoped<Features.Allocation.AllocationReader>();
         services.AddScoped<Features.Giving.PoolSweeper>();
+        services.AddScoped<Features.Giving.Commands.SponsorDigestReader>();
         services.AddScoped<Features.AdminCatalog.CatalogChanges>();
         services.AddScoped<Features.Cart.CartCatalog>();
         services.AddScoped<Features.Cart.CartAccess>();

@@ -65,6 +65,8 @@ internal static class SeedData
         ("staff_alert", "email", "en", "[ta3lom store] {{ subject }}", "{{ body }}"),
         ("sponsor_digest", "email", "ar", "أثر رعايتك هذا الشهر", "{{ body }}"),
         ("sponsor_digest", "email", "en", "Your sponsorship this month", "{{ body }}"),
+        ("sponsor_digest", "sms", "ar", null, "ملخص رعايتك الشهري: {{ summary }}. التفاصيل: {{ link }}"),
+        ("sponsor_digest", "sms", "en", null, "Your monthly sponsorship summary: {{ summary }}. Details: {{ link }}"),
     ];
 
     /// Gapless document series (RUL-59); rows for other years are created lazily by the numbering transaction.

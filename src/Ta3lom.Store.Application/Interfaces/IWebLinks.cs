@@ -18,6 +18,9 @@ public interface IWebLinks
     /// `{web}/{locale}/store/account/courses` — "My courses" after the OTP sign-in (RUL-52 invite).
     string MyCourses(string locale);
 
+    /// `{web}/{locale}/store/account/giving` — the sponsor's giving history (monthly digest, RUL-63).
+    string MyGiving(string locale);
+
     /// `{web}/{locale}/store/products/{slug}` (cause update SMS, RUL-54).
     string Product(string locale, string slug);
 

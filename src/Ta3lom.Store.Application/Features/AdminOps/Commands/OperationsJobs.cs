@@ -31,7 +31,7 @@ internal sealed class IntegrityChecksCommandHandler(IOperationsStatus ops, IOutb
 }
 
 /// `Retention` job (Fridays 04:30, database/03 §7, PDPL): `payment_event.payload` scrubbed after 18 months; notifications and
-/// download logs deleted after 12 months; processed outbox rows after 30 days; beneficiary PII erased two years after the
+/// download logs deleted after 12 months; processed outbox rows after 30 days (`SponsorDigest` rows after 13 months); beneficiary PII erased two years after the
 /// beneficiary became inactive or was rejected (code and history kept). Returns the rows touched.
 public sealed record RetentionCommand : ICommand<int>;
 
@@ -43,7 +43,7 @@ internal sealed class RetentionCommandHandler(IOperationsMaintenance maintenance
         var now = clock.UtcNow;
         var touched = await maintenance.ScrubPaymentPayloadsAsync(now.AddMonths(-18), ct)
                       + await maintenance.DeleteNotificationsAsync(now.AddMonths(-12), ct)
-                      + await maintenance.DeleteProcessedOutboxAsync(now.AddDays(-30), ct)
+                      + await maintenance.DeleteProcessedOutboxAsync(now.AddDays(-30), now.AddMonths(-13), ct)
                       + await maintenance.DeleteDownloadLogAsync(now.AddMonths(-12), ct);
 
         var cutoff = now.AddYears(-2);

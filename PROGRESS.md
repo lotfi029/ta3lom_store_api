@@ -1,5 +1,5 @@
 # Build progress
-Next: S-45 — SponsorDigest job
+Next: Close-out 7.1 — retry blocked, full smoke from an empty dev DB, coverage audit
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -47,7 +47,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-31 /v1/me | done | S-31 | 21–28, 30, 31, 33–39 | — | ✅ tools/smoke/S-31.http | delete = anonymise; donor views without beneficiary identity |
 | S-33 dashboard/reports/admin ops | done | S-33 | 53, 117, 129–133 | — | ✅ tools/smoke/S-33.http | 7 reports JSON + CSV BOM; integrity checks run from code |
 | S-35 templates, retention, integrity | done | S-35 | 120–122 | IntegrityChecks, Retention, PruneIdempotencyKeys | ✅ tools/smoke/S-35.http | Scriban trial render; CatalogChanged → repository_dispatch (debounced) |
-| S-45 sponsor digest | todo | | — | SponsorDigest | | |
+| S-45 sponsor digest | done | S-45 | — | SponsorDigest; outbox SponsorDigest | ✅ tools/smoke/S-45.http | monthly, once per Riyadh month, e-mail or SMS fallback; M7 passed |
 | Close-out 7.1–7.3 | todo | | | | | |
 | H-1 code-side hardening | todo | | | | | |
 
@@ -60,7 +60,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | M4 First settled order | tools/smoke/M4.http | ✅ passed for the gift path (receipt PDF, SMS, e-mail, repeat, review); invoice PDF re-checked in M5 |
 | M5 Fulfilment | tools/smoke/M5.http | ✅ passed (T3-26-001018: course enrolled + launch, digital watermarked 301 pages, print shipped → delivered → fulfilled, ledger = counters, integrity 0 rows) |
 | M6 Giving | tools/smoke/M6.http | ✅ passed (T3-26-001036: 5 seats + 100.00 share → units + pool; allocation → invites → enrolments; card SMS; close sweeps the pool; integrity 0 rows) |
-| M7 Operations-complete | tools/smoke/M7.http | |
+| M7 Operations-complete | tools/smoke/M7.http | ✅ passed (/v1/me export + delete; gifts/sales/zakat reports equal the ledger sums; 12 jobs + dispatcher; 19 digest e-mails, rerun 0; integrity 0 rows) |
 
 ## Part 1 checklist
 - [ ] 130 endpoints of plan 14 §13.2 mapped and answering
@@ -480,3 +480,16 @@ Tests (test phase)
 
 Done when (local smoke)
 - [x] Verified with curl (tools/smoke/S-35.http); integrity checks 0 rows
+
+### S-45 — SponsorDigest job
+
+Build
+- [x] Monthly (1st, 09:00 Riyadh): per sponsor, unit status changes since the last digest (group and region only), pooled shares, sweeps and cause updates
+- [x] E-mail, with an SMS fallback without e-mail; skips sponsors with no change; records the last digest time (the `SponsorDigest` outbox row, kept 13 months)
+
+Tests (test phase)
+- [ ] a digest never contains beneficiary identity
+- [ ] running twice in a month sends once
+
+Done when (local smoke)
+- [x] Verified with curl (tools/smoke/S-45.http); **M7 demo** passed (tools/smoke/M7.http)

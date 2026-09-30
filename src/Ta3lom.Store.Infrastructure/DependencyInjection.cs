@@ -65,6 +65,7 @@ public static class DependencyInjection
             q.AddStoreJob<IntegrityChecksJob>(IntegrityChecksJob.Cron);
             q.AddStoreJob<RetentionJob>(RetentionJob.Cron);
             q.AddStoreJob<PruneIdempotencyKeysJob>(PruneIdempotencyKeysJob.Cron);
+            q.AddStoreJob<SponsorDigestJob>(SponsorDigestJob.Cron);
         });
         services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
         services.AddSingleton<IJobRunner, QuartzJobRunner>();

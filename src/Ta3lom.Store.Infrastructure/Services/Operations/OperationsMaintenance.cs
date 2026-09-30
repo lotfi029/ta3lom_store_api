@@ -13,15 +13,19 @@ internal sealed class OperationsMaintenance(StoreDbContext db) : IOperationsMain
     public Task<int> DeleteNotificationsAsync(DateTimeOffset before, CancellationToken ct = default) =>
         db.Database.ExecuteSqlAsync($"DELETE FROM store.notification WHERE created_at < {before}", ct);
 
-    public async Task<int> DeleteProcessedOutboxAsync(DateTimeOffset before, CancellationToken ct = default)
+    public async Task<int> DeleteProcessedOutboxAsync(DateTimeOffset before, DateTimeOffset digestsBefore, CancellationToken ct = default)
     {
         // Notifications (kept 12 months) point at their message for de-duplication; long after processing the link is
         // no longer needed, so it is cleared before the message is deleted (FK without ON DELETE).
         await db.Database.ExecuteSqlAsync($"""
             UPDATE store.notification SET outbox_message_id = NULL
-             WHERE outbox_message_id IN (SELECT id FROM store.outbox_message WHERE processed_at < {before})
+             WHERE outbox_message_id IN (SELECT id FROM store.outbox_message
+                                          WHERE processed_at < {before} AND (type <> 'SponsorDigest' OR processed_at < {digestsBefore}))
             """, ct);
-        return await db.Database.ExecuteSqlAsync($"DELETE FROM store.outbox_message WHERE processed_at < {before}", ct);
+        return await db.Database.ExecuteSqlAsync($"""
+            DELETE FROM store.outbox_message
+             WHERE processed_at < {before} AND (type <> 'SponsorDigest' OR processed_at < {digestsBefore})
+            """, ct);
     }
 
     public Task<int> DeleteDownloadLogAsync(DateTimeOffset before, CancellationToken ct = default) =>
