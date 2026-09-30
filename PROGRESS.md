@@ -1,5 +1,5 @@
 # Build progress
-Next: T-5 — every remaining plan-14 "Tests" line with [Rule] (open boxes in the per-session checklists), ImplementedRules.txt
+Next: T-6 — policy matrix (every admin route × every role → 200/403, segregation of duties)
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -80,7 +80,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | T-2 settlement | done | T-2 | `SettlementTests` (7) + `SettlementPathTests` (IL scan: only `OrderSettlement` calls `Order.MarkPaid`); RUL-13, 20, 29, 30, 35, 39 in ImplementedRules.txt |
 | T-3 pooling | done | T-3/T-4 | FsCheck property (100 random scenarios: balance = Σ remaining, units × seat = Σ converted = Σ funding, zakat propagation), documented example, sweep keeps zakat; parallel contributions (API) |
 | T-4 allocation | done | T-3/T-4 | RUL-47 (a)–(e) on `AllocationPolicy`; API: all-or-nothing 422, admin 403 (SoD), parallel officers distinct units, FIFO, invite + customer row (RUL-52), lapse → front of queue + SMS |
-| T-5 RUL tests + ImplementedRules.txt | todo | | |
+| T-5 RUL tests + ImplementedRules.txt | done | T-5 (7 commits) | 54/54 backend rules of §13.1 tagged and listed; Cart, Checkout, Catalogue, FulfilmentAndGiving, Identity, Operations, special-host classes; 1 bug fixed (unclosed Scriban block) |
 | T-6 policy matrix | todo | | |
 | T-7 endpoint integration | todo | | |
 | T-8 documents and outputs | todo | | |
@@ -107,7 +107,7 @@ Build
 - [x] Endpoints #16–#20 mapped; `/dev/sms` (Development/Staging)
 
 Tests (test phase)
-- [ ] RUL-60: expiry, 5 wrong attempts, per-mobile and per-IP limits, hash not reversible, code never logged
+- [x] RUL-60: expiry, 5 wrong attempts, per-mobile and per-IP limits, hash not reversible, code never logged
 - [x] RUL-61: blocked customer cannot verify
 - [x] Refresh reuse revokes the family
 - [x] Cookie has the exact attributes
@@ -273,7 +273,7 @@ Build
 - [x] Audit §2.2: short-lived launch URL; `LmsEnrol` retries through the dispatcher
 
 Tests (test phase)
-- [ ] RUL-42: lifetime vs `access_days`; LMS down → `pending_sync` → recovers; never a second enrolment (`ux_enrolment_live`)
+- [x] RUL-42: lifetime vs `access_days`; LMS down → `pending_sync` → recovers; never a second enrolment (`ux_enrolment_live`) (recovery after the LMS returns: smoke S-19; the failure switch is a start-up option)
 
 Done when (local smoke)
 - [x] A paid course shows as active and launches
