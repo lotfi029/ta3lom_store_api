@@ -31,10 +31,12 @@ public sealed class LayerTests
             .GetResult().FailingTypeNames.ShouldBeNull();
     }
 
+    /// Infrastructure may use ASP.NET Core Data Protection (a standalone library, 09 §5.13) but nothing of the web stack.
     [Fact]
-    public void Infrastructure_does_not_reference_Api() =>
+    public void Infrastructure_does_not_reference_Api_or_the_web_stack() =>
         Types.InAssembly(Assemblies.Infrastructure).ShouldNot()
-            .HaveDependencyOnAny("Ta3lom.Store.Api", "Ta3lom.Store.Contracts", "Microsoft.AspNetCore")
+            .HaveDependencyOnAny("Ta3lom.Store.Api", "Ta3lom.Store.Contracts", "Microsoft.AspNetCore.Http", "Microsoft.AspNetCore.Mvc",
+                "Microsoft.AspNetCore.Routing", "Microsoft.AspNetCore.Builder", "Microsoft.AspNetCore.Hosting", "Microsoft.AspNetCore.Authorization")
             .GetResult().FailingTypeNames.ShouldBeNull();
 
     [Fact]

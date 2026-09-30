@@ -33,7 +33,37 @@ public sealed class HealthTests(StoreApiFactory factory) : IClassFixture<StoreAp
         body.EnumerateObject().Select(p => p.Name).ShouldBe(["status", "totalDurationMs", "checks"]);
         body.GetProperty("status").GetString().ShouldBe("Healthy");
         body.GetProperty("totalDurationMs").ValueKind.ShouldBe(JsonValueKind.Number);
-        body.GetProperty("checks").ValueKind.ShouldBe(JsonValueKind.Array);
+        var postgres = body.GetProperty("checks").EnumerateArray().Single(c => c.GetProperty("name").GetString() == "postgres");
+        postgres.GetProperty("status").GetString().ShouldBe("Healthy");
+    }
+
+    [Fact]
+    public async Task Ready_is_503_when_the_database_is_unreachable()
+    {
+        await using var unreachable = new UnreachableDatabaseFactory();
+
+        var response = await unreachable.CreateClient().GetAsync("/health/ready", Ct);
+        var text = await response.Content.ReadAsStringAsync(Ct);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
+        var postgres = JsonDocument.Parse(text).RootElement.GetProperty("checks").EnumerateArray()
+            .Single(c => c.GetProperty("name").GetString() == "postgres");
+        postgres.GetProperty("status").GetString().ShouldBe("Unhealthy");
+        text.ShouldNotContain("refused", Case.Insensitive);
+        text.ShouldNotContain("PostgreSQL unreachable");
+    }
+
+    [Fact]
+    public async Task Live_does_not_depend_on_the_database()
+    {
+        await using var unreachable = new UnreachableDatabaseFactory();
+
+        (await unreachable.CreateClient().GetAsync("/health/live", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    private sealed class UnreachableDatabaseFactory : StoreApiFactory
+    {
+        protected override string ConnectionString => "Host=127.0.0.1;Port=1;Database=none;Username=none;Password=none;Timeout=2";
     }
 
     [Fact]
@@ -49,7 +79,7 @@ public sealed class HealthTests(StoreApiFactory factory) : IClassFixture<StoreAp
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var body = JsonDocument.Parse(text).RootElement;
         body.GetProperty("status").GetString().ShouldBe("Degraded");
-        var check = body.GetProperty("checks")[0];
+        var check = body.GetProperty("checks").EnumerateArray().Single(c => c.GetProperty("name").GetString() == "probe");
         check.EnumerateObject().Select(p => p.Name).ShouldBe(["name", "status", "durationMs", "data"]);
         check.GetProperty("name").GetString().ShouldBe("probe");
         check.GetProperty("status").GetString().ShouldBe("Degraded");

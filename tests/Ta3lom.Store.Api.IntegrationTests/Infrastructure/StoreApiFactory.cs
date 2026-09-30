@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Ta3lom.Store.Api.IntegrationTests.Infrastructure.Database;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Infrastructure;
 
@@ -19,6 +20,9 @@ public class StoreApiFactory : WebApplicationFactory<Program>
 
     protected virtual string EnvironmentName => "Testing";
 
+    /// The migrated and seeded shared database; a test can point a factory elsewhere (e.g. an unreachable server).
+    protected virtual string ConnectionString => SharedStoreDatabase.ConnectionString;
+
     /// Settings applied on top of appsettings*.json.
     protected virtual IReadOnlyDictionary<string, string?> Settings => new Dictionary<string, string?>
     {
@@ -32,6 +36,10 @@ public class StoreApiFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(EnvironmentName);
+        builder.UseSetting("ConnectionStrings:Store", ConnectionString);
+        builder.UseSetting("Store:Pii:MobileHashKeyBase64", StoreSchema.PiiHashKeyBase64);
+        builder.UseSetting("Store:DataProtection:KeysPath", StoreSchema.DataProtectionKeysPath);
+        builder.UseSetting("Store:Seed:RunOnStartup", "false");   // the shared database is seeded once by the fixture
         foreach (var (key, value) in Settings)
         {
             builder.UseSetting(key, value);

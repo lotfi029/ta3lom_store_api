@@ -3,7 +3,9 @@
 --  Reference catalogue = the approved prototype (design/ta3lom-store-prototype.html).
 --  Opening goal figures are stored as seed_* (offline giving before launch),
 --  never as fake orders. Run after 001_store_schema.sql.
---  In the app, the same data lives in Ta3lom.Store.Infrastructure/Persistence/Seed.
+--  In the app, settings, templates and counters are seeded by SeedRunner
+--  (Ta3lom.Store.Infrastructure/Persistence/Seed); those inserts here are ON CONFLICT DO NOTHING so the
+--  two can run in either order. The catalogue exists only in this file.
 -- ============================================================================
 SET search_path = store, public;
 BEGIN;
@@ -15,7 +17,8 @@ INSERT INTO setting (key, value) VALUES
  ('order_payment_timeout_min','60'),('download_limit','5'),
  ('allocation_alert_days','30'),('allocation_escalate_days','90'),('lapse_days','60'),
  ('refund_window_days','7'),('refund_progress_max_pct','20'),('gift_refund_window_hours','48'),
- ('dedication_free_text_enabled','false');
+ ('dedication_free_text_enabled','false')
+ON CONFLICT (key) DO NOTHING;   -- SeedRunner may have inserted them already (database/03 §3)
 
 -- Categories
 INSERT INTO category (slug,name_ar,name_en) VALUES ('tech','التقنية في التعليم','EdTech');
@@ -157,16 +160,19 @@ INSERT INTO message_template (key,channel,locale,subject,body) VALUES
  ('beneficiary_invite','sms','ar',NULL,'مرحباً، خُصّص لك مقعد في دورة «{{ product }}» من جمعية التعلم الإلكتروني. ابدأ: {{ link }}'),
  ('shipment_shipped','sms','ar',NULL,'طلبك {{ reference }} في الطريق. رقم الشحنة {{ tracking }}'),
  ('refund_done','sms','ar',NULL,'تم استرداد {{ amount }} ر.س من الطلب {{ reference }}.'),
- ('cause_update','sms','ar',NULL,'تحديث من «{{ product }}»: {{ title }} {{ link }}');
+ ('cause_update','sms','ar',NULL,'تحديث من «{{ product }}»: {{ title }} {{ link }}')
+ON CONFLICT (key, channel, locale) DO NOTHING;
 
 -- Dedication message templates are stored as settings so staff can edit them
 INSERT INTO setting (key, value) VALUES ('dedication_templates', '[
  {"key":"hasanat","ar":"اللهم اجعله في ميزان حسناتك","en":"May it weigh in your good deeds"},
  {"key":"departed","ar":"صدقة جارية عن روح الفقيد","en":"A lasting charity for the departed"},
  {"key":"success","ar":"هدية بمناسبة نجاحك","en":"A gift for your success"},
- {"key":"eid","ar":"عيدكم مبارك","en":"Eid Mubarak"}]');
+ {"key":"eid","ar":"عيدكم مبارك","en":"Eid Mubarak"}]')
+ON CONFLICT (key) DO NOTHING;
 
 -- Document counters for the current year
-INSERT INTO document_counter (series, year) VALUES ('INV',2026),('CN',2026),('DR',2026),('DRC',2026);
+INSERT INTO document_counter (series, year) VALUES ('INV',2026),('CN',2026),('DR',2026),('DRC',2026)
+ON CONFLICT (series, year) DO NOTHING;
 
 COMMIT;

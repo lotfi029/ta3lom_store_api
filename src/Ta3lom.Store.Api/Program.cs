@@ -4,6 +4,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
+using Ta3lom.Store.Api.Cli;
 using Ta3lom.Store.Api.Endpoints;
 using Ta3lom.Store.Api.Http;
 using Ta3lom.Store.Api.Logging;
@@ -12,6 +13,12 @@ using Ta3lom.Store.Api.Security;
 using Ta3lom.Store.Application;
 using Ta3lom.Store.Application.Abstractions;
 using Ta3lom.Store.Infrastructure;
+
+// CLI verbs run without the web host (database/03 §3).
+if (args.Length > 0 && args[0] == CreateAdminCommand.Verb)
+{
+    return CreateAdminCommand.Run(args[1..], Console.Out);
+}
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(k => k.AddServerHeader = false);
@@ -103,6 +110,7 @@ if (!app.Environment.IsProduction())
 }
 
 await app.RunAsync();
+return 0;
 
 /// Entry point; public partial so WebApplicationFactory can host it in tests.
 public partial class Program;

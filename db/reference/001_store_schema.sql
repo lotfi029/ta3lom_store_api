@@ -1,11 +1,14 @@
 -- ============================================================================
 --  ta3lom STORE — PostgreSQL 18 reference schema (S1)
 --
---  Reference DDL for review and for DBA work. In the application, the schema
---  is owned by EF Core migrations in repos/ta3lom-store-api
---  (Ta3lom.Store.Infrastructure/Persistence/Migrations). If this file and the
---  migrations disagree, the migrations are the running truth — regenerate
---  this file with:  dotnet ef migrations script --idempotent
+--  Reference DDL for review and for DBA work, kept by hand with its comments.
+--  In the application, the schema is owned by EF Core migrations
+--  (src/Ta3lom.Store.Infrastructure/Persistence/Migrations). SchemaParityTests
+--  builds one database from this file and one from the migrations and fails on
+--  any difference, so a model change edits this file in the same pull request.
+--  A pg_dump of the migrated schema: tools/scripts/regenerate-schema-sql.sh
+--  (db/reference/generated/). On PostgreSQL < 18, create a uuidv7() shim first
+--  (see tests/smoke_scenario.sql); migrations never create it.
 --
 --  Conventions (Docs/store/database/01-database-design.md §2):
 --    * one schema: store

@@ -1,5 +1,8 @@
-import json
-T=json.load(open('/tmp/dict.json'))['tables']
+"""Step 2: render the data dictionary.
+Usage: python3 gen_dictionary_step2.py <dict.json> <out 02-data-dictionary.md> <generated-on date>"""
+import json,sys
+json_path, out_path, generated_on = sys.argv[1], sys.argv[2], sys.argv[3]
+T=json.load(open(json_path,encoding='utf-8'))['tables']
 MOD=[
 ("1. Settings, audit, numbering",[
  ('setting','Admin-editable configuration (Docs/store/03-business-rules.md §M). One JSON value per key.'),
@@ -62,9 +65,9 @@ MOD=[
  ('notification','Delivery record of each SMS or email sent.')]),
 ]
 seen=set()
-o=["# Store Data Dictionary","","**Generated from** [`database/store/001_store_schema.sql`](../../../database/store/001_store_schema.sql) on PostgreSQL · S1 draft · 29 September 2026","",
+o=["# Store Data Dictionary","",f"**Generated from** the EF Core migrations (identical to [`db/reference/001_store_schema.sql`](../../db/reference/001_store_schema.sql), checked by `SchemaParityTests`) on PostgreSQL · {generated_on}","",
 "Every column is listed. **Key**: PK primary key, FK→ foreign key target, UQ unique. Types are PostgreSQL types. The EF Core CLR type mapping is in [01-database-design.md §6](01-database-design.md#6-ef-core-mapping).","",
-"Regenerate after each migration (`database/store/tools/gen_dictionary_step1.py` then `step2`, against a database built from the DDL) so that this file never drifts from the schema.",""]
+"Regenerate after each migration with `tools/scripts/regenerate-data-dictionary.sh` so that this file never drifts from the schema.",""]
 o.append("## Contents\n")
 for m,ts in MOD:
     o.append(f"- **{m}** — "+", ".join(f"[`{t}`](#{t})" for t,_ in ts))
@@ -83,5 +86,5 @@ for m,ts in MOD:
         o.append("")
 missing=set(T)-seen
 assert not missing, missing
-open('/home/claude/sd/Docs/store/database/02-data-dictionary.md','w').write("\n".join(o))
+open(out_path,'w',encoding='utf-8').write("\n".join(o)+"\n")
 print('ok')
