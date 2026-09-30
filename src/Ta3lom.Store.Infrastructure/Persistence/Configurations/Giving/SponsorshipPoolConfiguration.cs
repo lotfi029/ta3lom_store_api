@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Giving;
+using Ta3lom.Store.Domain.Entities.Giving;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Giving;
 
@@ -18,6 +18,6 @@ internal sealed class SponsorshipPoolConfiguration : IEntityTypeConfiguration<Sp
         e.Property(x => x.Balance).HasColumnType("numeric(12,2)").IsRequired().HasDefaultValueSql("0").ValueGeneratedNever();
         e.Property(x => x.UpdatedAt).HasColumnType("timestamp with time zone").IsRequired().HasDefaultValueSql("now()").ValueGeneratedNever();
         e.Property<uint>("xmin").HasColumnName("xmin").HasColumnType("xid").ValueGeneratedOnAddOrUpdate().IsConcurrencyToken();
-        e.HasOne<Ta3lom.Store.Domain.Catalog.SponsorshipOffer>().WithOne().HasForeignKey<SponsorshipPool>(x => x.SponsorshipOfferId).HasConstraintName("sponsorship_pool_sponsorship_offer_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Catalog.SponsorshipOffer>().WithOne().HasForeignKey<SponsorshipPool>(x => x.SponsorshipOfferId).HasConstraintName("sponsorship_pool_sponsorship_offer_id_fkey").OnDelete(DeleteBehavior.NoAction);
     }
 }

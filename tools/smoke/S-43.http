@@ -1,0 +1,21 @@
+# S-43 — Zakat ledger and disbursement vouchers (#115, #116). Result 30 Sep 2026 (local, Development): all as expected.
+# #115 ?productId=tablet-for-student → balances [{received 500.00, disbursed 0.00, refunded 0.00, balance 500.00}] + entries (2 × in 250.00)
+# #116 voucher 300.00 ZV-2026-0001 (disbursedOn 2026-09-25) → 201 out, reference ZV-2026-0001, at 09:00Z (noon Riyadh), actor finance
+#   250.00 → 422 zakat.balance_insufficient {balance "200.00"} · "zv-2026-0001" again → 400 voucherNo already used (upper-cased)
+#   sponsorship product → 400 (sponsorship zakat goes out at allocation) · missing fields / negative amount → 400
+#   parallel 150.00 ‖ 150.00 on 200.00 left → one 201, one 422; balance 50.00 (never negative)
+#   audit_log zakat.voucher {productId, amount, voucherNo, disbursedOn, purpose}
+# #115 ?from=2026-09-25&to=2026-09-25 → the two vouchers · admin 200 (staff:finance) · integrity checks 10 × 0 rows (check 7 zakat ≥ 0)
+@base = http://localhost:5080/v1/admin/zakat
+@finance = <finance access token>
+
+### #115 Ledger
+GET {{base}}?productId={{productId}}&from=2026-09-01&to=2026-09-30
+Authorization: Bearer {{finance}}
+
+### #116 Disbursement voucher
+POST {{base}}/disbursements
+Authorization: Bearer {{finance}}
+Content-Type: application/json
+
+{"productId":"{{productId}}","amount":"300.00","voucherNo":"ZV-2026-0001","disbursedOn":"2026-09-25","purpose":"أجهزة لطلاب مستحقين للزكاة — القصيم"}

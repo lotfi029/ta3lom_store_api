@@ -1,11 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- References Domain only (09 §2 r2). Never Contracts, EF Core, ASP.NET Core or adapter SDKs. -->
+  <!-- DMS Application: references Domain (+ SharedKernel). EF Core only for IApplicationDbContext read queries (K-c);
+       never Npgsql, EF Relational, ASP.NET Core or adapter SDKs. -->
   <ItemGroup>
     <ProjectReference Include="../Ta3lom.Store.Domain/Ta3lom.Store.Domain.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FluentValidation" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="Mapster" />
+    <PackageReference Include="Mapster.DependencyInjection" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Scrutor" />

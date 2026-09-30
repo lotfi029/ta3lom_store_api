@@ -3,8 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Ta3lom.Store.Api.IntegrationTests.Infrastructure.Database;
-using Ta3lom.Store.Domain.Catalog;
-using Ta3lom.Store.Domain.Payments;
+using Ta3lom.Store.Domain.Entities.Catalog;
+using Ta3lom.Store.Domain.Entities.Payments;
+using Ta3lom.Store.Domain.Enums;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Persistence;
 

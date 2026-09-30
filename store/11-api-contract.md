@@ -176,7 +176,7 @@ The client switches on `code`, never on `title`.
 | `auth.account_locked` | 423 | staff locked; `lockedUntil` | RUL-62 (FR-53) |
 | `auth.totp_required` / `auth.totp_invalid` / `auth.totp_not_enrolled` | 401 | staff second factor | RUL-62 |
 | `otp.mobile_invalid` | 400 | not a Saudi mobile | RUL-60 |
-| `otp.rate_limited` | 429 | 3 / mobile / 15 min or 10 / IP / hour; `retryAfterSeconds` | RUL-60 |
+| `otp.rate_limited` | 429 | 3 / mobile / 15 min, 10 / IP / hour, or the store-wide daily cap (08 §6.2, H-1); `retryAfterSeconds` | RUL-60 |
 | `otp.invalid` | 400 | wrong code; `attemptsLeft` | RUL-60 |
 | `otp.expired` | 400 | no open code or older than 5 min | RUL-60 |
 | `otp.too_many_attempts` | 429 | 5 wrong attempts on this code | RUL-60 |
@@ -576,7 +576,8 @@ Presets come from FR-S12/FR-S13 (constants in S1). Serves FR-S12–S14, RUL-12, 
 
 Server-side cart for guests (cookie `t3s_cart`) and customers (bearer token) (RUL-11, FR-S17). The
 customer cart wins when both are present; the guest cart is merged at sign-in (§4.2). Rate policy
-`cart`. All responses `Cache-Control: no-store`.
+`cart`. All responses `Cache-Control: no-store`. A presented customer token must be valid (`401` otherwise, so the client
+refreshes instead of silently falling back to a guest cart).
 
 ### 3.1 Cart DTO
 
@@ -670,8 +671,8 @@ Sponsor by amount (FR-S12 acceptance: 100 SAR on a 350 SAR seat):
   "quantity": 1, "amount": "100.00", "intent": "sadaqa" }
 ```
 
-Resulting line: `"mode": "amount", "amount": "100.00", "seatEquivalent": "0.29"` (display only,
-`floor(amount ÷ seat_price, 2)`).
+Resulting line: `"mode": "amount", "amount": "100.00", "seatEquivalent": "0.28"` (display only,
+`floor(amount ÷ seat_price, 2)`; 100 ÷ 350 = 0.2857 → 0.28).
 
 Dedicated donation:
 
@@ -750,6 +751,11 @@ The response is the same whether or not the mobile has an account. Errors: `otp.
   ]
 }
 ```
+
+`cartNotices` (RUL-17): `cart.merge_dropped_owned_course` (a `buy` course the customer owns),
+`cart.merge_combined` (identical line combined, capped at the line maximum), and — when the customer cart would
+break RUL-18 — `cart.too_many_lines` / `cart.total_exceeded` for the guest line left out. Without a customer cart the
+guest cart simply becomes theirs.
 
 First login creates the `customer` (RUL-61). A beneficiary's `customer` row already exists from
 allocation (RUL-47, RUL-52), so their first login simply signs them in. A `blocked` customer is
@@ -998,6 +1004,20 @@ Beneficiary data is never included. Serves FR-S27, RUL-61 (database/03 §7).
 tokens revoked, `status = 'anonymised'`), clears the refresh cookie. Financial records are kept
 (RUL-61). Serves FR-S27. Whether deletion needs a fresh OTP is OP-4.
 
+As built (S-31): the mobile placeholder is a random `+9665XXXXXXXX` (the column CHECK needs the E.164 shape; `status =
+anonymised` marks it). If a real person later signs in with a number an anonymised account happens to hold, that account is
+moved to another placeholder first. Orders keep `contact_*` = "محذوف / deleted" and the recipient of `shipping_address` and
+`shipment.address` is replaced the same way (city kept). Messages to such contacts are skipped. Access tokens already issued
+stay valid until they expire (≤ 15 min).
+
+As built (S-31) for §5.1–§5.11: addresses are limited to 10; the first is the default; deleting the default promotes the
+newest; `shortAddress` is accepted in either case and stored upper-case. `GET …/certificate` redirects to
+`{web}/{locale}/store/certificates/{certificateNo}` (`409 enrolment.not_active` before completion, `404` without a number).
+`GivingItem` carries `units`, `groupLabelAr/En`, `pooled`, `latestUpdate` and `dedication` (null when not applicable);
+`awaitingAllocation` counts lapsed seats being re-allocated; `shareOfSeat` = contribution ÷ seat price. `GivingLineDetail`
+units add `share` (this line's part of a pooled seat). Document numbers are matched case-insensitively. The export is
+`{ exportedAt, profile, addresses, orders (OrderDetail), giving, enrolments, downloadGrants, dedicationsSent }`.
+
 ---
 
 ## 6. Checkout and orders
@@ -1022,6 +1042,9 @@ cookie or customer. Body optional: `{ "shippingAddressId": "…" }`.
 ```
 
 A failing line has `"status": "invalid", "code": "cart.campaign_ended"` and `valid` is false.
+Cart-level failures that belong to no line (RUL-18: more than 50 lines, total above `cart_max_total`) are
+listed in `cartIssues` (`["cart.total_exceeded"]`), also with `valid: false`; `POST /v1/checkout` returns them
+inside `checkout.lines_invalid` `lines[]` with `lineId` `00000000-…`. Without a cart: `409 checkout.cart_empty`.
 Serves FR-S31, RUL-15, RUL-24, RUL-26, RUL-27, RUL-31.
 
 ### 6.2 `POST /v1/checkout`
@@ -1069,6 +1092,12 @@ accepted only when the cart has gifts (RUL-23). `acceptTerms` must be `true`; th
 }
 ```
 
+Until the payment service exists (plan 14 §0, doc 15 §3) the backend runs `NullPaymentInitiator`: no
+`payment` row is created, `payment.paymentId`, `provider`, `redirectUrl` and `sdkPayload` are `null`, `method`
+echoes the request and `expiresAt` = `paymentDueAt`; the order stays `pending_payment` (settle it in
+Development with `POST /dev/orders/{ref}/confirm-payment`). A replayed `Idempotency-Key` returns the stored body
+with `Idempotent-Replayed: true` (no `Location`).
+
 The client redirects to `redirectUrl`; the gateway returns the browser to
 `/{locale}/store/orders/T3-26-004187/thanks?t=st_7Hq2LmX9vB4kPz1R`. That return is never proof of
 payment (RUL-33). If the gateway session fails after the order is created, the response is
@@ -1110,7 +1139,9 @@ Poll every 2 s for up to 60 s, then every 10 s.
 }
 ```
 
-With the status token only, `summary` omits `dedications` and document numbers. `status` values
+With the status token only, `summary` omits `dedications` and document numbers (both `null`). Neither a
+customer bearer nor `t` → `401 auth.unauthenticated`; another customer's order or a wrong token → `404
+order.not_found`. `status` values
 per RUL-29; `payment_failed` + `canRetry: true` shows the retry button. When the order `expired` or
 failed for good, its lines are back in the active cart (`"cartRestored": true`; products already in
 the cart are skipped, RUL-29). Errors: `order.not_found`.
@@ -1196,6 +1227,11 @@ Never includes the amount (RUL-22). If the order is anonymous and no sender name
 `fromName` is `"فاعل خير"` (RUL-23). Available only once the order is paid; a refunded line returns
 `404`. Errors: `card.not_found`. Serves FR-S60, RUL-22, RUL-23.
 
+As built (S-26): the response carries `X-Robots-Tag: noindex, nofollow` and `Cache-Control: private, no-store`; a token
+that is not 22 characters is `404` without a lookup. If the donor typed no sender name and the order is not anonymous,
+`fromName` is the order's contact name. `messageAr`/`messageEn` come from the `dedication_templates` setting (both are the
+free text for `custom`).
+
 ### 8.2 `GET /v1/downloads/{token}`
 
 The signed link from §5.7. Streams the watermarked PDF (`application/pdf`,
@@ -1274,6 +1310,11 @@ Five failures (password or TOTP) in 15 minutes lock the account for one hour (FR
 | POST | `/admin/products/{id}/goal-adjustments` | `staff:finance` | `{ amount, units, note }` | `201 GoalAdjustment` (`kind: "correction"`) + new `GoalFigures` | `goal.adjustment_invalid` | FR-S58, RUL-46 |
 
 `ProductInput`:
+
+As built (S-42): `GoalAdjustment` = `{ id, kind, amount, units, offerId, pairId, note, at, actor }` (signed amount; a sweep is
+two rows with the same `pairId`). `POST` returns `{ adjustment, goal: GoalFigures }`; `amount` is a signed money string
+(`"-50.00"`), `note` is required. The offer close (#71) with `sweepPool` returns `swept` (amount string) and `pairId`, both
+null when nothing moved or no general fund exists; zakat contributions are never swept and stay in the pool.
 
 ```json
 {
@@ -1383,6 +1424,14 @@ and has no `url`. Limits: images 10 MB, PDFs 200 MB (OP-6).
   "onHand": 486, "reserved": 6, "available": 480, "lowStockThreshold": null, "effectiveThreshold": 20, "isLow": false }
 ```
 
+`StockMovement` (newest first; `reason` = `sale`|`restock`|`adjustment`|`return`; sales carry `refType: "order"` and the
+reference; `actor` is the staff e-mail or `settlement`; S-21):
+
+```json
+{ "id": 5, "delta": -2, "reason": "sale", "refType": "order", "refId": "T3-26-004187", "note": null,
+  "at": "2026-09-14T11:02:00Z", "actor": "settlement" }
+```
+
 `sale` and `sponsor_distribution` movements are written by the system only. The threshold is
 `book_format.low_stock_threshold` (set through `PUT /admin/formats/{formatId}`), falling back to the
 setting `low_stock_default_threshold` (20); `LowStockAlert` emails staff daily at 08:00 (FR-S43).
@@ -1403,7 +1452,9 @@ setting `low_stock_default_threshold` (20); `LowStockAlert` emails staff daily a
 ```
 
 `notifyDonors: true` queues `CauseUpdatePublished` once; `notified_at` is then set and the flag is
-read-only.
+read-only. Staff responses are `AdminCauseUpdate` = `{ id, productId, titleAr, titleEn, bodyAr, bodyEn, image,
+unitsDelivered, occurredOn, isPublic, notifyDonors, notifiedAt, createdAt, createdBy }`. The SMS goes to each distinct
+contact mobile of the product's paid gift orders, in the order's locale, with a link to the product page (S-26).
 
 ### 9.9 Orders (FR-S73, FR-S38)
 
@@ -1414,6 +1465,15 @@ read-only.
 | POST | `/admin/orders/{ref}/cancel` | `staff:finance` | `{ reason }` | `AdminOrderDetail` (`cancelled`, stock released) | `order.cancel_not_allowed` | RUL-29, RUL-30 |
 | POST | `/admin/orders/{ref}/resend-documents` | `staff:resend` | `{ channels: ["sms","email"] }` | `202` | `document.not_ready` | RUL-63 |
 | POST | `/admin/orders/{ref}/payment-review/resolve` | `staff:finance`; `decision: "refund"` also needs `staff:refund` (RUL-56, RUL-62) | `{ decision: "accept"|"refund", note }` | `AdminOrderDetail` | `order.not_in_review` | RUL-35 |
+
+`AdminOrderRow` (S-21; `q` that is a Saudi mobile matches the order's contact mobile, anything else a reference prefix; `from`/`to` are Riyadh dates on
+`placedAt`; the mobile is masked):
+
+```json
+{ "reference": "T3-26-004187", "status": "fulfilled", "placedAt": "2026-09-14T10:58:12Z", "paidAt": "2026-09-14T11:02:00Z",
+  "contactName": "نورة العتيبي", "contactMobile": "05•••••567", "grandTotal": "2605.00", "lineCount": 4,
+  "kinds": ["buy", "sponsor", "donate"] }
+```
 
 `AdminOrderDetail` = customer `OrderDetail` (§5.10) plus:
 
@@ -1514,7 +1574,9 @@ webhook. Errors: `refund.lines_not_refundable` (`lines[]`), `refund.amount_excee
   "carrier": null, "trackingNo": null, "placedAt": "2026-09-14T10:58:12Z", "shippedAt": null, "deliveredAt": null }
 ```
 
-Delivering updates print lines to `delivered` and may complete the order (RUL-40).
+Delivering updates print lines to `delivered` and may complete the order (RUL-40). A return is allowed from `shipped` or `delivered`; the
+line becomes `returned`, which is not terminal (RUL-40: for print lines terminal means `delivered`), so a returned order that
+was not yet `fulfilled` stays `paid` until the payment service refunds it. `deliveredOn` is stored as noon Riyadh of that date.
 
 ### 9.13 Beneficiaries (FR-S52, RUL-51, PDPL)
 
@@ -1561,6 +1623,13 @@ Import report:
 ```
 
 Imported rows are `pending`; approval is a separate audited step (RUL-51).
+
+As built (S-24): `BeneficiaryDetail` = the row plus `hasGuardian`, `eligibilityNotes`, `createdAt`, `createdBy` and
+`units[]` (`{ unitId, productSlug, titleAr, status, allocatedAt, completedAt, lapsedAt }`), still masked. `beneficiaryGroup`
+is a key (`^[a-z0-9_]{1,64}$`). Import: up to 2 MB and 5,000 rows, UTF-8 (BOM optional), header row exactly as the
+template; row numbers count the header as row 1; blank lines are skipped. `dryRun: true` returns `200 ImportReport`;
+`dryRun: false` with any invalid row returns `422 beneficiary.import_invalid` with the same report in `report` and saves
+nothing. Status filter values are validated (`400`). The template is UTF-8 with a BOM.
 
 ### 9.14 Allocation (FR-S53, FR-S55, RUL-47 … RUL-50)
 
@@ -1612,6 +1681,16 @@ enrolment (`source = 'sponsored'`), sets `beneficiary.customer_id` and queues th
 RUL-52). A unit that later lapses (`LapseUnits`) gets its enrolment `revoked` and the beneficiary a
 short SMS; they can be allocated again (RUL-50).
 
+As built (S-25): `BacklogRow` = `{ productId, slug, titleAr, awaiting, overdue30, allocated, completed, oldestAwaiting,
+groupLabelAr }`. `UnitRow` = `{ id, source, unitPrice, hasZakat, status, fundedAt, beneficiaryCode, allocatedAt, allocatedBy,
+completedAt, lapsedAt }` (beneficiaries by code only). `AllocationBatch` = `{ id, productId, slug, note, createdBy, createdAt,
+units: UnitRow[] }`. The per-person checks (a, c, e) and the group (b) run first for every selected beneficiary and are all
+reported at once; zakat-funded units are matched first to zakat-eligible people (d). `allocation.rejected` also lists
+`allocation.no_matching_unit` when free units remain that nobody in the request may take. `POST /admin/units/{id}/complete`
+is for book copies only (course seats complete through `LmsProgressSync`); it writes the `sponsor_distribution` stock
+movement (OP-9) and can fail with `stock.below_reserved`. Escalations go to `Store:Email:ManagerAlerts` (the staff
+mailbox when empty).
+
 ### 9.15 Zakat ledger (FR-S61, RUL-20)
 
 | Method | Path | Policy | Request | Response | Errors |
@@ -1633,6 +1712,12 @@ Disbursement voucher for cause zakat (RUL-20); sponsorship zakat goes out automa
 
 The row is written with `reference = voucherNo`; the balance can never go below zero (integrity check 7).
 
+As built (S-43): `ZakatEntry` = `{ id, productId, slug, direction, amount, orderLineId, reference, at, actor }`; `entries` is
+`Page<ZakatEntry>` (newest first; `from`/`to` are Riyadh dates). Vouchers are for **cause** products only; `voucherNo` is
+upper-cased and must be unused (`400`); `at` is noon Riyadh of `disbursedOn`; the purpose is kept in `audit_log`
+(`zakat.voucher`) because the ledger has no purpose column. Vouchers for one product are serialised (product row lock), so two
+parallel vouchers can never overdraw the balance.
+
 ### 9.16 Reports (FR-S75)
 
 | Method | Path | Policy | Request | Response |
@@ -1653,6 +1738,12 @@ The row is written with `reference = voucherNo`; the balance can never go below 
 { "name": "sales", "from": "2026-09-01", "to": "2026-09-29",
   "rows": [ { "day": "2026-09-14", "productType": "course", "orders": 7, "gross": "2380.00", "vat": "0.00", "refunded": "0.00" } ] }
 ```
+
+As built (S-33): `from`/`to` are Riyadh days (default the last 30, at most 366, else `400`); unknown `{name}` → `404`. JSON
+keys are the camelCase column names; `format=csv` returns `text/csv; charset=utf-8` with a UTF-8 BOM, the snake_case header
+row and `Content-Disposition: attachment; filename={name}-{from}-{to}.csv`. `productId` filters `gifts`, `zakat` and
+`allocation`. `refunds` reads the payment service's rows (empty until it writes them). Plan 14's names (`sales-vat`,
+`gifts-by-product`) are not used; the names above are the contract.
 
 ### 9.17 Settings (FR-S76, RUL §M)
 
@@ -1688,6 +1779,13 @@ counts and percentages are integers.
   "variables": [ "reference", "total", "link" ], "updatedAt": "2026-09-01T00:00:00Z" }
 ```
 
+As built (S-35): `variables` are the distinct `{{ name }}` identifiers of subject and body, in order of appearance.
+Save validates the Scriban syntax and then trial-renders with every variable set to a sample value, so a template that
+parses but fails at render time is also refused; the 422 body carries `line` and `column` (1-based) of the first
+error. The test send renders the **saved** template; `sampleData` fills variables, any variable left
+unset shows as `[name]`. `recipient` is a Saudi mobile for `sms` and an e-mail address for `email` (else
+`validation.failed`); an unknown key/channel/locale → `404 http.not_found`. Updates are audited (`template.update`).
+
 ### 9.19 Staff users (RUL-62, FR-S71)
 
 | Method | Path | Policy | Request | Response | Errors |
@@ -1717,7 +1815,10 @@ change, reset) are audited.
 | POST | `/admin/customers/{id}/block` | `staff:finance` | `{ reason }` | `CustomerRow` (`blocked`; tokens revoked) | — |
 | POST | `/admin/customers/{id}/unblock` | `staff:finance` | — | `CustomerRow` (`active`) | — |
 
-Lookup is by exact mobile or email only (no browsing of the customer base).
+Lookup is by exact mobile or email only (no browsing of the customer base). As built (S-33): `CustomerRow` = `{ id, mobile, fullName, email,
+status, createdAt, lastLoginAt, ordersCount }`; `Customer360` = `{ customer, orders: OrderSummary[] (latest 50), giving:
+GivingTotals, enrolments }`; neither `mobile` nor `email` → `400`; block needs a `reason` (audited as `customer.block`);
+an anonymised account → `404`.
 
 ### 9.21 Audit log (FR-S78)
 
@@ -1750,6 +1851,20 @@ Lookup is by exact mobile or email only (no browsing of the customer base).
 ```
 
 Serves FR-S83 (09 §8.3).
+
+### 10.1 Development-only routes (`/dev/*`)
+
+Mapped **only** when `ASPNETCORE_ENVIRONMENT` is `Development` or `Staging` (plan 14 §4.3); they return 404 in
+Production and are excluded from the OpenAPI document. They are test tooling, not part of the contract:
+
+| Method | Path | Purpose | Session |
+|---|---|---|---|
+| GET | `/dev/sms?count=50` | Latest messages of the SMS sink (`[{ sentAt, to, body }]`), newest first | S-04 |
+| GET | `/dev/mail` | Latest `.eml` files of the email sink | S-17 |
+| POST | `/dev/orders/{ref}/confirm-payment` | Simulated payment confirmation through `IOrderSettlement` (`{ amount?, confirmationId? }`) → `{ reference, outcome: paid\|already_paid\|payment_review\|not_found, status }`; records one captured `dev` payment per order like the payment service would | S-16 |
+| GET | `/dev/jobs` | Registered Quartz jobs and their cron (Riyadh) | S-16 |
+| POST | `/dev/jobs/{name}/run` | Runs a job now (`202`; `404` for an unknown name), e.g. `ExpireUnpaidOrdersJob` | S-16 |
+| POST | `/dev/lms/progress` | Plays the LMS for the internal adapter: `{ enrolmentId, progressPct, completed, certificateNo? }` is what the next `LmsProgressSyncJob` run pulls (`202`) | S-40 |
 
 ---
 

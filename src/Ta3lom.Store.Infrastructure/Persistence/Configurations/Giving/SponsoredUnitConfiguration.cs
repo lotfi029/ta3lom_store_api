@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Giving;
+using Ta3lom.Store.Domain.Entities.Giving;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Giving;
 
@@ -38,8 +38,8 @@ internal sealed class SponsoredUnitConfiguration : IEntityTypeConfiguration<Spon
         e.HasIndex(x => x.OrderLineId).HasDatabaseName("ix_unit_orderline");
         e.HasOne<AllocationBatch>().WithMany().HasForeignKey(x => x.AllocationBatchId).HasConstraintName("sponsored_unit_allocation_batch_id_fkey").OnDelete(DeleteBehavior.NoAction);
         e.HasOne<Beneficiary>().WithMany().HasForeignKey(x => x.BeneficiaryId).HasConstraintName("sponsored_unit_beneficiary_id_fkey").OnDelete(DeleteBehavior.NoAction);
-        e.HasOne<Ta3lom.Store.Domain.Ordering.OrderLine>().WithMany().HasForeignKey(x => x.OrderLineId).HasConstraintName("sponsored_unit_order_line_id_fkey").OnDelete(DeleteBehavior.NoAction);
-        e.HasOne<Ta3lom.Store.Domain.Catalog.Product>().WithMany().HasForeignKey(x => x.ProductId).HasConstraintName("sponsored_unit_product_id_fkey").OnDelete(DeleteBehavior.NoAction);
-        e.HasOne<Ta3lom.Store.Domain.Catalog.SponsorshipOffer>().WithMany().HasForeignKey(x => x.SponsorshipOfferId).HasConstraintName("sponsored_unit_sponsorship_offer_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Ordering.OrderLine>().WithMany().HasForeignKey(x => x.OrderLineId).HasConstraintName("sponsored_unit_order_line_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Catalog.Product>().WithMany().HasForeignKey(x => x.ProductId).HasConstraintName("sponsored_unit_product_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Catalog.SponsorshipOffer>().WithMany().HasForeignKey(x => x.SponsorshipOfferId).HasConstraintName("sponsored_unit_sponsorship_offer_id_fkey").OnDelete(DeleteBehavior.NoAction);
     }
 }

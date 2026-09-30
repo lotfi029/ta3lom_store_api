@@ -10,9 +10,12 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3" />
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Shouldly" />
     <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="PdfPig" />
+    <PackageReference Include="ZXing.Net" />
   </ItemGroup>
   <ItemGroup>
     <None Include="../../db/reference/**/*.sql" LinkBase="reference" CopyToOutputDirectory="PreserveNewest" />

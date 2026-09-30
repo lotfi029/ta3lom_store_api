@@ -61,7 +61,7 @@ public class StoreApiFactory : WebApplicationFactory<Program>
 public class ProbeApiFactory : StoreApiFactory
 {
     protected override void ConfigureTestServices(IServiceCollection services) =>
-        services.AddSingleton<Ta3lom.Store.Api.Endpoints.IV1EndpointContributor, ProbeContributor>();
+        services.AddSingleton<Ta3lom.Store.Api.Endpoints.IEndpoint, ProbeEndpoints>();
 }
 
 public sealed class RateLimitedApiFactory : ProbeApiFactory
@@ -79,11 +79,19 @@ public sealed class ProductionApiFactory : StoreApiFactory
 {
     protected override string EnvironmentName => "Production";
 
+    /// Production refuses missing or DEV ONLY signing keys (S-04): throw-away test keys, never real ones.
     protected override IReadOnlyDictionary<string, string?> Settings => new Dictionary<string, string?>
     {
         ["Store:ForwardedHeaders:KnownNetworks:0"] = "10.0.0.0/8",
         ["Serilog:MinimumLevel:Default"] = "Fatal",
+        ["Store:Jwt:CustomerSigningKeyBase64"] = TestKey(1),
+        ["Store:Jwt:StaffSigningKeyBase64"] = TestKey(2),
+        ["Store:Otp:PepperBase64"] = TestKey(3),
+        ["Store:Tokens:StatusKeyBase64"] = TestKey(4),
+        ["Store:Downloads:LinkKeyBase64"] = TestKey(5),
     };
+
+    private static string TestKey(byte seed) => Convert.ToBase64String(Enumerable.Repeat(seed, 32).ToArray());
 }
 
 public sealed class StagingApiFactory : ProbeApiFactory

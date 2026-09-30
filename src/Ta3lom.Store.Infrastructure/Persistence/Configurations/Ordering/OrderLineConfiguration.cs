@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Ordering;
+using Ta3lom.Store.Domain.Entities.Ordering;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Ordering;
 
@@ -45,9 +45,8 @@ internal sealed class OrderLineConfiguration : IEntityTypeConfiguration<OrderLin
         e.Property(x => x.RefundedAmount).HasColumnType("numeric(12,2)").IsRequired().HasDefaultValueSql("0").ValueGeneratedNever();
         e.HasIndex(x => new { x.ProductId, x.Kind }).HasDatabaseName("ix_order_line_product");
         e.HasIndex(x => new { x.OrderId, x.LineNo }).IsUnique().HasDatabaseName("order_line_order_id_line_no_key");
-        e.HasOne<Ta3lom.Store.Domain.Catalog.BookFormat>().WithMany().HasForeignKey(x => x.BookFormatId).HasConstraintName("order_line_book_format_id_fkey").OnDelete(DeleteBehavior.NoAction);
-        e.HasOne<Order>().WithMany().HasForeignKey(x => x.OrderId).HasConstraintName("order_line_order_id_fkey").OnDelete(DeleteBehavior.Cascade);
-        e.HasOne<Ta3lom.Store.Domain.Catalog.Product>().WithMany().HasForeignKey(x => x.ProductId).HasConstraintName("order_line_product_id_fkey").OnDelete(DeleteBehavior.NoAction);
-        e.HasOne<Ta3lom.Store.Domain.Catalog.SponsorshipOffer>().WithMany().HasForeignKey(x => x.SponsorshipOfferId).HasConstraintName("order_line_sponsorship_offer_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Catalog.BookFormat>().WithMany().HasForeignKey(x => x.BookFormatId).HasConstraintName("order_line_book_format_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Catalog.Product>().WithMany().HasForeignKey(x => x.ProductId).HasConstraintName("order_line_product_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Catalog.SponsorshipOffer>().WithMany().HasForeignKey(x => x.SponsorshipOfferId).HasConstraintName("order_line_sponsorship_offer_id_fkey").OnDelete(DeleteBehavior.NoAction);
     }
 }

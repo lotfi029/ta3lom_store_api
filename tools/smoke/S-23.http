@@ -1,0 +1,15 @@
+# S-23 — Sponsored units and pooling (settlement effects; no endpoints). Result 30 Sep 2026 (local, Development): all as expected.
+# RUL-43: T3-26-001019 sponsor digital-teacher units ×2 → dev trigger → 2 `full` units (350.00, awaiting_allocation, linked to the
+#   line) + 2 sponsored_unit_event (null → awaiting_allocation, actor settlement); line funded; order fulfilled; funded_units +2
+# RUL-45 (the documented example, seat 350.00): contributions 100.00 (T3-26-001020), 150.00 (…021), 120.00 (…022) → pool
+#   100 → 250 → 20.00; one `pooled` unit after the third; unit_funding 100 / 150 / 100; remaining 0 / 0 / 20; funded_units 3
+# parallel: 6 × 50.00 on smart-study (seat 120.00), confirmed concurrently (T3-26-001023…028) → all 200; pool 60.00 =
+#   Σ remaining 60.00; 2 pooled units; Σ unit_funding 240.00 (no lost update)
+# zakat (RUL-47d): family-remote offer made zakat-eligible in the dev DB only (S1 offers are not, RUL-19), 45.00 sadaqa + 45.00
+#   zakat on a 90.00 seat → one pooled unit has_zakat = true, pool 0.00, zakat_ledger in 45.00; flag reset afterwards
+# guard: settlement.effect_missing removed (every line kind has its effect, plan 14 §13.4) — code, 11 §1.6, resx, doc 15
+# integrity checks (db/reference/003) after the run → 10 × 0 rows (check 4 pool = Σ remaining, check 5 units = quantity)
+@dev = http://localhost:5080/dev
+
+### Settle a sponsor order
+POST {{dev}}/orders/{{reference}}/confirm-payment

@@ -163,7 +163,8 @@ Still banned: MediatR, AutoMapper, FluentAssertions, any payment SDK.
 
 ### 2.5 Tests during the run
 
-You decided: **no new tests until the whole plan is built.**
+You decided: **no new tests until the whole plan is built.** After close-out the run continues into the
+**test phase (§4b)** without stopping (Run-plan-review §3).
 
 | Kept | Deferred to the test phase |
 |---|---|
@@ -175,15 +176,17 @@ You decided: **no new tests until the whole plan is built.**
 
 To make up for the missing tests, every S-nn runs a **smoke check** instead (§2.7).
 
-### 2.6 Git flow
+### 2.6 Git flow (amended by Run-plan-review §2 #1)
 
-- Work on the branch the cloud session gives you (e.g. `claude/…`). Don't open a new branch per session.
-- **One commit set per S-nn.** Commit messages start with `S-nn —`. Push after every S-nn.
-- **One PR per phase** (Phase 1 … Phase 6, §4). Open it when the phase's first session starts and mark it ready when the phase ends.
-  - If the session can merge, it squash-merges when the build and tests are green, then continues from the updated `main`.
-  - If it can't merge, it keeps going on the same branch; you merge later.
+- Work on the branch the cloud session gives you (`claude/funny-wright-yum3nm`). Don't open a new branch per session.
+- **One commit set per step.** Messages start with `S-nn —`, `P0-n —`, `H-1 —` or `T-nn —`. Push after every step.
+- **One draft PR for the whole run** (`claude/funny-wright-yum3nm` → `main`), "Store backend — full build + tests",
+  with a phase/session checklist (RUL / FR / endpoint numbers per session) updated after each session. It is
+  marked ready only at the very end. **Nothing is merged by the session** (the owner reviews once, at the end).
 - Never force-push, rebase shared history, or delete branches.
-- New migrations are named by intent (`AddCartDedicationJson`, `AddOtpIndexes`). Merged migrations are never edited. After a migration, update `db/reference/001_store_schema.sql` by hand until schema parity passes.
+- New migrations are named by intent (`AddCartDedicationJson`, `AddOtpIndexes`) and are additive (expand → migrate →
+  contract). Merged migrations are never edited. After a migration, update `db/reference/001_store_schema.sql` by
+  hand until schema parity passes.
 
 ### 2.7 Smoke check (end of every S-nn)
 
@@ -360,6 +363,68 @@ Integrity checks after S-23, S-25 and S-42. **Phase 5 PR:** "Phase 5 — giving"
 | S-17 | S-16 | S-25 | S-19, S-23, S-24 |
 | S-26, S-33, S-35 | S-17 | S-42 | S-23 |
 | S-31 | S-17 (+ effects) | S-43, S-45 | S-25 |
+
+---
+
+### §4b Test phase (after close-out, same run, non-stop — Run-plan-review §3)
+
+| # | Step | Content |
+|---|---|---|
+| T-1 | Test infrastructure | Shared PostgreSQL fixture (external PG16 here, Testcontainers `postgres:18` in CI) with a reset between tests; `StoreApiFactory` with `FakeClock`; SMS and email sink readers; token helpers per role; data builders; `SettleViaDevTrigger` helper |
+| T-2 | Settlement (S-16) | Same confirmation 5× → one change; parallel confirmations → one settlement; amount mismatch → `payment_review`, no effects; confirmation after expiry → review; expiry releases stock and restores cart lines; duplicate-course race; zakat `in`; counters once; architecture test: only `IOrderSettlement` sets `paid` |
+| T-3 | Pooling (S-23) | FsCheck: `balance = Σ remaining`, `units × seat price = Σ converted`; 100 + 150 + 120 on a 350 seat → 1 unit, 20 left, split 100/150/100; parallel contributions |
+| T-4 | Allocation (S-25) | RUL-47 (a)–(e); all-or-nothing; parallel officers never share a unit; zakat mismatch; `allocation.mobile_required`; lapse re-queue + SMS |
+| T-5 | RUL tests | Every plan 14 "Tests" list, `[Rule("RUL-nn")]`; fill `ImplementedRules.txt` per §13.1 until `RuleCoverageTests` passes (payment-service RULs excluded) |
+| T-6 | Policy matrix | Every admin route × every role → 200/403, incl. segregation of duties |
+| T-7 | Endpoint integration | All 130 endpoints: success, 400, 401/403, ≥ 1 business `code`; Mapster `Compile()` test; OpenAPI vs 11; log redaction for new PII; `/dev/*` 404 in Production |
+| T-8 | Documents and outputs | PDF text + Arabic shaping + totals; QR TLV decode; gapless numbering under 20 parallel settlements; CSV BOM; donor DTOs never carry beneficiary identity |
+| T-9 | Coverage + report | Domain ≥ 90 %, Application ≥ 80 %; then `store/sessions/Build-report.md` |
+
+Test rules: if a test fails because the code breaks 03, fix the **code**; if the test misread 03, fix the test.
+Never weaken, skip or delete a test to go green; `[Skip]` only for environment limits with a written reason (it must
+run in CI). Every bug found goes into `DECISIONS.md` "Bugs found by tests". Allowed test packages: FsCheck (xUnit
+v3), NSubstitute, Respawn, Microsoft.Testing.Extensions.CodeCoverage, PdfPig and a QR decoder if needed.
+Shouldly only. Commits `T-nn — title`.
+
+**The run ends** when the Part 1 checklist is ticked, T-1…T-9 are done, all tests are green, coverage thresholds
+are met and `store/sessions/Build-report.md` is pushed; then the PR is marked ready.
+
+### §4c Plan 14 coverage (addendum, from Plan-14-coverage-audit.md)
+
+1. **Per-session checklist.** Before coding each S-nn, copy every Build bullet, Tests line and Done-when line of its
+   plan 14 section (plus the audit §2.2 items) into `PROGRESS.md` as check boxes. A session is done only when every
+   Build and Done-when box is ticked (staging items verified by local smoke). Tests boxes are ticked in the test
+   phase. Any deviation from 11 is fixed in 11 in the same commit; the PR checklist lists RUL/FR/endpoint numbers.
+2. **Outbox.** All 17 message types of 09 §4.9 (not `RefundProcessed`) get a handler in the session of audit §2.1:
+   OrderPaid, RenderDocuments, FinanceAlert (S-17); DedicationCard (S-17 stub → S-26); LmsEnrol (S-19);
+   ShipmentShipped/Delivered (S-21); LowStockAlert (S-41); SponsorUnitAllocated, AllocationAlert/Escalation,
+   BeneficiaryInvite, UnitLapsed, LmsRevoke (S-25); SponsorUnitCompleted (S-40); CauseUpdatePublished (S-26);
+   PoolSwept (S-42).
+3. **Adapters.** `SinkEmailSender` (`.eml` files in `artifacts/mail/` + `GET /dev/mail`) in Development,
+   `SmtpEmailSender` by config; `IEInvoicingGateway` + `NoopEInvoicingGateway` (S-17); a real SMS provider class
+   behind config with empty keys (S-04).
+4. **Spikes.** P0-3 before S-17 (QuestPDF Arabic invoice + receipt, IBM Plex Sans Arabic, RTL/LTR numbers, table,
+   QR, licence note) and P0-4 before S-20 (PdfSharp watermark on a 300-page PDF: timing, size, go/no-go). Code in
+   `spikes/` outside the solution, notes in `store/spikes/`.
+5. **Packages also approved:** SkiaSharp + SkiaSharp.NativeAssets.Linux.NoDependencies (EXIF strip by re-encode;
+   not ImageSharp). Fonts: IBM Plex Sans Arabic (OFL) in `Infrastructure/Resources/Fonts` with its licence;
+   fallback Noto Naskh Arabic, logged.
+6. **STEP 0 extra:** apply the idempotent migration script twice to the dev DB and confirm the `create-admin` stub.
+7. **Milestones:** at each phase end run the plan 14 §2 demo as `tools/smoke/M2.http` … `M7.http`; record the result.
+8. **Settings:** `StoreSettings` covers every RUL §M key plus `seller_vat_no` and `dedication_templates`, 60 s cache,
+   invalidated on update (09 §4.10).
+9. **Migrations** are additive (expand → migrate → contract); if the settlement contract differs from 15 §2–§3,
+   update `store/15-payment-service-handoff.md` in the same commit.
+10. **Close-out H-1** before the test phase: STRIDE walk (08 §6.2) with fixes or logged findings, vulnerable-package
+    scan, Production config with `/docs` and `/dev` off, security headers, local load smoke (k6 if installable, else
+    a scripted run) for catalogue p95 and 50 concurrent checkouts, index tuning from `pg_stat_statements`; verify the
+    code-side items of plan 14 §15.
+11. **Build-report.md** gets a "Plan 14 coverage" section: every plan 14 section → done / tested / deferred (hosting
+    items of audit §3), with commit references.
+
+Owner's approval fixes: S-25 fills the S-40 sponsored-unit hook; S-21 maps `shipment.address` to an owned JSON type;
+S-13 fills the S-04 cart-merge hook (RUL-17); in Production, start-up fails when a signing key is missing, equals
+its DEV ONLY value or is shorter than 32 bytes.
 
 ---
 

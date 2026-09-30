@@ -1,15 +1,26 @@
-using Ta3lom.Store.Application.Abstractions;
+using System.Security.Claims;
+using Ta3lom.Store.Application.Interfaces;
+using Ta3lom.Store.Domain.Constants;
 
 namespace Ta3lom.Store.Api.Security;
 
-/// Anonymous until customer (S-04) and staff (S-05) authentication add claims.
-internal sealed class HttpCurrentActor : ICurrentActor
+/// Who is calling (09 §3.4), from the bearer token's claims; the IP is only ever exposed as an HMAC.
+internal sealed class HttpCurrentActor(IHttpContextAccessor accessor, IPseudonymizer pseudonymizer) : ICurrentActor
 {
-    public ActorKind Kind => ActorKind.Anonymous;
+    private ClaimsPrincipal? User => accessor.HttpContext?.User;
 
-    public Guid? Id => null;
+    public ActorKind Kind => User?.Identity is { IsAuthenticated: true, AuthenticationType: var type }
+        ? type switch
+        {
+            AuthSchemes.Staff => ActorKind.Staff,
+            AuthSchemes.Customer => ActorKind.Customer,
+            _ => ActorKind.Anonymous,          // the MFA step token is not an actor yet
+        }
+        : ActorKind.Anonymous;
 
-    public string? Name => null;
+    public Guid? Id => Guid.TryParse(User?.FindFirstValue("sub"), out var id) ? id : null;
 
-    public string? IpHash => null;
+    public string? Name => Kind == ActorKind.Staff ? User?.FindFirstValue("email") : null;
+
+    public string? IpHash => accessor.HttpContext?.Connection.RemoteIpAddress is { } ip ? pseudonymizer.HashIp(ip.ToString()) : null;
 }

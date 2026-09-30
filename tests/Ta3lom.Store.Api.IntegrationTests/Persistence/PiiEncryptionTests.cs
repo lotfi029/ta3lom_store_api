@@ -2,7 +2,8 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Ta3lom.Store.Api.IntegrationTests.Infrastructure.Database;
-using Ta3lom.Store.Domain.Giving;
+using Ta3lom.Store.Domain.Entities.Giving;
+using Ta3lom.Store.Domain.Enums;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Persistence;
 

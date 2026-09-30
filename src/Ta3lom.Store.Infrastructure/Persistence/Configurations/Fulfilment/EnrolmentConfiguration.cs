@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Fulfilment;
+using Ta3lom.Store.Domain.Entities.Fulfilment;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Fulfilment;
 
@@ -33,9 +33,9 @@ internal sealed class EnrolmentConfiguration : IEntityTypeConfiguration<Enrolmen
         e.Property(x => x.CertificateNo).HasColumnType("text").IsRequired(false).ValueGeneratedNever();
         e.HasIndex(x => x.CertificateNo).IsUnique().HasDatabaseName("enrolment_certificate_no_key");
         e.HasIndex(x => new { x.CustomerId, x.ProductId }).IsUnique().HasFilter("(status = ANY (ARRAY['pending_sync'::text, 'active'::text, 'completed'::text]))").HasDatabaseName("ux_enrolment_live");
-        e.HasOne<Ta3lom.Store.Domain.Identity.Customer>().WithMany().HasForeignKey(x => x.CustomerId).HasConstraintName("enrolment_customer_id_fkey").OnDelete(DeleteBehavior.NoAction);
-        e.HasOne<Ta3lom.Store.Domain.Ordering.OrderLine>().WithMany().HasForeignKey(x => x.OrderLineId).HasConstraintName("enrolment_order_line_id_fkey").OnDelete(DeleteBehavior.NoAction);
-        e.HasOne<Ta3lom.Store.Domain.Catalog.Product>().WithMany().HasForeignKey(x => x.ProductId).HasConstraintName("enrolment_product_id_fkey").OnDelete(DeleteBehavior.NoAction);
-        e.HasOne<Ta3lom.Store.Domain.Giving.SponsoredUnit>().WithMany().HasForeignKey(x => x.SponsoredUnitId).HasConstraintName("fk_enrolment_unit").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Identity.Customer>().WithMany().HasForeignKey(x => x.CustomerId).HasConstraintName("enrolment_customer_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Ordering.OrderLine>().WithMany().HasForeignKey(x => x.OrderLineId).HasConstraintName("enrolment_order_line_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Catalog.Product>().WithMany().HasForeignKey(x => x.ProductId).HasConstraintName("enrolment_product_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Giving.SponsoredUnit>().WithMany().HasForeignKey(x => x.SponsoredUnitId).HasConstraintName("fk_enrolment_unit").OnDelete(DeleteBehavior.NoAction);
     }
 }

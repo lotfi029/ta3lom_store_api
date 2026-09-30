@@ -1,0 +1,47 @@
+# S-35 — Templates, retention, integrity and remaining events (#120–#122). Result 30 Sep 2026 (local, Development): all as expected.
+# #120 list → every seeded template with `variables` (the {{ name }} placeholders of subject + body); viewer 200
+# #121 update: body "{{ reference" (unclosed) → 422 template.render_failed with line/column; "{{ if x }}" without end → 422;
+#   "{{ 1 | nosuchfn }}" (fails only at render) → 422 (trial render with sample values); valid body → 200 + audit `template.update`;
+#   viewer → 403 auth.forbidden; unknown key → 404
+# #122 test send: SMS to 0551110021 → 202 {rendered} and the SMS in /dev/sms; e-mail to ops@example.test → 202 and the .eml in
+#   /dev/mail; unset variables show as [name]; bad recipient → 400 validation.failed; unknown template → 404
+# jobs (/dev/jobs lists 11 + OutboxDispatcher):
+#   IntegrityChecks on a clean DB → 0 alerts; after corrupting product_format.stock_on_hand → FinanceAlert integrity_check_failed
+#     e-mailed "check 3 — Stock counters match the ledger: 1 row(s)" (counter restored afterwards)
+#   Retention: a notification, a processed outbox row (its notification FK nulled first) and a download_log row back-dated past the
+#     window → deleted; payment_event.payload scrubbed; inactive beneficiary B-000006 back-dated 2 years → name/mobile/notes erased,
+#     code and region kept
+#   PruneIdempotencyKeys: a key back-dated 25 h → deleted (43 → 42)
+# rebuild: publish / archive smoke-book → CatalogChanged outbox rows processed; "Site rebuild not configured (Store:SiteRebuild);
+#   skipped" logged (no repository/token in Development); one pending message at a time (debounce at enqueue)
+# integrity checks (db/reference/003) → 0 rows
+@base = http://localhost:5080/v1
+@admin = <admin access token>
+
+### #120 Templates (staff:read)
+GET {{base}}/admin/templates
+Authorization: Bearer {{admin}}
+
+### #121 Update (staff:admin) — Scriban validated on save
+PUT {{base}}/admin/templates/order_paid/sms/ar
+Authorization: Bearer {{admin}}
+Content-Type: application/json
+
+{"body":"تم استلام طلبك {{ reference }} بمبلغ {{ total }} ر.س. الإيصال: {{ link }}"}
+
+### #121 Invalid template → 422 template.render_failed (line, column)
+PUT {{base}}/admin/templates/order_paid/sms/ar
+Authorization: Bearer {{admin}}
+Content-Type: application/json
+
+{"body":"تم استلام طلبك {{ reference"}
+
+### #122 Test send
+POST {{base}}/admin/templates/order_paid/sms/ar/test
+Authorization: Bearer {{admin}}
+Content-Type: application/json
+
+{"recipient":"0551110021","sampleData":{"reference":"T3-26-000001","total":"350.00"}}
+
+### Run a job now (Development)
+POST http://localhost:5080/dev/jobs/IntegrityChecks/run

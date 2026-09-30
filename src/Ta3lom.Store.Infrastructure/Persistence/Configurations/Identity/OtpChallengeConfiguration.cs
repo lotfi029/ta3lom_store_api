@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Identity;
+using Ta3lom.Store.Domain.Entities.Identity;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Identity;
 

@@ -1,0 +1,84 @@
+# S-13 — Cart (#10–#15, ExpireGuestCarts). Result 30 Sep 2026 (local, Development, seed catalogue): all as expected.
+# guest: GET → empty cart (id null, no row) · first POST → 201 + t3s_cart (sealed, Path=/v1, HttpOnly, Secure, Lax, 30 d)
+# buy course 350.00 · print ×2 then ×1 → one line ×3 (RUL-14) · print ×21 → 422 cart.quantity_limit max 20 ·
+# digital ×5 → forced to 1 · same course again → 409 cart.duplicate_course (RUL-13) ·
+# sponsor 100.00 on a 350.00 seat → amount line, seatEquivalent 0.28 · sponsor ×5 → units line 1750.00 (FR-S12) ·
+# sponsor 5.00 → 422 cart.amount_below_minimum · zakat on water-for-schools → 422 cart.zakat_not_allowed (RUL-19) ·
+# dedicated donation twice → two lines (never merge), mobile stored +9665…, shown 05•••••543 · free text while off →
+# 422 cart.dedication_free_text_disabled · mobile "123" → 400 cart.dedication_invalid · dedication on buy → 422
+# cart.dedication_not_allowed · units on the general fund (no unit amount) → 422 cart.mode_not_allowed · zakat
+# amount on tablet-for-student (eligible) → 201 · buy on a cause → 422 · quantity 0 → 400 validation.failed
+# summary: shipping 25.00 once a print line exists (RUL-26), VAT 0.00 while disabled; badge {lineCount, grandTotal}
+# PATCH print 7 → 200; 21 → 422 max 20; amount line → 422 cart.mode_not_allowed; digital 2 → 422 max 1 ·
+# DELETE line → 200, again → 404 cart.line_not_found · foreign Origin → 403 · invalid bearer → 401 · tampered cookie →
+# empty cart
+# sign-in merge (RUL-17): customer cart print ×15 + guest print ×7 → ×20 (capped) with cart.merge_combined; owned
+# course dropped with cart.merge_dropped_owned_course; guest cart → status merged, cookie deleted; a new customer
+# simply takes over the guest cart (expiresAt null) · customer adds an owned course → 409 cart.course_owned
+@base = http://localhost:5080/v1/cart
+@token = <customer access token>
+
+### #10 Cart (guest cookie or bearer)
+GET {{base}}
+
+### #11 Header badge
+GET {{base}}/summary
+
+### #12 Buy a course
+POST {{base}}/lines
+Content-Type: application/json
+
+{"productId":"01a0f1fa-8bb6-7741-8252-f96d88383c36","kind":"buy","mode":"units","quantity":1}
+
+### #12 Buy a print book ×2 (a second add merges)
+POST {{base}}/lines
+Content-Type: application/json
+
+{"productId":"01a0f1fa-8bcf-7fa1-aaf7-214cf95ba732","bookFormatId":"01a0f1fa-8bd1-766d-863d-e75096ab7169","kind":"buy","mode":"units","quantity":2}
+
+### #12 Sponsor by amount (FR-S12: 100 SAR share of a 350 SAR seat)
+POST {{base}}/lines
+Content-Type: application/json
+
+{"productId":"01a0f1fa-8bb6-7741-8252-f96d88383c36","kind":"sponsor","mode":"amount","quantity":1,"amount":"100.00","intent":"sadaqa"}
+
+### #12 Sponsor 5 seats → units line 1750.00
+POST {{base}}/lines
+Content-Type: application/json
+
+{"productId":"01a0f1fa-8bb6-7741-8252-f96d88383c36","kind":"sponsor","mode":"units","quantity":5}
+
+### #12 Dedicated donation
+POST {{base}}/lines
+Content-Type: application/json
+
+{"productId":"01a0f1fa-8bdd-763d-925d-722f4e91e5c9","kind":"donate","mode":"units","quantity":1,"intent":"sadaqa",
+ "dedication":{"toName":"أم خالد","toMobile":"0559876543","fromName":"نورة","templateKey":"hasanat","text":null}}
+
+### #12 Zakat on a non-eligible cause → 422 cart.zakat_not_allowed
+POST {{base}}/lines
+Content-Type: application/json
+
+{"productId":"01a0f1fa-8bdd-763d-925d-722f4e91e5c9","kind":"donate","mode":"units","quantity":1,"intent":"zakat"}
+
+### #13 Change a units line
+PATCH {{base}}/lines/{{lineId}}
+Content-Type: application/json
+
+{"quantity":7}
+
+### #14 Remove a line
+DELETE {{base}}/lines/{{lineId}}
+
+### #15 Empty the cart
+DELETE {{base}}
+
+### Sign in with the t3s_cart cookie → cartNotices (see S-04.http for the OTP steps)
+POST http://localhost:5080/v1/auth/otp/verify
+Content-Type: application/json
+
+{"mobile":"0551112233","code":"<code from /dev/sms>"}
+
+### Customer cart
+GET {{base}}
+Authorization: Bearer {{token}}

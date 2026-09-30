@@ -4,8 +4,8 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Logging.Abstractions;
 using Ta3lom.Store.Infrastructure.Persistence;
-using Ta3lom.Store.Infrastructure.Persistence.Seed;
-using Ta3lom.Store.Infrastructure.Security;
+using Ta3lom.Store.Infrastructure.Persistence.Seeders;
+using Ta3lom.Store.Infrastructure.Services.Security;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Infrastructure.Database;
 

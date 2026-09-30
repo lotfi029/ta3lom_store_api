@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Ordering;
+using Ta3lom.Store.Domain.Entities.Ordering;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Ordering;
 

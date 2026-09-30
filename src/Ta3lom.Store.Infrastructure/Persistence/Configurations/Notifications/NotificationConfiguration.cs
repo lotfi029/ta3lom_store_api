@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Notifications;
+using Ta3lom.Store.Domain.Entities.Notifications;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Notifications;
 
@@ -30,6 +30,6 @@ internal sealed class NotificationConfiguration : IEntityTypeConfiguration<Notif
         e.HasIndex(x => x.RelatedOrderId).HasDatabaseName("ix_notification_order");
         e.HasIndex(x => new { x.OutboxMessageId, x.Channel, x.Recipient }).IsUnique().HasFilter("(outbox_message_id IS NOT NULL)").HasDatabaseName("ux_notification_once");
         e.HasOne<OutboxMessage>().WithMany().HasForeignKey(x => x.OutboxMessageId).HasConstraintName("notification_outbox_message_id_fkey").OnDelete(DeleteBehavior.NoAction);
-        e.HasOne<Ta3lom.Store.Domain.Ordering.Order>().WithMany().HasForeignKey(x => x.RelatedOrderId).HasConstraintName("notification_related_order_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Ordering.Order>().WithMany().HasForeignKey(x => x.RelatedOrderId).HasConstraintName("notification_related_order_id_fkey").OnDelete(DeleteBehavior.NoAction);
     }
 }

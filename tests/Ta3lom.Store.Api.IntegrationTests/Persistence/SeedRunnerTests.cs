@@ -1,5 +1,5 @@
 using Ta3lom.Store.Api.IntegrationTests.Infrastructure.Database;
-using Ta3lom.Store.Infrastructure.Persistence.Seed;
+using Ta3lom.Store.Infrastructure.Persistence.Seeders;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Persistence;
 

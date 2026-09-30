@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Catalog;
+using Ta3lom.Store.Domain.Entities.Catalog;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Catalog;
 

@@ -9,7 +9,9 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3" />
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
     <PackageReference Include="Shouldly" />
+    <PackageReference Include="FsCheck" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Shouldly" />

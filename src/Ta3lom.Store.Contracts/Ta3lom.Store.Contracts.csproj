@@ -1,6 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <!-- HTTP request/response records only (11). BCL only; no Domain, no Application. -->
-  <ItemGroup>
-    <AdditionalFiles Include="$(MSBuildThisFileDirectory)../../BannedSymbols.Money.txt" Link="BannedSymbols.Money.txt" />
-  </ItemGroup>
-</Project>

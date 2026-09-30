@@ -1,5 +1,6 @@
 using FluentValidation;
-using Ta3lom.Store.Application.Abstractions;
+using Ta3lom.Store.Application.Abstractions.Messaging;
+using Ta3lom.Store.SharedKernel;
 
 namespace Ta3lom.Store.Application.Tests.Abstractions;
 
@@ -22,9 +23,9 @@ public sealed class RegisterMobileHandler : ICommandHandler<RegisterMobile, Unit
 
     public Error? FailWith { get; set; }
 
-    public Task<Result<Unit>> HandleAsync(RegisterMobile command, CancellationToken ct)
+    public Task<Result<Unit>> HandleAsync(RegisterMobile command, CancellationToken ct = default)
     {
         Calls++;
-        return Task.FromResult(FailWith is null ? Result<Unit>.Ok(Unit.Value) : Result<Unit>.Fail(FailWith));
+        return Task.FromResult(FailWith is null ? Result.Success(Unit.Value) : Result.Failure<Unit>(FailWith));
     }
 }

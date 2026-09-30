@@ -1,5 +1,22 @@
 # CLAUDE.md — ta3lom store API
 
+## Run mode (active until `store/sessions/Build-report.md` is pushed)
+
+The continuous cloud run is governed by `store/sessions/Cloud-build-plan.md` (§2 run rules, §4b test phase,
+§4c plan 14 coverage). While it runs, these rules **override** the rest of this file:
+
+- **Tests:** no new tests until the build and close-out are finished (§2.5); existing tests, architecture tests and
+  schema parity stay green and are only adapted when a refactor moves types. Then the test phase T-1…T-9 (§4b)
+  writes every RUL, policy-matrix and endpoint test and fills `ImplementedRules.txt`.
+- **"Stop and ask" → defaults:** docs conflicts and open decisions use the defaults of §2.2–§2.3 and are logged in
+  `DECISIONS.md` (precedence 03 > 11 > database/ > 09 > 14).
+- **Staging DoD → local smoke check** (§2.7): gate, dev-DB migration, every new endpoint called once with curl
+  (`tools/smoke/S-nn.http`), integrity checks after S-16, S-21, S-23, S-25, S-42.
+- **"Ask before adding a dependency" → pre-approved list** (§2.4 + §4c item 5). Anything else: the smallest
+  well-known MIT/Apache package, logged as `REVIEW`.
+- **Git:** one draft PR for the whole run, nothing merged by the session, state in `PROGRESS.md` (first line
+  `Next:`) and `DECISIONS.md`.
+
 .NET backend for the store of ta3lom.sa (E-Learning Association, Riyadh): courses, books, seat
 sponsorships and donation products. Every session reads this file first. Work is built session by
 session from plan 14; payment processing is a separate service (plan 14 §0, doc 15).
@@ -30,21 +47,42 @@ All docs live in `store/` in this repo.
 - Central package management (`Directory.Packages.props`), nullable, warnings as errors, analyzers on,
   `Ta3lom.Store.slnx`. Tests run on Microsoft.Testing.Platform (xUnit v3).
 
-## Clean Architecture — enforced by `tests/Ta3lom.Store.ArchitectureTests`
+## Architecture — DMS + store (K) exceptions, enforced by `tests/Ta3lom.Store.ArchitectureTests`
+
+The layout follows the owner's DMS repo (github.com/lotfi029/DMS) as mapped in
+`store/sessions/Architecture-alignment-DMS.md`; the (K) rules there override DMS where they differ.
 
 | Project | References | Never |
 |---|---|---|
-| `Ta3lom.Store.Domain` | BCL only | EF Core, `Microsoft.Extensions.*`, any other project |
-| `Ta3lom.Store.Application` | **Domain only** (+ FluentValidation, Logging/DI abstractions, Scrutor) | **Contracts**, EF Core, Npgsql, ASP.NET Core, adapter SDKs |
-| `Ta3lom.Store.Infrastructure` | Application, Domain | Api, Contracts, ASP.NET Core |
-| `Ta3lom.Store.Contracts` | BCL only; sealed records | Domain, Application |
-| `Ta3lom.Store.Api` | all (composition root) | business logic |
+| `Ta3lom.Store.SharedKernel` | BCL only | anything else |
+| `Ta3lom.Store.Domain` | SharedKernel (+ DI abstractions for `AddDomain` only) | EF Core (K-b), ASP.NET Core, any outer project |
+| `Ta3lom.Store.Application` | Domain, SharedKernel (+ FluentValidation, Mapster, Scrutor, EF Core **abstractions** for read queries, K-c) | Npgsql, EF Relational, raw SQL, ASP.NET Core, adapter SDKs |
+| `Ta3lom.Store.Infrastructure` | Application, Domain, SharedKernel | Api, the ASP.NET Core web stack |
+| `Ta3lom.Store.Api` | all (composition root) | business logic, DTO types |
 
-- Handlers return Application result records (`Result<T>`, `PagedResult<T>`); the Api maps them to
-  Contracts with static mappers in `Api/Mapping/` (no AutoMapper). Error codes live in
-  `Application/Abstractions/ErrorCodes.cs`.
-- Endpoints: bind → call one handler → `ToHttp()`. No logic, no DbContext. Test-only routes go through
-  `IV1EndpointContributor` registered in tests; no probe route in production code.
+Where a use case lives (Cloud-build-plan §3.2):
+
+| Piece | Path |
+|---|---|
+| Entity / aggregate behaviour | `Domain/Entities/<Module>/` · enums `Domain/Enums/` · `Money` in `Domain/ValueObjects/` |
+| Error catalogue | `Domain/Errors/ErrorCodes.cs` (flat list of 11 §1.6 codes) + `Domain/Errors/<Aggregate>Errors.cs` |
+| Repository port / unit of work | `Domain/IRepositories/` (`IGenericRepository<T>`, `IUnitOfWork` = `SaveChangesAsync` + `ExecuteInTransactionAsync`, no EF types) |
+| Command / query + handler (one file) + validator | `Application/Features/<Module>/{Commands,Queries}/<UseCase>/` |
+| Request / response DTOs | `Application/DTOs/<Module>/` (sealed records; money as `"350.00"` strings, enums as DDL strings) |
+| Mapping | `Application/Mapping/<Module>MappingConfig : IRegister` (Mapster, explicit for money and enums) |
+| Ports for external services | `Application/Interfaces/` |
+| Settlement effects | `Application/Features/Settlement/Effects/` |
+| Repository / service implementations | `Infrastructure/Persistence/Repositories/`, `Infrastructure/Services/<Area>/` (row locks only here) |
+| Jobs | `Infrastructure/Services/Jobs/<Name>Job.cs` — thin shell calling one Application command |
+| Endpoints | `Api/Endpoints/<Module>Endpoints.cs : IEndpoint` (mapped on `/v1`); `/dev/*` via `IDevEndpoint` |
+| Error texts | `Api/Resources/ErrorMessages.resx` + `.en.resx` |
+
+- Handlers return SharedKernel `Result` / `Result<T>`; failures are `Error(Code, Description, Status)` whose
+  code is an 11 §1.6 value. `CustomResults.ToHttp()`/`ToProblem()` keep the 11 §1.6 problem body (K-d).
+- Endpoints: bind → call one handler → `ToHttp()`. No logic, no DbContext. Test-only routes are an
+  `IEndpoint` registered by the test factory; no probe route in production code.
+- No catch-all in handlers (K-i); transactions only through `IUnitOfWork.ExecuteInTransactionAsync` (retrying
+  execution strategy). No startup migrations (K-a). `created_at`/time only from `IClock` (K-e).
 - Aggregates protect invariants; private setters; state changes through methods named after the business
   action (`Order.MarkPaid`, `Cart.AddLine`). One transaction per use case; outbox rows in that transaction;
   no external call inside a transaction.
@@ -54,7 +92,7 @@ All docs live in `store/` in this repo.
 1. **03 is the source of truth.** Read the RUL before touching its code. Code vs rule → stop and ask.
 2. **Never float money.** `decimal`/`Money` only, two decimals, `MidpointRounding.AwayFromZero`; JSON money
    is a string (`"350.00"`). Guards: `BannedSymbols.Money.txt` (double/float members in Domain and
-   Contracts) + the `No_money_as_floating_point` architecture test (money-named declarations).
+   SharedKernel) + the `No_money_as_floating_point` architecture test (money-named declarations).
 3. **Payments are out of scope.** Only `IOrderSettlement` sets an order `paid` (S-16). No gateway,
    webhook, reconciliation, retry or refund code here (doc 15).
 4. **Settlement, pooling and allocation are one transaction each**, with the row locks of database/01 §4.
@@ -77,7 +115,7 @@ All docs live in `store/` in this repo.
 11. **Idempotency wherever money moves** (checkout by `Idempotency-Key`, outbox handlers at-most-once).
 12. **Use `IClock`.** `DateTime.Now/UtcNow/Today`, `DateTimeOffset.Now/UtcNow` are banned in `src/`.
     Business dates are Asia/Riyadh.
-13. **Contracts are the API.** A DTO change updates `openapi/v1.json` in the same PR
+13. **DTOs are the API.** A change to `Application/DTOs` updates `openapi/v1.json` in the same PR
     (`UPDATE_OPENAPI_SNAPSHOT=1 dotnet test`) and 11 if needed; every new error code goes into 11 §1.6,
     `ErrorCodes` and both `ErrorMessages*.resx` files.
 14. **Ask before adding a dependency.** Versions only in `Directory.Packages.props`.
@@ -88,7 +126,7 @@ All docs live in `store/` in this repo.
 - One session = one branch = one PR; the PR title starts with `S-nn` (in cloud sessions, use the branch
   the session names).
 - Test-first: failing `[Rule]` test per RUL, then the code. Layer by layer: Domain → Application →
-  Infrastructure → Contracts + Api.
+  Infrastructure → Api (DTOs in Application).
 - Extend the shared tests each session: `ImplementedRules.txt`, the role × endpoint policy matrix (S-05+),
   the architecture tests.
 - **Stop and ask** when a rule is missing or ambiguous, docs conflict, a session will exceed 1.5× its

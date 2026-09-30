@@ -1,0 +1,60 @@
+# S-25 — Allocation (#109–#114; jobs AllocationAlerts, LapseUnits). Result 30 Sep 2026 (local, Development): all as expected.
+# #109 backlog (v_allocation_backlog + title + group label) · #110 units FIFO (full, full, pooled) · #111 candidates (approved,
+#   offer group, no live enrolment): B-000001, 005, 007, 008, 009
+# #112 admin → 403 (staff:allocate = allocation_officer only, RUL-62)
+#   rejected batch [B-000001 ok, 006 pending, 007 no mobile, 002 other group] → 422 allocation.rejected with all three reasons
+#   (not_approved, mobile_required, group_mismatch); units still 3 awaiting (all-or-nothing)
+#   [B-000001, B-000005] → 200 allocated 2 (the two oldest), customers found/created by mobile, beneficiary.customer_id set,
+#   sponsored enrolments pending_sync → LmsEnrol → active; BeneficiaryInvite SMS "خُصّص لك مقعد … ابدأ: …/store/account/courses"
+#   to both, notification.recipient stored masked (05•••••218)
+#   B-000001 again → 422 allocation.already_enrolled (RUL-47c)
+#   parallel [B-000008] ‖ [B-000009] on the last unit → one 200, one 409 allocation.no_units (SKIP LOCKED)
+#   family-remote zakat unit: non-zakat B-000010 → 422 allocation.zakat_mismatch; zakat-eligible B-000011 → 200;
+#   zakat_ledger out 45.00 (reference = unit), v_zakat_balance 0.00
+#   smart-study 2 units, 3 people → allocated 2, unitsShort true · then → 409 allocation.no_units · [] → 400
+# book: sponsor science-stars-book ×1 (T3-26-001031) → allocate B-000004 (library, no mobile needed) → distribution in the print
+#   format; #113 batch view; #114 complete {deliveredOn} → completed, stock 518 → 517 (sponsor_distribution, ref unit);
+#   again → 409 unit.invalid_transition; a course unit through #114 → 409
+# S-40 hook filled: /dev/lms/progress completes B-000001's sponsored enrolment → LmsProgressSync → unit completed (actor lms),
+#   SponsorUnitCompleted queued; second run adds nothing
+# LapseUnits: B-000005's seat allocated 61 days ago (dev DB) → allocated → lapsed → awaiting_allocation (job:LapseUnits),
+#   funded_at kept (head of the FIFO list), enrolment revoked + LmsRevoke, SMS beneficiary_lapsed (stored masked);
+#   re-allocating B-000005 later → 200 on the same unit (new enrolment; the revoked one stays)
+# AllocationAlerts: an awaiting unit funded 95 days ago (dev DB) → AllocationAlert + AllocationEscalation, e-mails in the sink;
+#   second run the same day → nothing new
+# roles: viewer backlog 200, units 403, allocate 403 · no token 401 · integrity checks 10 × 0 rows
+@base = http://localhost:5080/v1/admin
+@officer = <allocation_officer access token>
+
+### #109 Backlog
+GET {{base}}/allocation/backlog
+Authorization: Bearer {{officer}}
+
+### #110 Units (FIFO)
+GET {{base}}/allocation/products/{{productId}}/units?status=awaiting_allocation
+Authorization: Bearer {{officer}}
+
+### #111 Candidates
+GET {{base}}/allocation/products/{{productId}}/candidates?zakatOnly=false
+Authorization: Bearer {{officer}}
+
+### #112 Allocate
+POST {{base}}/allocation/products/{{productId}}/allocate
+Authorization: Bearer {{officer}}
+Content-Type: application/json
+
+{"beneficiaryIds":["{{beneficiaryId}}"],"note":"دفعة سبتمبر — القصيم"}
+
+### #113 Batch
+GET {{base}}/allocation/batches/{{batchId}}
+Authorization: Bearer {{officer}}
+
+### #114 Complete a book copy
+POST {{base}}/units/{{unitId}}/complete
+Authorization: Bearer {{officer}}
+Content-Type: application/json
+
+{"deliveredOn":"2026-09-30"}
+
+### Jobs (dev)
+POST http://localhost:5080/dev/jobs/LapseUnitsJob/run

@@ -1,0 +1,141 @@
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+
+namespace Ta3lom.Store.Infrastructure.Services.Security;
+
+/// Signing keys and peppers (Run-plan-review §2 #4). Real values come from /run/secrets in production.
+/// Outside Production an empty key falls back to its DEV ONLY value; in Production start-up fails when a key
+/// is missing, equals its DEV ONLY value or is shorter than 32 bytes.
+public sealed class JwtOptions
+{
+    public const string Section = "Store:Jwt";
+
+    public string Issuer { get; set; } = "https://store-api.ta3lom.sa";
+
+    public string CustomerAudience { get; set; } = "store-customer";
+
+    public string StaffAudience { get; set; } = "store-staff";
+
+    public string StaffMfaAudience { get; set; } = "store-staff-mfa";
+
+    /// `kid` header; rotate by changing it together with the key.
+    public string KeyId { get; set; } = "k1";
+
+    public string CustomerSigningKeyBase64 { get; set; } = string.Empty;
+
+    public string StaffSigningKeyBase64 { get; set; } = string.Empty;
+}
+
+public sealed class OtpOptions
+{
+    public const string Section = "Store:Otp";
+
+    public string PepperBase64 { get; set; } = string.Empty;
+}
+
+public sealed class TokenKeyOptions
+{
+    public const string Section = "Store:Tokens";
+
+    /// HMAC key of the per-order status token (`GET /v1/orders/{ref}/status`, S-15).
+    public string StatusKeyBase64 { get; set; } = string.Empty;
+}
+
+public sealed class DownloadKeyOptions
+{
+    public const string Section = "Store:Downloads";
+
+    /// HMAC key of the signed 10-minute download links (RUL-41, S-20).
+    public string LinkKeyBase64 { get; set; } = string.Empty;
+}
+
+/// Deterministic development keys: SHA-256("ta3lom-store DEV ONLY &lt;purpose&gt;"). Public by design, refused in Production.
+public static class DevOnlyKeys
+{
+    public const string JwtCustomer = "+zco5EjjaH++zZf/zVfF/52+4kgGxbIIYIXf3tlwPlY=";
+    public const string JwtStaff = "yyp7JEZrsV3kfEczPvnNSyvU4ipbgz9ZO9VX/oul4j0=";
+    public const string OtpPepper = "RmWH6Y2B4QC79EjwbHT9RREfbcIzuTpo095HTumzUtI=";
+    public const string OrderStatus = "JRSbCH7+CypDBf48ErxfUj6JVHKluq1YTByYLNf8THs=";
+    public const string DownloadLink = "fUJygvuodzCxeXaaPHBmxKybMxgoWxADnzGa5D5rOzg=";
+
+    public static int KeyLength(string? base64)
+    {
+        if (string.IsNullOrWhiteSpace(base64))
+        {
+            return 0;
+        }
+
+        try
+        {
+            return Convert.FromBase64String(base64).Length;
+        }
+        catch (FormatException)
+        {
+            return 0;
+        }
+    }
+
+    /// Null when the key is acceptable for <paramref name="environment"/>, else the reason.
+    public static string? Problem(string name, string? value, string devValue, IHostEnvironment environment)
+    {
+        if (!environment.IsProduction())
+        {
+            return KeyLength(value) >= 32 ? null : $"{name} must be at least 32 bytes (base64)";
+        }
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return $"{name} is required in Production";
+        }
+
+        if (value == devValue)
+        {
+            return $"{name} must not be the DEV ONLY value in Production";
+        }
+
+        return KeyLength(value) >= 32 ? null : $"{name} must be at least 32 bytes (base64)";
+    }
+}
+
+/// Fills empty keys with their DEV ONLY value outside Production (so Development, Testing and Staging start
+/// without secrets), then validates every key.
+internal sealed class KeyOptionsSetup(IHostEnvironment environment)
+    : IPostConfigureOptions<JwtOptions>, IPostConfigureOptions<OtpOptions>, IPostConfigureOptions<TokenKeyOptions>, IPostConfigureOptions<DownloadKeyOptions>,
+      IValidateOptions<JwtOptions>, IValidateOptions<OtpOptions>, IValidateOptions<TokenKeyOptions>, IValidateOptions<DownloadKeyOptions>
+{
+    public void PostConfigure(string? name, JwtOptions options)
+    {
+        options.CustomerSigningKeyBase64 = Fallback(options.CustomerSigningKeyBase64, DevOnlyKeys.JwtCustomer);
+        options.StaffSigningKeyBase64 = Fallback(options.StaffSigningKeyBase64, DevOnlyKeys.JwtStaff);
+    }
+
+    public void PostConfigure(string? name, OtpOptions options) => options.PepperBase64 = Fallback(options.PepperBase64, DevOnlyKeys.OtpPepper);
+
+    public void PostConfigure(string? name, TokenKeyOptions options) => options.StatusKeyBase64 = Fallback(options.StatusKeyBase64, DevOnlyKeys.OrderStatus);
+
+    public void PostConfigure(string? name, DownloadKeyOptions options) => options.LinkKeyBase64 = Fallback(options.LinkKeyBase64, DevOnlyKeys.DownloadLink);
+
+    public ValidateOptionsResult Validate(string? name, JwtOptions options) => Result(
+        DevOnlyKeys.Problem("Store:Jwt:CustomerSigningKeyBase64", options.CustomerSigningKeyBase64, DevOnlyKeys.JwtCustomer, environment),
+        DevOnlyKeys.Problem("Store:Jwt:StaffSigningKeyBase64", options.StaffSigningKeyBase64, DevOnlyKeys.JwtStaff, environment),
+        options.CustomerSigningKeyBase64 == options.StaffSigningKeyBase64 && environment.IsProduction()
+            ? "Store:Jwt customer and staff keys must differ" : null);
+
+    public ValidateOptionsResult Validate(string? name, OtpOptions options) =>
+        Result(DevOnlyKeys.Problem("Store:Otp:PepperBase64", options.PepperBase64, DevOnlyKeys.OtpPepper, environment));
+
+    public ValidateOptionsResult Validate(string? name, TokenKeyOptions options) =>
+        Result(DevOnlyKeys.Problem("Store:Tokens:StatusKeyBase64", options.StatusKeyBase64, DevOnlyKeys.OrderStatus, environment));
+
+    public ValidateOptionsResult Validate(string? name, DownloadKeyOptions options) =>
+        Result(DevOnlyKeys.Problem("Store:Downloads:LinkKeyBase64", options.LinkKeyBase64, DevOnlyKeys.DownloadLink, environment));
+
+    private string Fallback(string value, string devValue) =>
+        string.IsNullOrWhiteSpace(value) && !environment.IsProduction() ? devValue : value;
+
+    private static ValidateOptionsResult Result(params string?[] problems)
+    {
+        var failures = problems.Where(p => p is not null).Select(p => p!).ToList();
+        return failures.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(failures);
+    }
+}

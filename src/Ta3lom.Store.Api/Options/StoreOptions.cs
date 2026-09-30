@@ -85,6 +85,32 @@ public sealed class RateLimitSettings
 {
     /// `public` policy (09 §5.15): token bucket, 120/min with a burst of 40.
     public TokenBucketSettings Public { get; set; } = new() { TokenLimit = 40, TokensPerPeriod = 2, ReplenishmentPeriodSeconds = 1 };
+
+    /// Window policies of 09 §5.15 (per hashed IP, or per subject where noted).
+    public WindowSettings OtpRequest { get; set; } = new() { PermitLimit = 10, WindowSeconds = 3600 };
+
+    public WindowSettings OtpVerify { get; set; } = new() { PermitLimit = 30, WindowSeconds = 900 };
+
+    public WindowSettings AuthRefresh { get; set; } = new() { PermitLimit = 30, WindowSeconds = 60 };
+
+    public WindowSettings StaffLogin { get; set; } = new() { PermitLimit = 10, WindowSeconds = 900 };
+
+    public WindowSettings Cart { get; set; } = new() { PermitLimit = 60, WindowSeconds = 60 };
+
+    public WindowSettings Checkout { get; set; } = new() { PermitLimit = 10, WindowSeconds = 60 };
+
+    public WindowSettings Me { get; set; } = new() { PermitLimit = 120, WindowSeconds = 60 };
+
+    public WindowSettings Download { get; set; } = new() { PermitLimit = 10, WindowSeconds = 60 };
+
+    public WindowSettings Admin { get; set; } = new() { PermitLimit = 300, WindowSeconds = 60 };
+}
+
+public sealed class WindowSettings
+{
+    public int PermitLimit { get; set; }
+
+    public int WindowSeconds { get; set; }
 }
 
 public sealed class TokenBucketSettings

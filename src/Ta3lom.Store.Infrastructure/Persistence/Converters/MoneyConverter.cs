@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Ta3lom.Store.Domain.Common;
+using Ta3lom.Store.Domain.ValueObjects;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Converters;
 

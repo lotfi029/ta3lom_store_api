@@ -1,0 +1,11 @@
+# M6 — Giving (plan 14 §2): "5 seats + a 100 SAR share → units and pool; allocation batch → beneficiary invited → enrolment;
+# dedication card SMS; campaign close sweeps the pool." Result 30 Sep 2026 (local, Development): PASSED.
+#  1. customer 0551110801: python-kids (seat 450.00) sponsor ×5 + a 100.00 share dedicated to أم عبدالله (from سارة) → T3-26-001036,
+#     2350.00 → dev trigger → paid → fulfilled (both lines funded)
+#  2. 5 `full` units awaiting allocation; pool 100.00 (below one seat, no pooled unit); goal funded_units 5, raised 2350.00
+#  3. dedication card SMS to 0559990101 "أم عبدالله، تبرّع سارة عنك في «البرمجة للناشئين بلغة بايثون». بطاقتك: …/store/card/…"
+#  4. two orphan_home_students beneficiaries (B-000015, B-000016, guardian recorded) approved → officer allocates both → 2 units
+#     allocated, customers created by mobile, sponsored enrolments active, invite SMS to both mobiles
+#  5. offer close with sweepPool → inactive, 100.00 swept to education-fund (goal_adjustment pair), pool 0.00
+#  6. integrity checks → 10 × 0 rows
+# Covered in detail by S-23.http, S-24.http, S-25.http, S-26.http, S-42.http, S-43.http.

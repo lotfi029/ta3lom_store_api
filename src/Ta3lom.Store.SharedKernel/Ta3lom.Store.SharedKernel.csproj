@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- DMS SharedKernel: BCL only. Entity, Result, Error, domain events. Referenced by every layer. -->
+  <ItemGroup>
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)../../BannedSymbols.Money.txt" Link="BannedSymbols.Money.txt" />
+  </ItemGroup>
+</Project>

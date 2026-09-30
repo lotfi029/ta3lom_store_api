@@ -8,7 +8,7 @@ namespace Ta3lom.Store.Api.Endpoints;
 /// #134 GET /health/live and #135 GET /health/ready (11 §10, 09 §8.3). Unversioned, no CORS.
 public static class HealthEndpoints
 {
-    public const string ReadyTag = Ta3lom.Store.Infrastructure.Health.HealthTags.Ready;
+    public const string ReadyTag = Ta3lom.Store.Infrastructure.Services.Health.HealthTags.Ready;
 
     public static IEndpointRouteBuilder MapHealthEndpoints(this IEndpointRouteBuilder app)
     {

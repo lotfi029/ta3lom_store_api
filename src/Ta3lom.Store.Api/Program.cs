@@ -1,18 +1,10 @@
-using Microsoft.AspNetCore.Localization;
+using Mapster;
 using Microsoft.Extensions.Options;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
+using Ta3lom.Store.Api;
 using Ta3lom.Store.Api.Cli;
 using Ta3lom.Store.Api.Endpoints;
-using Ta3lom.Store.Api.Http;
-using Ta3lom.Store.Api.Logging;
-using Ta3lom.Store.Api.Options;
-using Ta3lom.Store.Api.Security;
-using Ta3lom.Store.Application;
-using Ta3lom.Store.Application.Abstractions;
-using Ta3lom.Store.Infrastructure;
+using Ta3lom.Store.Api.Extensions;
 
 // CLI verbs run without the web host (database/03 §3).
 if (args.Length > 0 && args[0] == CreateAdminCommand.Verb)
@@ -23,60 +15,16 @@ if (args.Length > 0 && args[0] == CreateAdminCommand.Verb)
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(k => k.AddServerHeader = false);
 
-// ── Configuration: validated at start-up (09 §7.3) ─────────────────────────────────────────────
-builder.Services.AddOptions<StoreOptions>()
-    .BindConfiguration(StoreOptions.Section)
-    .ValidateDataAnnotations()
-    .Validate(o => o.Validate().Count == 0, "Store options are invalid; see StoreOptions.Validate()")
-    .ValidateOnStart();
-
-// ── Layers ──────────────────────────────────────────────────────────────────────────────────────
-builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<ICurrentActor, HttpCurrentActor>();
-
-// ── Cross-cutting HTTP concerns ─────────────────────────────────────────────────────────────────
-builder.Services.AddStoreLogging();
-builder.Services.AddStoreProblemDetails();
-builder.Services.AddStoreForwardedHeaders();
-builder.Services.AddStoreCors();
-builder.Services.AddStoreRateLimiting();
-builder.Services.AddHsts(o =>
-{
-    o.MaxAge = TimeSpan.FromDays(365);
-    o.IncludeSubDomains = true;
-});
-builder.Services.AddRequestLocalization(o =>
-{
-    string[] cultures = ["ar", "en"];
-    o.SetDefaultCulture("ar").AddSupportedCultures(cultures).AddSupportedUICultures(cultures);
-    o.RequestCultureProviders = [new AcceptLanguageHeaderRequestCultureProvider()];
-});
-builder.Services.AddHealthChecks();
-builder.Services.AddOpenApi();
-
-var otlpEndpoint = builder.Configuration["Store:Telemetry:OtlpEndpoint"];
-builder.Services.AddOpenTelemetry()
-    .ConfigureResource(r => r.AddService("ta3lom-store-api"))
-    .WithTracing(t =>
-    {
-        t.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddSource("Ta3lom.Store");
-        if (!string.IsNullOrWhiteSpace(otlpEndpoint))
-        {
-            t.AddOtlpExporter(o => o.Endpoint = new Uri(otlpEndpoint));
-        }
-    })
-    .WithMetrics(m =>
-    {
-        m.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddRuntimeInstrumentation().AddMeter("Ta3lom.Store");
-        if (!string.IsNullOrWhiteSpace(otlpEndpoint))
-        {
-            m.AddOtlpExporter(o => o.Endpoint = new Uri(otlpEndpoint));
-        }
-    });
+// ── Layers (DMS chaining: AddApi → AddInfrastructure → AddApplication → AddDomain) ─────────────
+builder.Services.AddStore(builder.Configuration);
 
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    // Explicit Mapster maps must be complete (K-h); fails fast on an unmapped member.
+    app.Services.GetRequiredService<TypeAdapterConfig>().Compile();
+}
 
 // ── Pipeline (order matters: TLS ends at Caddy, so forwarded headers come first) ────────────────
 app.UseForwardedHeaders();
@@ -88,19 +36,20 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<SecurityHeadersMiddleware>();
+app.UsePublicFiles();
 app.UseStoreRequestLogging();
 app.UseRequestLocalization(app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>().Value);
 app.UseRouting();
 app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseRateLimiter();
+app.UseOutputCache();
 
 // ── Endpoints ───────────────────────────────────────────────────────────────────────────────────
 var v1 = app.MapGroup("/v1").RequireCors(CorsSetup.WebPolicy);
-foreach (var contributor in app.Services.GetServices<IV1EndpointContributor>())
-{
-    contributor.Map(v1);
-}
-
+app.MapEndpoints(v1);
+app.MapDevEndpoints();
 app.MapHealthEndpoints();
 
 if (!app.Environment.IsProduction())

@@ -1,0 +1,16 @@
+# S-41 — LowStockAlert job (daily 08:00 Riyadh). Result 30 Sep 2026 (local, Development): all as expected.
+# /dev/jobs lists LowStockAlertJob "0 0 8 * * ?"
+# low = available ≤ coalesce(low_stock_threshold, low_stock_default_threshold = 20); active formats of non-archived products only
+# SMOKE-P (0 available, product archived) → no alert
+# BK-STUDY-PLANNE-P low_stock_threshold 600 (#57 PUT format) → available 500 ≤ 600 → run → one outbox LowStockAlert
+#   {formatId, sku, titleAr, available 500, threshold 600, day 2026-09-30} → staff e-mail to store-alerts@ta3lom.sa
+#   "[متجر تعلّم] LowStockAlert BK-STUDY-PLANNE-P" (staff_alert, notification sent once)
+# second run the same Riyadh day → no new message (at most one per format per day); threshold reset to null afterwards
+# first attempt failed: the Riyadh day start was sent with offset +03:00 (Npgsql wants UTC) → fixed with ToUniversalTime()
+@dev = http://localhost:5080/dev
+
+### Run the job now
+POST {{dev}}/jobs/LowStockAlertJob/run
+
+### Staff e-mail in the mail sink
+GET {{dev}}/mail?count=1

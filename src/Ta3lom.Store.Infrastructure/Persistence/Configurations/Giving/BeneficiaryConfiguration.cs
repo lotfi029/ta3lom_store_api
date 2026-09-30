@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Giving;
+using Ta3lom.Store.Domain.Entities.Giving;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Giving;
 
@@ -36,6 +36,6 @@ internal sealed class BeneficiaryConfiguration : IEntityTypeConfiguration<Benefi
         e.HasIndex(x => x.Code).IsUnique().HasDatabaseName("beneficiary_code_key");
         e.HasIndex(x => new { x.BeneficiaryGroup, x.EligibilityStatus, x.ZakatEligible }).HasDatabaseName("ix_beneficiary_pick");
         e.HasIndex(x => x.MobileHash).IsUnique().HasFilter("(mobile_hash IS NOT NULL)").HasDatabaseName("ux_beneficiary_mobile");
-        e.HasOne<Ta3lom.Store.Domain.Identity.Customer>().WithMany().HasForeignKey(x => x.CustomerId).HasConstraintName("beneficiary_customer_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Identity.Customer>().WithMany().HasForeignKey(x => x.CustomerId).HasConstraintName("beneficiary_customer_id_fkey").OnDelete(DeleteBehavior.NoAction);
     }
 }

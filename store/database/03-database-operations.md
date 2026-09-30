@@ -143,7 +143,7 @@ SELECT series, yr FROM (
 | `otp_challenge` | 24 h | Deleted |
 | Guest carts | 30 days idle | Deleted |
 | `notification` | 12 months | Deleted |
-| `outbox_message` (processed) | 30 days | Deleted |
+| `outbox_message` (processed) | 30 days; `SponsorDigest` rows 13 months (the last-digest record, S-45) | Deleted |
 | `download_log`, IP hashes | 12 months | Deleted |
 | `audit_log` | 5 years | Kept |
 | Beneficiary PII | While active + 2 years | `full_name_enc`/`mobile_enc` nulled; code and aggregate history kept |

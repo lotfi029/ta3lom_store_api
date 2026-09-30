@@ -1,8 +1,8 @@
 using System.Text.Json;
 using Ta3lom.Store.Api.IntegrationTests.Infrastructure.Database;
-using Ta3lom.Store.Application.Abstractions;
-using Ta3lom.Store.Domain.Catalog;
-using Ta3lom.Store.Domain.Identity;
+using Ta3lom.Store.Application.Interfaces;
+using Ta3lom.Store.Domain.Entities.Catalog;
+using Ta3lom.Store.Domain.Entities.Identity;
 using Ta3lom.Store.Infrastructure.Persistence.Interceptors;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Persistence;

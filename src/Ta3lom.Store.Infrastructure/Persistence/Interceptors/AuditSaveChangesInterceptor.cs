@@ -4,9 +4,10 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Ta3lom.Store.Application.Abstractions;
-using Ta3lom.Store.Domain.Auditing;
-using Ta3lom.Store.Domain.Common;
+using Ta3lom.Store.Application.Abstractions.Time;
+using Ta3lom.Store.Application.Interfaces;
+using Ta3lom.Store.Domain.Entities.Auditing;
+using Ta3lom.Store.Domain.ValueObjects;
 using Ta3lom.Store.Infrastructure.Persistence.Converters;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Interceptors;

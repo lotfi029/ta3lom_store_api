@@ -1,0 +1,28 @@
+# S-20 — Digital downloads (#32, #46, #94). Result 30 Sep 2026 (local, Development): all as expected.
+# setup: the P0-4 301-page book uploaded as a private book_file and set on formative-guide's digital format
+# purchase T3-26-001013 → dev trigger → paid → fulfilled; DigitalBookEffect: grant 5 downloads, line available; invoice issued
+# #32 link → {url: {api}/v1/downloads/{token}, expiresAt: +10 min, remaining: 5} (token = grant ‖ customer ‖ expiry + HMAC)
+# #46 download → 200 application/pdf, attachment formative-guide.pdf, no-store; 886 KB; 301/301 pages stamped
+#   "نسخة خاصة بـ {buyer} — 05•••••001 — T3-26-001013 — لا يجوز نشرها"; first download 0.75 s (stamp + cache), then 0.02 s
+#   (cached per grant in private downloads/{grant}.pdf); download_log rows with ip_hash
+# downloads 2–5 → 200, 6th → 403 download.limit_reached; new link at the limit → 403
+# #94 reset (admin, staff:resend) → downloadCount 0, audited; download works again
+# another customer asking a link for the grant → 404; revoked grant → 410 download.revoked (download and reset);
+# tampered payload / garbage token → 410 download.link_expired; the download rate policy answers 429 when hammered
+@base = http://localhost:5080/v1
+@token = <customer access token>
+@admin = <admin access token>
+
+### #32 Download link
+POST {{base}}/me/downloads/{{grantId}}/link
+Authorization: Bearer {{token}}
+
+### #46 Download (the link is the credential)
+GET {{base}}/downloads/{{downloadToken}}
+
+### #94 Reset (staff)
+POST {{base}}/admin/download-grants/{{grantId}}/reset
+Authorization: Bearer {{admin}}
+Content-Type: application/json
+
+{"reason":"customer changed device"}

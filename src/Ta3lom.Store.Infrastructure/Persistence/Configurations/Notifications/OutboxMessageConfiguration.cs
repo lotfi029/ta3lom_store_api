@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Notifications;
+using Ta3lom.Store.Domain.Entities.Notifications;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Notifications;
 

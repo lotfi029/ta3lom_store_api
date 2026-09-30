@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Catalog;
+using Ta3lom.Store.Domain.Entities.Catalog;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Catalog;
 
@@ -46,6 +46,6 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         e.HasIndex("SearchVector").HasMethod("gin").HasDatabaseName("ix_product_search");
         e.HasIndex(x => x.Slug).IsUnique().HasDatabaseName("product_slug_key");
         e.HasOne<Category>().WithMany().HasForeignKey(x => x.CategoryId).HasConstraintName("product_category_id_fkey").OnDelete(DeleteBehavior.SetNull);
-        e.HasOne<Ta3lom.Store.Domain.Media.MediaAsset>().WithMany().HasForeignKey(x => x.CoverAssetId).HasConstraintName("product_cover_asset_id_fkey").OnDelete(DeleteBehavior.SetNull);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Media.MediaAsset>().WithMany().HasForeignKey(x => x.CoverAssetId).HasConstraintName("product_cover_asset_id_fkey").OnDelete(DeleteBehavior.SetNull);
     }
 }

@@ -1,8 +1,10 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Ta3lom.Store.Application.Abstractions;
-using Ta3lom.Store.Application.Abstractions.Behaviours;
+using Ta3lom.Store.Application.Abstractions.Behaviors;
+using Ta3lom.Store.Application.Abstractions.Messaging;
+using Ta3lom.Store.Domain.Errors;
+using Ta3lom.Store.SharedKernel;
 
 namespace Ta3lom.Store.Application.Tests.Abstractions;
 
@@ -14,13 +16,13 @@ public sealed class DecoratorTests
     public async Task Validation_failure_returns_400_shape_and_skips_the_handler()
     {
         var inner = new RegisterMobileHandler();
-        var sut = new ValidatingCommandHandler<RegisterMobile, Unit>(inner, [new RegisterMobileValidator()]);
+        var sut = new ValidationDecorator.CommandHandler<RegisterMobile, Unit>(inner, [new RegisterMobileValidator()]);
 
         var result = await sut.HandleAsync(new RegisterMobile("12345", new AddressInput("")), TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
-        result.Error!.Code.ShouldBe(ErrorCodes.ValidationFailed);
-        result.Error.Kind.ShouldBe(ErrorKind.Validation);
+        result.Error.Code.ShouldBe(ErrorCodes.ValidationFailed);
+        result.Error.Status.ShouldBe(400);
         var errors = (IReadOnlyDictionary<string, string[]>)result.Error.Extensions!["errors"]!;
         errors.Keys.ShouldBe(["mobileNumber", "address.cityName"], ignoreOrder: true);
         inner.Calls.ShouldBe(0);
@@ -30,7 +32,7 @@ public sealed class DecoratorTests
     public async Task Valid_command_reaches_the_handler()
     {
         var inner = new RegisterMobileHandler();
-        var sut = new ValidatingCommandHandler<RegisterMobile, Unit>(inner, [new RegisterMobileValidator()]);
+        var sut = new ValidationDecorator.CommandHandler<RegisterMobile, Unit>(inner, [new RegisterMobileValidator()]);
 
         var result = await sut.HandleAsync(new RegisterMobile(SecretMobile, new AddressInput("الرياض")), TestContext.Current.CancellationToken);
 
@@ -41,13 +43,13 @@ public sealed class DecoratorTests
     [Fact]
     public async Task Logging_decorator_logs_name_and_outcome_but_never_the_payload()
     {
-        var logger = new RecordingLogger<LoggingCommandHandler<RegisterMobile, Unit>>();
+        var logger = new RecordingLogger<LoggingDecorator.CommandHandler<RegisterMobile, Unit>>();
         var inner = new RegisterMobileHandler();
-        var sut = new LoggingCommandHandler<RegisterMobile, Unit>(inner, logger);
+        var sut = new LoggingDecorator.CommandHandler<RegisterMobile, Unit>(inner, logger);
         var command = new RegisterMobile(SecretMobile, new AddressInput("الرياض"));
 
         await sut.HandleAsync(command, TestContext.Current.CancellationToken);
-        inner.FailWith = new Error("otp.invalid", "Wrong code", ErrorKind.Validation);
+        inner.FailWith = Error.BadRequest("otp.invalid", "Wrong code");
         await sut.HandleAsync(command, TestContext.Current.CancellationToken);
 
         logger.Entries.Count.ShouldBe(2);
@@ -70,10 +72,11 @@ public sealed class DecoratorTests
 
         services.AddApplication();
 
-        using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
+        // ValidateOnBuild is off since S-04: the real handlers of this assembly need Infrastructure ports.
+        using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
         using var scope = provider.CreateScope();
         var handler = scope.ServiceProvider.GetRequiredService<ICommandHandler<RegisterMobile, Unit>>();
-        handler.ShouldBeOfType<LoggingCommandHandler<RegisterMobile, Unit>>();
+        handler.ShouldBeOfType<LoggingDecorator.CommandHandler<RegisterMobile, Unit>>();
     }
 
     [Fact]
@@ -96,7 +99,7 @@ public sealed class DecoratorTests
         var result = await provider.GetRequiredService<ICommandHandler<RegisterMobile, Unit>>()
             .HandleAsync(new RegisterMobile("bad", new AddressInput("x")), TestContext.Current.CancellationToken);
 
-        result.Error!.Code.ShouldBe(ErrorCodes.ValidationFailed);
+        result.Error.Code.ShouldBe(ErrorCodes.ValidationFailed);
     }
 
     private sealed class RecordingLogger<T> : ILogger<T>

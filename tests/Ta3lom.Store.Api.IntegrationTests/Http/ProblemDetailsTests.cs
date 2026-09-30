@@ -1,6 +1,6 @@
 using System.Net;
 using Ta3lom.Store.Api.IntegrationTests.Infrastructure;
-using Ta3lom.Store.Application.Abstractions;
+using Ta3lom.Store.Domain.Errors;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Http;
 
@@ -43,17 +43,17 @@ public sealed class ProblemDetailsTests(ProbeApiFactory factory) : IClassFixture
     }
 
     [Theory]
-    [InlineData(ErrorKind.Validation, 400)]
-    [InlineData(ErrorKind.Unauthorized, 401)]
-    [InlineData(ErrorKind.Forbidden, 403)]
-    [InlineData(ErrorKind.NotFound, 404)]
-    [InlineData(ErrorKind.Conflict, 409)]
-    [InlineData(ErrorKind.Gone, 410)]
-    [InlineData(ErrorKind.Unprocessable, 422)]
-    [InlineData(ErrorKind.RateLimited, 429)]
-    public async Task Result_errors_map_to_status_and_keep_code_and_extensions(ErrorKind kind, int status)
+    [InlineData(400)]
+    [InlineData(401)]
+    [InlineData(403)]
+    [InlineData(404)]
+    [InlineData(409)]
+    [InlineData(410)]
+    [InlineData(422)]
+    [InlineData(429)]
+    public async Task Result_errors_map_to_status_and_keep_code_and_extensions(int status)
     {
-        var response = await factory.CreateClient().GetAsync($"/v1/__test/error/{kind}", Ct);
+        var response = await factory.CreateClient().GetAsync($"/v1/__test/error/{status}", Ct);
 
         ((int)response.StatusCode).ShouldBe(status);
         var problem = await response.ReadProblemAsync();

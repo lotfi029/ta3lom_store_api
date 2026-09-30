@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Giving;
+using Ta3lom.Store.Domain.Entities.Giving;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Giving;
 
@@ -16,6 +16,6 @@ internal sealed class AllocationBatchConfiguration : IEntityTypeConfiguration<Al
         e.Property(x => x.Note).HasColumnType("text").IsRequired(false).ValueGeneratedNever();
         e.Property(x => x.CreatedBy).HasColumnType("text").IsRequired().ValueGeneratedNever();
         e.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone").IsRequired().HasDefaultValueSql("now()").ValueGeneratedNever();
-        e.HasOne<Ta3lom.Store.Domain.Catalog.Product>().WithMany().HasForeignKey(x => x.ProductId).HasConstraintName("allocation_batch_product_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Catalog.Product>().WithMany().HasForeignKey(x => x.ProductId).HasConstraintName("allocation_batch_product_id_fkey").OnDelete(DeleteBehavior.NoAction);
     }
 }

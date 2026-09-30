@@ -1,6 +1,6 @@
 using System.Net;
 using Ta3lom.Store.Api.IntegrationTests.Infrastructure;
-using Ta3lom.Store.Application.Abstractions;
+using Ta3lom.Store.Domain.Errors;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Http;
 

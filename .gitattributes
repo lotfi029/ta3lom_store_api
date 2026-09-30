@@ -2,3 +2,5 @@
 *.cs diff=csharp
 *.png binary
 *.pdf binary
+*.ttf binary
+*.webp binary

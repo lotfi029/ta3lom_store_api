@@ -1,0 +1,30 @@
+# M7 — Operations-complete (plan 14 §2): "/v1/me complete (export, delete); reports equal integrity-check sums; all jobs and the
+# dispatcher running; digest email." Result 30 Sep 2026 (local, Development): PASSED.
+#  1. /v1/me #21–#39 complete: export (JSON attachment with every personal field) and delete (anonymise, "محذوف / deleted" on
+#     orders, sign-in again → new empty account) — tools/smoke/S-31.http
+#  2. reports vs SQL over the ledgers (2026-01-01 … 2026-09-30):
+#     gifts report Σ amount 11125.00 = Σ order_line.amount (gift lines of settled orders) 11125.00
+#     sales report Σ gross 1784.00 = Σ buy lines 1784.00; v_sales_daily Σ gross 12909.00 = 1784.00 + 11125.00
+#     zakat report = v_zakat_balance (tablet-for-student 500.00/450.00/50.00, family-remote 75.00/45.00/30.00)
+#  3. /dev/jobs → 12 scheduled jobs (PruneOtp, ExpireGuestCarts, ExpireUnpaidOrders, LmsProgressSync, LowStockAlert,
+#     AllocationAlerts, LapseUnits, CloseCampaigns, IntegrityChecks, Retention, PruneIdempotencyKeys, SponsorDigest) +
+#     the OutboxDispatcher (every outbox row processed, no dead messages)
+#  4. SponsorDigest → 19 digest e-mails, rerun → 0 (tools/smoke/S-45.http)
+#  5. IntegrityChecks job on a clean DB → 0 alerts; integrity checks → 0 rows
+@base = http://localhost:5080/v1
+@admin = <admin access token>
+
+### Jobs
+GET http://localhost:5080/dev/jobs
+
+### Reports (JSON; add &format=csv for the BOM CSV)
+GET {{base}}/admin/reports/gifts?from=2026-01-01&to=2026-09-30
+Authorization: Bearer {{admin}}
+
+### Zakat report
+GET {{base}}/admin/reports/zakat?from=2026-01-01&to=2026-09-30
+Authorization: Bearer {{admin}}
+
+### Dashboard
+GET {{base}}/admin/dashboard
+Authorization: Bearer {{admin}}
