@@ -1,0 +1,26 @@
+# M4 — First settled order (plan 14 §2): "Guest cart → OTP → checkout → pending_payment → test trigger confirm-payment →
+# paid → invoice and donation receipt PDFs → SMS and email in the sinks. The same confirmation sent twice changes nothing;
+# a wrong amount → payment_review."
+# Result 30 Sep 2026 (local, Development): PASSED for the gift path; the purchase path waits for its effects.
+#  1. guest cart (dedicated cooler + zakat 250.00) → OTP sign-in keeps the cart (S-13) → quote 1750.00 → checkout
+#     T3-26-001008 pending_payment (S-15)                                                                           ✅
+#  2. dev trigger → paid → fulfilled; DR-2026-000004 issued in the settlement and rendered to PDF by the outbox;
+#     order_paid SMS in /dev/sms and e-mail in /dev/mail (S-16, S-17)                                                 ✅
+#  3. the same confirmation again → already_paid, nothing changes (S-16 smoke: ×3 and in parallel)                  ✅
+#  4. wrong amount → payment_review + FinanceAlert e-mail to staff (T3-26-001003)                                      ✅
+#  5. invoice PDF: a paid order with purchase lines cannot settle before S-19/S-20/S-21 (settlement.effect_missing guard);
+#     the invoice renderer shares the receipt framework and the P0-3 layout → re-run in M5 after S-21                  ⏳
+@base = http://localhost:5080/v1
+@dev = http://localhost:5080/dev
+
+### Settle (repeat to see already_paid)
+POST {{dev}}/orders/T3-26-001008/confirm-payment
+Content-Type: application/json
+
+{}
+
+### Order status (bearer or ?t=)
+GET {{base}}/orders/T3-26-001008/status?t=<statusToken>
+
+### The e-mail and SMS
+GET {{dev}}/mail?count=3

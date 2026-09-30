@@ -13,6 +13,10 @@ public sealed class FileStorageOptions
 
     /// Base URL of public files, e.g. https://store-api.ta3lom.sa/files/public.
     public string PublicBaseUrl { get; set; } = "https://store-api.ta3lom.sa/files/public";
+
+    /// The absolute root: a relative `Root` (Development: `../../artifacts/files`) resolves against the content root,
+    /// never against the process working directory.
+    public string ResolveRoot(string contentRootPath) => Path.GetFullPath(Path.Combine(contentRootPath, Root));
 }
 
 internal sealed class FileUrls(IOptions<FileStorageOptions> options) : IFileUrls

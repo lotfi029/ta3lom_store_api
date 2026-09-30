@@ -60,4 +60,14 @@ public sealed class Invoice : AggregateRoot
             SellerVatNo = vatEnabled ? sellerVatNo : null,
             ZatcaStatus = vatEnabled ? Enums.ZatcaStatus.Pending : Enums.ZatcaStatus.NotRequired,
         };
+
+    public bool HasPdf => PdfAssetId is not null;
+
+    /// 09 §9.1: documents are immutable; the rendered PDF is attached once (with the Phase-1 QR of a tax invoice).
+    public void AttachPdf(Guid pdfAssetId, string? zatcaQr)
+    {
+        Guard.Against(PdfAssetId is not null, "document.already_rendered");
+        PdfAssetId = pdfAssetId;
+        ZatcaQr = zatcaQr;
+    }
 }

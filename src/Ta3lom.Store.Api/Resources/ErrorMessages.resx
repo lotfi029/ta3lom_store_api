@@ -421,4 +421,16 @@
   <data name="order.cancel_not_allowed.detail" xml:space="preserve">
     <value>يمكن إلغاء الطلبات غير المدفوعة فقط.</value>
   </data>
+  <data name="document.not_found" xml:space="preserve">
+    <value>المستند غير موجود</value>
+  </data>
+  <data name="document.not_found.detail" xml:space="preserve">
+    <value>لم يصدر هذا المستند.</value>
+  </data>
+  <data name="document.not_ready" xml:space="preserve">
+    <value>المستند قيد الإعداد</value>
+  </data>
+  <data name="document.not_ready.detail" xml:space="preserve">
+    <value>المستند قيد الإعداد. حاول بعد قليل.</value>
+  </data>
 </root>

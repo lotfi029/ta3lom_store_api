@@ -421,4 +421,16 @@
   <data name="order.cancel_not_allowed.detail" xml:space="preserve">
     <value>Only unpaid orders can be cancelled.</value>
   </data>
+  <data name="document.not_found" xml:space="preserve">
+    <value>Document not found</value>
+  </data>
+  <data name="document.not_found.detail" xml:space="preserve">
+    <value>This document was not issued.</value>
+  </data>
+  <data name="document.not_ready" xml:space="preserve">
+    <value>Document not ready</value>
+  </data>
+  <data name="document.not_ready.detail" xml:space="preserve">
+    <value>The document is still being prepared. Try again shortly.</value>
+  </data>
 </root>

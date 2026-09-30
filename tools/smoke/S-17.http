@@ -1,0 +1,35 @@
+# S-17 — Outbox, notifications and documents (#88, OutboxDispatcher). Result 30 Sep 2026 (local, Development): all as expected.
+# start-up drained the 18 rows queued since S-15 (OrderPlaced ×6, OrderPaid ×3, RenderDocuments ×3, FinanceAlert ×3,
+#   DedicationCard, OrderCancelled, OrderExpired): all processed at attempt 1; order_paid SMS + e-mail once per recipient,
+#   staff_alert e-mails to store-alerts@ta3lom.sa, DR-2026-000001…3 rendered to private documents/2026/*.pdf
+# new paid order T3-26-001008 (dedicated cooler + zakat) → DR-2026-000004.pdf (Arabic shaping, real donor name, zakat line,
+#   dedication name, no English/bidi mix-ups) within ~1 s of the dev trigger
+# retry: API started with Store__Sms__Provider=unifonic (no keys) → attempt 1: e-mail sent, SMS failed ("sms provider not
+#   configured"), message rescheduled; restarted with the sink → attempt 2: SMS sent, e-mail NOT re-sent
+#   (ux_notification_once: 1 sms row + 1 email row, both sent)
+# #88 resend (admin): 202 → e-mail with DR-2026-000004.pdf attached + SMS; unpaid order → 409 document.not_ready;
+#   channels ["fax"] → 400 validation.failed; viewer → 403
+# integrity checks: 0 rows
+@base = http://localhost:5080/v1
+@dev = http://localhost:5080/dev
+@admin = <admin access token>
+
+### E-mail sink (newest first)
+GET {{dev}}/mail?count=5
+
+### SMS sink
+GET {{dev}}/sms?count=5
+
+### #88 Resend documents
+POST {{base}}/admin/orders/T3-26-001008/resend-documents
+Authorization: Bearer {{admin}}
+Content-Type: application/json
+
+{"channels":["email","sms"]}
+
+### #88 Not ready (unpaid order) → 409 document.not_ready
+POST {{base}}/admin/orders/T3-26-001000/resend-documents
+Authorization: Bearer {{admin}}
+Content-Type: application/json
+
+{"channels":["sms"]}

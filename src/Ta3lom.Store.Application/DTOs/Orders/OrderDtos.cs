@@ -46,3 +46,4 @@ public sealed record AdminOrderRefund(Guid Id, string Amount, string Status, str
 
 /// `POST /v1/admin/orders/{ref}/cancel` body.
 public sealed record CancelOrderRequest(string Reason);
+public sealed record ResendDocumentsRequest(IReadOnlyList<string> Channels);

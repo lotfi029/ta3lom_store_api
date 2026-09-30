@@ -73,4 +73,6 @@ public static class ErrorCodes
     public const string OrderNotFound = "order.not_found";
     public const string SettlementEffectMissing = "settlement.effect_missing";
     public const string OrderCancelNotAllowed = "order.cancel_not_allowed";
+    public const string DocumentNotFound = "document.not_found";
+    public const string DocumentNotReady = "document.not_ready";
 }

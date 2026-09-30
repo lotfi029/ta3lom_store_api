@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using NpgsqlTypes;
 using Ta3lom.Store.Domain.Entities.Identity;
 using Ta3lom.Store.Domain.Entities.Notifications;
 using Ta3lom.Store.Domain.Enums;
@@ -58,7 +60,22 @@ internal sealed class RefreshTokenRepository(StoreDbContext db) : GenericReposit
             .ExecuteUpdateAsync(u => u.SetProperty(t => t.RevokedAt, now), ct);
 }
 
-internal sealed class NotificationRepository(StoreDbContext db) : GenericRepository<Notification>(db), INotificationRepository;
+internal sealed class NotificationRepository(StoreDbContext db) : GenericRepository<Notification>(db), INotificationRepository
+{
+    public async Task<Notification?> TryClaimAsync(Guid outboxMessageId, MessageChannel channel, string recipient, string templateKey, string locale,
+        Guid? relatedOrderId, DateTimeOffset now, CancellationToken ct = default)
+    {
+        var order = new NpgsqlParameter("related_order_id", NpgsqlDbType.Uuid) { Value = (object?)relatedOrderId ?? DBNull.Value };
+        var ids = await Db.Database.SqlQuery<Guid>($"""
+            INSERT INTO store.notification (id, channel, recipient, template_key, locale, status, related_order_id, outbox_message_id, created_at)
+            VALUES ({Guid.CreateVersion7()}, {channel.ToWire()}, {recipient}, {templateKey}, {locale}, 'queued', {order}, {outboxMessageId}, {now})
+            ON CONFLICT (outbox_message_id, channel, recipient) WHERE outbox_message_id IS NOT NULL
+            DO UPDATE SET status = 'queued', error = NULL WHERE notification.status = 'failed'
+            RETURNING id AS "Value"
+            """).ToListAsync(ct);
+        return ids.Count == 0 ? null : await Set.SingleAsync(n => n.Id == ids[0], ct);
+    }
+}
 
 internal sealed class StaffUserRepository(StoreDbContext db) : GenericRepository<StaffUser>(db), IStaffUserRepository
 {

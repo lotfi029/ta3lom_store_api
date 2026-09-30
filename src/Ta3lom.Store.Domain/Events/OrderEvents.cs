@@ -14,6 +14,9 @@ public sealed record OrderExpired(Guid OrderId, string Reference, bool CartResto
 
 public sealed record OrderCancelled(Guid OrderId, string Reference, string Reason) : IDomainEvent;
 
+/// #88: staff asked to send the order's documents again (`channels`: sms, email).
+public sealed record DocumentsResendRequested(Guid OrderId, IReadOnlyList<string> Channels) : IDomainEvent;
+
 /// RUL-22: the card SMS for one dedicated gift line, after payment.
 public sealed record DedicationCard(Guid DedicationId, Guid OrderId) : IDomainEvent;
 

@@ -14,6 +14,7 @@ internal sealed class DevEndpoints : IDevEndpoint
     {
         app.MapGet("/sms", GetSmsAsync);
         app.MapPost("/orders/{reference}/confirm-payment", ConfirmPaymentAsync);                 // doc 15 §2.4
+        app.MapGet("/mail", async (IDevMailInbox inbox, CancellationToken ct, int count = 20) => TypedResults.Ok(await inbox.LatestAsync(count, ct)));
         app.MapGet("/jobs", (IJobRunner jobs) => TypedResults.Ok(jobs.Jobs));
         app.MapPost("/jobs/{name}/run", RunJobAsync);
     }

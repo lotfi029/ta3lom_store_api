@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Ta3lom.Store.Application.Interfaces;
 
@@ -5,7 +6,7 @@ namespace Ta3lom.Store.Infrastructure.Services.Files;
 
 /// Files under `Store:Files:Root` (09 §4.3): `public/{key}` is served at `/files/public`, `private/{key}` never is.
 /// Keys are relative; any attempt to leave the root is refused.
-internal sealed class LocalFileStorage(IOptions<FileStorageOptions> options) : IFileStorage
+internal sealed class LocalFileStorage(IOptions<FileStorageOptions> options, IHostEnvironment environment) : IFileStorage
 {
     public async Task SaveAsync(string storageKey, bool isPublic, Stream content, CancellationToken ct = default)
     {
@@ -41,7 +42,7 @@ internal sealed class LocalFileStorage(IOptions<FileStorageOptions> options) : I
     /// Root folder of public files (served by the Api at `/files/public`).
     public string PublicRoot => Path.Combine(Root, "public");
 
-    private string Root => Path.GetFullPath(options.Value.Root);
+    private string Root => options.Value.ResolveRoot(environment.ContentRootPath);
 
     private string PathFor(string storageKey, bool isPublic)
     {

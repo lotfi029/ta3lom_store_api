@@ -20,7 +20,9 @@ public static class DependencyInjection
             .AddClasses(c => c.AssignableTo(typeof(IQueryHandler<,>)), publicOnly: false)
                 .AsImplementedInterfaces().WithScopedLifetime()
             .AddClasses(c => c.AssignableTo<Features.Settlement.ILineSettlementEffect>(), publicOnly: false)   // one per line case (§13.4)
-                .As<Features.Settlement.ILineSettlementEffect>().WithScopedLifetime());
+                .As<Features.Settlement.ILineSettlementEffect>().WithScopedLifetime()
+            .AddClasses(c => c.AssignableTo<Features.Outbox.IOutboxHandler>(), publicOnly: false)               // one per message type
+                .As<Features.Outbox.IOutboxHandler>().WithScopedLifetime());
 
         services.AddValidatorsFromAssemblyContaining<ApplicationAssemblyMarker>(includeInternalTypes: true);
         services.AddHandlerDecorators();
@@ -33,6 +35,9 @@ public static class DependencyInjection
         services.AddScoped<Features.Settlement.SettlementLedger>();
         services.AddScoped<Features.Orders.OrderReader>();
         services.AddScoped<Features.Orders.OrderStock>();
+        services.AddScoped<Features.Notifications.NotificationDispatch>();
+        services.AddScoped<Features.Outbox.Handlers.OrderMessages>();
+        services.AddScoped<Features.Documents.OrderDocuments>();
         services.AddScoped<Features.Settlement.IOrderSettlement, Features.Settlement.OrderSettlement>();
         services.AddScoped<Features.Catalog.CatalogReader>();
         services.AddScoped<Features.AdminCatalog.AdminCatalogReader>();

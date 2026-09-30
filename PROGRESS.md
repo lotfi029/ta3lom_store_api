@@ -1,5 +1,5 @@
 # Build progress
-Next: S-17 — Outbox, notifications and documents
+Next: S-19 — Enrolment and LMS access
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -31,7 +31,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-15 checkout | done | S-15 | 40–42 | — | ✅ tools/smoke/S-15.http | 286 tests green; last-copy race: one 201, one 409 |
 | S-16 settlement core | done | S-16 | 87 + dev trigger | ExpireUnpaidOrders; DonateLineEffect + ledger | ✅ tools/smoke/S-16.http | 290 tests green; integrity checks 0 rows; doc 15 updated |
 | P0-3 Arabic PDF spike | done | P0-3 | — | — | spikes/P0-3 → 2 PDFs | GO: shaping, table, QR ok; LRI/PDI isolates for phones/English; store/spikes/P0-3-arabic-pdf.md |
-| S-17 outbox, documents | todo | | 88 | OutboxDispatcher; OrderPaid, RenderDocuments, FinanceAlert, DedicationCard (stub) | | |
+| S-17 outbox, documents | done | S-17 | 88 | OutboxDispatcher; OrderPaid, RenderDocuments, FinanceAlert, DedicationCard (stub), DocumentsResendRequested, lifecycle no-ops | ✅ tools/smoke/S-17.http | 294 tests green; retry after provider outage verified; path-resolution bug fixed |
 | S-19 enrolment + LMS | todo | | 29 | CourseEnrolmentEffect; LmsEnrol | | |
 | P0-4 watermark spike | todo | | — | — | | |
 | S-20 digital downloads | todo | | 32, 46, 94 | DigitalBookEffect | | |
@@ -57,7 +57,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 |---|---|---|
 | M2 Identity | tools/smoke/M2.http | ✅ passed (OTP sink sign-in, rotation, reuse revokes family, staff TOTP, 403s) |
 | M3 Catalogue | tools/smoke/M3.http | ✅ passed (store_manager created/published course, book print+digital, cause; public ETags; archive → 404) |
-| M4 First settled order | tools/smoke/M4.http | |
+| M4 First settled order | tools/smoke/M4.http | ✅ passed for the gift path (receipt PDF, SMS, e-mail, repeat, review); invoice PDF re-checked in M5 |
 | M5 Fulfilment | tools/smoke/M5.http | |
 | M6 Giving | tools/smoke/M6.http | |
 | M7 Operations-complete | tools/smoke/M7.http | |
@@ -241,3 +241,24 @@ Done when (local smoke)
 - [x] Repeating the trigger changes nothing; a wrong amount parks the order in `payment_review`
 - [x] Killing the API mid-settlement leaves no partial state (single transaction on the retrying strategy; verified by design, crash test in T-2)
 - [x] The contract in 15 §2 matches the code (15 §2.3a added)
+
+### S-17 — Outbox, notifications and documents
+
+Build
+- [x] `OutboxDispatcher` (hosted, `FOR UPDATE SKIP LOCKED`, batch 20, 5-min lease, backoff up to 6 h, dead letter after 24 h → staff alert); nudged after commits
+- [x] Handlers `OrderPaid`, `DedicationCard` (stub until S-26), `RenderDocuments`, `FinanceAlert` (+ resend, lifecycle no-ops)
+- [x] `ScribanTemplateRenderer` + `message_template` lookup with ar fallback (S-04) used for every message
+- [x] `notification` rows with `outbox_message_id`; `ux_notification_once` prevents re-sends; failed rows retried
+- [x] `SmtpEmailSender` (MailKit) by config; `SinkEmailSender` + `GET /dev/mail` in Development (Mailpit replaced)
+- [x] `DocumentNumberAllocator` (S-16, gapless, row lock until commit)
+- [x] QuestPDF invoice (simplified tax invoice with the TLV QR when `vat_enabled`) and donation receipt (zakat separately, licence no., real donor name)
+- [x] PDFs as private `media_asset` rows; admin resend documents (#88)
+- [x] Audit §4c: `SinkEmailSender` + `/dev/mail`, `SmtpEmailSender`, `IEInvoicingGateway` + `NoopEInvoicingGateway`
+
+Tests (test phase)
+- [ ] RUL-59: mixed order → one INV + one DR; numbers gapless under 20 parallel settlements
+- [ ] Outbox retry does not duplicate an SMS; template fallback to Arabic; the QR decodes to the five TLV fields; PDF text snapshot
+
+Done when (local smoke)
+- [x] An order settled through the dev trigger produces its PDF(s), the SMS lands in the sink and the e-mail in the mail sink (invoice path: M5)
+- [x] Stopping the SMS provider → messages retry and are delivered after it recovers

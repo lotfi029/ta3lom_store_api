@@ -10,7 +10,7 @@ public static class PublicFilesSetup
     public static IApplicationBuilder UsePublicFiles(this WebApplication app)
     {
         ArgumentNullException.ThrowIfNull(app);
-        var root = Path.Combine(Path.GetFullPath(app.Services.GetRequiredService<IOptions<FileStorageOptions>>().Value.Root), "public");
+        var root = Path.Combine(app.Services.GetRequiredService<IOptions<FileStorageOptions>>().Value.ResolveRoot(app.Environment.ContentRootPath), "public");
         try
         {
             Directory.CreateDirectory(root);

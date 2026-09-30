@@ -59,4 +59,8 @@ public sealed class MediaAsset : AggregateRoot
         AltAr = altAr;
         AltEn = altEn;
     }
+
+    /// RUL-59, 09 §9.1: a generated document (invoice, receipt) — always private, served only to its owner or staff.
+    public static MediaAsset PrivateDocument(string storageKey, long sizeBytes, DateTimeOffset now) =>
+        new(MediaKind.Pdf, storageKey, "application/pdf", sizeBytes, now) { IsPublic = false };
 }

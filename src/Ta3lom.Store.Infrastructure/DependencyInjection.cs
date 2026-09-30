@@ -18,9 +18,12 @@ using Ta3lom.Store.Infrastructure.Persistence.Interceptors;
 using Ta3lom.Store.Infrastructure.Persistence.Repositories;
 using Ta3lom.Store.Infrastructure.Persistence.Seeders;
 using Ta3lom.Store.Infrastructure.Services.Catalog;
+using Ta3lom.Store.Infrastructure.Services.Documents;
+using Ta3lom.Store.Infrastructure.Services.Email;
 using Ta3lom.Store.Infrastructure.Services.Files;
 using Ta3lom.Store.Infrastructure.Services.Health;
 using Ta3lom.Store.Infrastructure.Services.Jobs;
+using Ta3lom.Store.Infrastructure.Services.Outbox;
 using Ta3lom.Store.Infrastructure.Services.Security;
 using Ta3lom.Store.Infrastructure.Services.Settings;
 using Ta3lom.Store.Infrastructure.Services.Sms;
@@ -142,6 +145,23 @@ public static class DependencyInjection
                 : sp.GetRequiredService<SinkSmsSender>());
         services.AddScoped<ITemplateRenderer, ScribanTemplateRenderer>();
 
+        // E-mail (sink unless `Store:Email:Mode = smtp`), outbox dispatcher (09 §5.11), documents (09 §9).
+        services.AddOptions<EmailOptions>().BindConfiguration(EmailOptions.Section);
+        services.AddSingleton<SinkEmailSender>();
+        services.AddSingleton<IDevMailInbox>(sp => sp.GetRequiredService<SinkEmailSender>());
+        services.AddSingleton<SmtpEmailSender>();
+        services.AddSingleton<IEmailSender>(sp =>
+            string.Equals(sp.GetRequiredService<IOptions<EmailOptions>>().Value.Mode, "smtp", StringComparison.OrdinalIgnoreCase)
+                ? sp.GetRequiredService<SmtpEmailSender>()
+                : sp.GetRequiredService<SinkEmailSender>());
+        services.AddOptions<OutboxOptions>().BindConfiguration(OutboxOptions.Section);
+        services.AddSingleton<OutboxSignal>();
+        services.AddHostedService<OutboxDispatcher>();
+        services.AddOptions<DocumentOptions>().BindConfiguration(DocumentOptions.Section);
+        services.AddSingleton<ISellerProfile, SellerProfile>();
+        services.AddSingleton<IDocumentRenderer, QuestPdfDocumentRenderer>();
+        services.AddSingleton<IEInvoicingGateway, NoopEInvoicingGateway>();
+
         services.AddSingleton<StoreSettingsProvider>();
         services.AddSingleton<IStoreSettings>(sp => sp.GetRequiredService<StoreSettingsProvider>());
         services.AddSingleton<ISettingsProvider>(sp => sp.GetRequiredService<StoreSettingsProvider>());
@@ -158,12 +178,13 @@ public static class DependencyInjection
     private static void AddDataProtection(IServiceCollection services)
     {
         services.AddDataProtection().SetApplicationName("ta3lom-store");
-        services.AddOptions<KeyManagementOptions>().Configure<IConfiguration, ILoggerFactory>((o, c, loggers) =>
+        services.AddOptions<KeyManagementOptions>().Configure<IConfiguration, ILoggerFactory, IHostEnvironment>((o, c, loggers, environment) =>
         {
             var path = c["Store:DataProtection:KeysPath"];
             if (!string.IsNullOrWhiteSpace(path))
             {
-                o.XmlRepository = new FileSystemXmlRepository(new DirectoryInfo(path), loggers);
+                // A relative path (Development) resolves against the content root, never the working directory.
+                o.XmlRepository = new FileSystemXmlRepository(new DirectoryInfo(Path.GetFullPath(Path.Combine(environment.ContentRootPath, path))), loggers);
             }
         });
 
