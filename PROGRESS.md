@@ -211,9 +211,9 @@ Build
 - [x] Audit §2.2: `acceptTerms` → `terms_accepted_at`; address only with print; totals; `payment_due_at`; cart converted; status never by reference alone
 
 Tests (test phase)
-- [ ] RUL-24 matrix (unpublished, ended, closed offer, stock out, limit, owned course); RUL-27 350 @ 15 % → 45.65 / 304.35; RUL-28 format
-- [ ] RUL-30 two concurrent checkouts for the last copy → exactly one succeeds; RUL-31 `ck_order_total` never violated
-- [ ] Same `Idempotency-Key` + same body → same response; different body → 422; status without a token → 401/404
+- [x] RUL-24 matrix (unpublished, ended, closed offer, stock out, limit, owned course); RUL-27 350 @ 15 % → 45.65 / 304.35; RUL-28 format
+- [x] RUL-30 two concurrent checkouts for the last copy → exactly one succeeds; RUL-31 `ck_order_total` never violated
+- [x] Same `Idempotency-Key` + same body → same response; different body → 422; status without a token → 401/404
 
 Done when (local smoke)
 - [x] The prototype cart becomes order `T3-26-001000` in `pending_payment`, with stock reserved and a status token
