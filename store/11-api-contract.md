@@ -576,7 +576,8 @@ Presets come from FR-S12/FR-S13 (constants in S1). Serves FR-S12–S14, RUL-12, 
 
 Server-side cart for guests (cookie `t3s_cart`) and customers (bearer token) (RUL-11, FR-S17). The
 customer cart wins when both are present; the guest cart is merged at sign-in (§4.2). Rate policy
-`cart`. All responses `Cache-Control: no-store`.
+`cart`. All responses `Cache-Control: no-store`. A presented customer token must be valid (`401` otherwise, so the client
+refreshes instead of silently falling back to a guest cart).
 
 ### 3.1 Cart DTO
 
@@ -670,8 +671,8 @@ Sponsor by amount (FR-S12 acceptance: 100 SAR on a 350 SAR seat):
   "quantity": 1, "amount": "100.00", "intent": "sadaqa" }
 ```
 
-Resulting line: `"mode": "amount", "amount": "100.00", "seatEquivalent": "0.29"` (display only,
-`floor(amount ÷ seat_price, 2)`).
+Resulting line: `"mode": "amount", "amount": "100.00", "seatEquivalent": "0.28"` (display only,
+`floor(amount ÷ seat_price, 2)`; 100 ÷ 350 = 0.2857 → 0.28).
 
 Dedicated donation:
 
@@ -750,6 +751,11 @@ The response is the same whether or not the mobile has an account. Errors: `otp.
   ]
 }
 ```
+
+`cartNotices` (RUL-17): `cart.merge_dropped_owned_course` (a `buy` course the customer owns),
+`cart.merge_combined` (identical line combined, capped at the line maximum), and — when the customer cart would
+break RUL-18 — `cart.too_many_lines` / `cart.total_exceeded` for the guest line left out. Without a customer cart the
+guest cart simply becomes theirs.
 
 First login creates the `customer` (RUL-61). A beneficiary's `customer` row already exists from
 allocation (RUL-47, RUL-52), so their first login simply signs them in. A `blocked` customer is

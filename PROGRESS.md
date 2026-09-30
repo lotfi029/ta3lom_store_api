@@ -1,5 +1,5 @@
 # Build progress
-Next: S-13 — Cart
+Next: S-15 — Checkout and order creation
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -27,7 +27,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-05 staff identity | done | S-05 | 47–52, 123–128 | — | ✅ tools/smoke/S-05.http | 204 tests green; actor bug found and fixed in smoke |
 | S-08 public catalogue | done | S-08 | 1–7, 9 | — | ✅ tools/smoke/S-08.http | seed catalogue served (15 products), ETag/304 |
 | S-09 admin catalogue | done | S-09 | 54–77, 118, 119 | — | ✅ tools/smoke/S-09.http | 230 tests green; offer/cause UTC bug + money-setting wire bug found and fixed in smoke |
-| S-13 cart | todo | | 10–15 | ExpireGuestCarts | | |
+| S-13 cart | done | S-13 | 10–15 | ExpireGuestCarts | ✅ tools/smoke/S-13.http | 262 tests green; S-04 merge hook filled (RUL-17); dedication owned JSON |
 | S-15 checkout | todo | | 40–42 | — | | |
 | S-16 settlement core | todo | | 87 + dev trigger | ExpireUnpaidOrders; gift/donate effects | | integrity check |
 | P0-3 Arabic PDF spike | todo | | — | — | | |
@@ -176,3 +176,22 @@ Tests (test phase)
 Done when (local smoke)
 - [x] A `store_manager` creates, publishes and archives one course, one book (print + digital) and one cause (M3)
 - [x] Public endpoints show them within 60 s (output cache evicted on write; shown at once)
+
+### S-13 — Cart
+
+Build
+- [x] `Cart` aggregate: `AddLine` (RUL-12 kind × mode × product matrix, RUL-13 owned / in-cart / unpaid-order course, RUL-14 merge, RUL-18 50 lines / `cart_max_total`, RUL-19 intent, RUL-21 dedication, RUL-30 print stock), `UpdateQuantity`, `RemoveLine`, `Clear`, `MergeInto`, `AssignTo`
+- [x] `CartLineRules` shared with checkout (S-15): line maximum, indicative price (RUL-15), `issues` per line
+- [x] Guest cookie `t3s_cart` (Data Protection sealed, HttpOnly, Secure, Lax, `/v1`, 30 days) issued lazily and refreshed on change
+- [x] S-04 hook filled: VerifyOtp merges the guest cart (owned course dropped with a notice), cookie deleted (owner fix 3)
+- [x] `ExpireGuestCarts` job (03:00 Riyadh) → `DeleteExpiredGuestCarts` command (RUL-16)
+- [x] Summary endpoint for the header badge (count + total, no auth required)
+- [x] `cart_line.dedication` owned JSON (CLAUDE.md jsonb rule); row locks on the cart row in `CartRepository` only
+- [x] Audit §2.2: badge endpoint; `MergeInto` (RUL-17); owned course dropped on merge with a notice
+
+Tests (test phase)
+- [ ] One test per RUL-11 … RUL-19 and RUL-21; print qty 21 rejected; digital qty forced to 1; `amount` line never merges; a dedicated line never merges; zakat on a non-eligible cause → `cart.zakat_not_allowed`; campaign ended → `cart.campaign_ended`; the merge drops an owned course with a notice
+
+Done when (local smoke)
+- [x] A guest adds the prototype's mixed cart, signs in and keeps it (merge verified, cookie removed)
+- [x] FR-S12: a 100 SAR share of a 350 SAR seat → one `amount` line; 5 seats → a `units` line of 1,750 SAR

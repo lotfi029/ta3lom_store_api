@@ -43,4 +43,20 @@ public static class ErrorCodes
     public const string MediaTooLarge = "media.too_large";
     public const string SettingUnknownKey = "setting.unknown_key";
     public const string SettingInvalidValue = "setting.invalid_value";
+    public const string CartProductUnavailable = "cart.product_unavailable";
+    public const string CartModeNotAllowed = "cart.mode_not_allowed";
+    public const string CartQuantityLimit = "cart.quantity_limit";
+    public const string CartAmountBelowMinimum = "cart.amount_below_minimum";
+    public const string CartCampaignEnded = "cart.campaign_ended";
+    public const string CartDuplicateCourse = "cart.duplicate_course";
+    public const string CartCourseOwned = "cart.course_owned";
+    public const string CartCourseInUnpaidOrder = "cart.course_in_unpaid_order";
+    public const string CartZakatNotAllowed = "cart.zakat_not_allowed";
+    public const string CartDedicationNotAllowed = "cart.dedication_not_allowed";
+    public const string CartDedicationInvalid = "cart.dedication_invalid";
+    public const string CartDedicationFreeTextDisabled = "cart.dedication_free_text_disabled";
+    public const string CartOutOfStock = "cart.out_of_stock";
+    public const string CartTooManyLines = "cart.too_many_lines";
+    public const string CartTotalExceeded = "cart.total_exceeded";
+    public const string CartLineNotFound = "cart.line_not_found";
 }

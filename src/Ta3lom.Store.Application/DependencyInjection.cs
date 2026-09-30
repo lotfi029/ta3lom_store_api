@@ -24,8 +24,9 @@ public static class DependencyInjection
         services.AddHandlerDecorators();
         services.AddMapping();
 
-        // Hooks later sessions replace (S-13 registers the real cart merge with Replace()).
-        services.AddScoped<ICartMergeHook, Features.CustomerAuth.NoCartMergeHook>();
+        services.AddScoped<ICartMergeHook, Features.Cart.CartMergeHook>();            // RUL-17 (S-13 fills the S-04 hook)
+        services.AddScoped<Features.Cart.CartCatalog>();
+        services.AddScoped<Features.Cart.CartAccess>();
         services.AddScoped<Features.Catalog.CatalogReader>();
         services.AddScoped<Features.AdminCatalog.AdminCatalogReader>();
         return services;

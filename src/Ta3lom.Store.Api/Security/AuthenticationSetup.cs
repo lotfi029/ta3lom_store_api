@@ -29,6 +29,8 @@ public static class AuthenticationSetup
 
         var authorization = services.AddAuthorizationBuilder()
             .AddPolicy(Policies.Customer, p => p.AddAuthenticationSchemes(AuthSchemes.Customer).RequireAuthenticatedUser())
+            .AddPolicy(Policies.CustomerOptional, p => p.AddAuthenticationSchemes(AuthSchemes.Customer).RequireAssertion(ctx =>
+                ctx.User.Identity?.IsAuthenticated == true || ctx.Resource is not HttpContext { Request.Headers.Authorization.Count: > 0 }))
             .AddPolicy(StaffMfaPolicy, p => p.AddAuthenticationSchemes(AuthSchemes.StaffMfa).RequireAuthenticatedUser());
 
         // Staff policies (11 §1.2): role sets from Policies.StaffRoles, including segregation of duties (RUL-62).

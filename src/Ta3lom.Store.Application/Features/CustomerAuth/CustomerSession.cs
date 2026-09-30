@@ -7,10 +7,3 @@ public sealed record CustomerSession(SessionResponse Body, string RefreshToken, 
 
 /// Refresh output: new access token + rotated refresh cookie.
 public sealed record RotatedSession(AccessTokenResponse Body, string RefreshToken, DateTimeOffset RefreshExpiresAt);
-
-/// No-op until S-13 registers the real cart merge (RUL-17).
-internal sealed class NoCartMergeHook : ICartMergeHook
-{
-    public Task<IReadOnlyList<CartMergeNotice>> MergeGuestCartAsync(Guid? guestCartId, Guid customerId, CancellationToken ct = default) =>
-        Task.FromResult<IReadOnlyList<CartMergeNotice>>([]);
-}

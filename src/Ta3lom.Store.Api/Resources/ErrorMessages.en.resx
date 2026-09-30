@@ -241,4 +241,100 @@
   <data name="setting.invalid_value.detail" xml:space="preserve">
     <value>The value does not fit this setting's type.</value>
   </data>
+  <data name="cart.product_unavailable" xml:space="preserve">
+    <value>Product unavailable</value>
+  </data>
+  <data name="cart.product_unavailable.detail" xml:space="preserve">
+    <value>This product or format is not available right now.</value>
+  </data>
+  <data name="cart.mode_not_allowed" xml:space="preserve">
+    <value>Mode not allowed</value>
+  </data>
+  <data name="cart.mode_not_allowed.detail" xml:space="preserve">
+    <value>This product cannot be added this way.</value>
+  </data>
+  <data name="cart.quantity_limit" xml:space="preserve">
+    <value>Quantity limit</value>
+  </data>
+  <data name="cart.quantity_limit.detail" xml:space="preserve">
+    <value>The quantity is above the limit for this line.</value>
+  </data>
+  <data name="cart.amount_below_minimum" xml:space="preserve">
+    <value>Amount below minimum</value>
+  </data>
+  <data name="cart.amount_below_minimum.detail" xml:space="preserve">
+    <value>The amount is below the minimum.</value>
+  </data>
+  <data name="cart.campaign_ended" xml:space="preserve">
+    <value>Campaign ended</value>
+  </data>
+  <data name="cart.campaign_ended.detail" xml:space="preserve">
+    <value>Giving to this product has ended.</value>
+  </data>
+  <data name="cart.duplicate_course" xml:space="preserve">
+    <value>Course already in cart</value>
+  </data>
+  <data name="cart.duplicate_course.detail" xml:space="preserve">
+    <value>This course is already in your cart.</value>
+  </data>
+  <data name="cart.course_owned" xml:space="preserve">
+    <value>Course already owned</value>
+  </data>
+  <data name="cart.course_owned.detail" xml:space="preserve">
+    <value>You are already enrolled in this course.</value>
+  </data>
+  <data name="cart.course_in_unpaid_order" xml:space="preserve">
+    <value>Course in an unpaid order</value>
+  </data>
+  <data name="cart.course_in_unpaid_order.detail" xml:space="preserve">
+    <value>This course is in an order that is not paid yet. Complete the payment or wait for it to expire.</value>
+  </data>
+  <data name="cart.zakat_not_allowed" xml:space="preserve">
+    <value>Zakat not allowed</value>
+  </data>
+  <data name="cart.zakat_not_allowed.detail" xml:space="preserve">
+    <value>Zakat cannot be paid to this project.</value>
+  </data>
+  <data name="cart.dedication_not_allowed" xml:space="preserve">
+    <value>Dedication not allowed</value>
+  </data>
+  <data name="cart.dedication_not_allowed.detail" xml:space="preserve">
+    <value>Purchases cannot be dedicated.</value>
+  </data>
+  <data name="cart.dedication_invalid" xml:space="preserve">
+    <value>Invalid dedication</value>
+  </data>
+  <data name="cart.dedication_invalid.detail" xml:space="preserve">
+    <value>Check the recipient name, mobile and message.</value>
+  </data>
+  <data name="cart.dedication_free_text_disabled" xml:space="preserve">
+    <value>Free text disabled</value>
+  </data>
+  <data name="cart.dedication_free_text_disabled.detail" xml:space="preserve">
+    <value>Choose a message from the approved templates.</value>
+  </data>
+  <data name="cart.out_of_stock" xml:space="preserve">
+    <value>Out of stock</value>
+  </data>
+  <data name="cart.out_of_stock.detail" xml:space="preserve">
+    <value>The quantity is above the stock available.</value>
+  </data>
+  <data name="cart.too_many_lines" xml:space="preserve">
+    <value>Too many lines</value>
+  </data>
+  <data name="cart.too_many_lines.detail" xml:space="preserve">
+    <value>A cart cannot have more than 50 lines.</value>
+  </data>
+  <data name="cart.total_exceeded" xml:space="preserve">
+    <value>Cart total exceeded</value>
+  </data>
+  <data name="cart.total_exceeded.detail" xml:space="preserve">
+    <value>The cart total is above the limit. For larger gifts please contact the association.</value>
+  </data>
+  <data name="cart.line_not_found" xml:space="preserve">
+    <value>Line not found</value>
+  </data>
+  <data name="cart.line_not_found.detail" xml:space="preserve">
+    <value>This line is not in your cart.</value>
+  </data>
 </root>

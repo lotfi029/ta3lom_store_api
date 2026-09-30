@@ -52,6 +52,7 @@ public static class DependencyInjection
         services.AddQuartz(q =>
         {
             q.AddStoreJob<PruneOtpJob>(PruneOtpJob.Cron);
+            q.AddStoreJob<ExpireGuestCartsJob>(ExpireGuestCartsJob.Cron);
         });
         services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
         return services;
@@ -89,6 +90,7 @@ public static class DependencyInjection
         services.AddScoped<IStaffUserRepository, StaffUserRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<ICartRepository, CartRepository>();
     }
 
     private static void AddSecurity(IServiceCollection services)

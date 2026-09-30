@@ -21,6 +21,10 @@ internal sealed class CartConfiguration : IEntityTypeConfiguration<Cart>
         e.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone").IsRequired().HasDefaultValueSql("now()").ValueGeneratedNever();
         e.Property(x => x.UpdatedAt).HasColumnType("timestamp with time zone").IsRequired().HasDefaultValueSql("now()").ValueGeneratedNever();
         e.HasIndex(x => x.CustomerId).IsUnique().HasFilter("((status = 'active'::text) AND (customer_id IS NOT NULL))").HasDatabaseName("ux_cart_customer_active");
+        e.HasMany(x => x.Lines).WithOne().HasForeignKey(l => l.CartId).HasConstraintName("cart_line_cart_id_fkey").OnDelete(DeleteBehavior.Cascade);
+        e.Navigation(x => x.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
+        e.Ignore(x => x.Total);
+        e.Ignore(x => x.IsGuest);
         e.HasOne<Ta3lom.Store.Domain.Entities.Identity.Customer>().WithMany().HasForeignKey(x => x.CustomerId).HasConstraintName("cart_customer_id_fkey").OnDelete(DeleteBehavior.Cascade);
     }
 }

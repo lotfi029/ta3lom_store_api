@@ -1,7 +1,7 @@
 # S-09 — Admin catalogue and settings (#54–#77, #118, #119). Result 30 Sep 2026 (local, Development): all as expected.
 # Tokens: store_manager (catalogue), admin (settings), viewer (read only) via /v1/admin/auth login + TOTP (see S-05.http).
 # categories: create 201, list · media: PNG → WebP ≤2400 px (EXIF dropped), public URL 200; text/plain → 415;
-#   book_file PDF private (url null) · products: course create 201, duplicate slug 409 catalog.slug_taken,
+#   book_file PDF private (url null) · products: course create 201, duplicate slug 409 product.slug_taken,
 #   compareAt ≤ price → 400, modules replaced, publish without cover → 422 {missing:[…]} then published;
 #   book print + digital (digital without file → 400), published, archived → public 404;
 #   cause: unit amount without label → 400, second general fund → 409, published; goal seed 1500.00/12 shown publicly
@@ -59,7 +59,7 @@ Content-Type: application/json
  "summaryAr":"ملخص","summaryEn":null,"bodyAr":null,"bodyEn":null,"badge":null,"sort":0,
  "seoTitleAr":null,"seoTitleEn":null,"seoDescAr":null,"seoDescEn":null}
 
-### #55 Same slug again → 409 catalog.slug_taken
+### #55 Same slug again → 409 product.slug_taken
 POST {{base}}/products
 Authorization: Bearer {{manager}}
 Content-Type: application/json
@@ -115,7 +115,7 @@ Content-Type: application/json
 
 {"seedRaised":"1500.00","seedUnits":12,"seedDonors":9,"reason":"offline donations before launch"}
 
-### #68 Offer (second active → 409 offer.already_active; zakatEligible true → 400)
+### #68 Offer (second active → 409 offer.active_exists; zakatEligible true → 400)
 POST {{base}}/products/{{courseId}}/offers
 Authorization: Bearer {{manager}}
 Content-Type: application/json

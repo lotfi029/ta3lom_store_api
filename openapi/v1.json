@@ -1989,6 +1989,211 @@
         }
       }
     },
+    "/v1/cart": {
+      "get": {
+        "tags": [
+          "Cart"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Cart"
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/v1/cart/summary": {
+      "get": {
+        "tags": [
+          "Cart"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartBadgeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/cart/lines": {
+      "post": {
+        "tags": [
+          "Cart"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddCartLineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/cart/lines/{lineId}": {
+      "patch": {
+        "tags": [
+          "Cart"
+        ],
+        "parameters": [
+          {
+            "name": "lineId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCartLineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Cart"
+        ],
+        "parameters": [
+          {
+            "name": "lineId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/catalog/home": {
       "get": {
         "tags": [
@@ -3087,6 +3292,68 @@
           }
         }
       },
+      "AddCartLineRequest": {
+        "required": [
+          "productId",
+          "bookFormatId",
+          "kind",
+          "mode",
+          "quantity",
+          "amount",
+          "intent",
+          "dedication"
+        ],
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bookFormatId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "quantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "amount": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "intent": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dedication": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DedicationInput"
+              }
+            ]
+          }
+        }
+      },
       "AdminBookBlock": {
         "required": [
           "authorAr",
@@ -3941,6 +4208,220 @@
           }
         }
       },
+      "CartBadgeResponse": {
+        "required": [
+          "lineCount",
+          "grandTotal"
+        ],
+        "type": "object",
+        "properties": {
+          "lineCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "grandTotal": {
+            "type": "string"
+          }
+        }
+      },
+      "CartDedicationResponse": {
+        "required": [
+          "toName",
+          "toMobile",
+          "fromName",
+          "templateKey",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "toName": {
+            "type": "string"
+          },
+          "toMobile": {
+            "type": "string"
+          },
+          "fromName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "templateKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "text": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "CartLineFormat": {
+        "required": [
+          "id",
+          "kind"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          }
+        }
+      },
+      "CartLineResponse": {
+        "required": [
+          "id",
+          "productId",
+          "slug",
+          "type",
+          "kind",
+          "mode",
+          "titleAr",
+          "titleEn",
+          "bookFormat",
+          "quantity",
+          "maxQuantity",
+          "unitPrice",
+          "amount",
+          "unitLabelAr",
+          "unitLabelEn",
+          "seatEquivalent",
+          "intent",
+          "dedication",
+          "issues"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "titleAr": {
+            "type": "string"
+          },
+          "titleEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bookFormat": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CartLineFormat"
+              }
+            ]
+          },
+          "quantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "maxQuantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unitPrice": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "unitLabelAr": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unitLabelEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "seatEquivalent": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "intent": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dedication": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CartDedicationResponse"
+              }
+            ]
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CartNoticeItem": {
+        "required": [
+          "code",
+          "slug"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        }
+      },
       "CartNoticeResponse": {
         "required": [
           "code",
@@ -3953,6 +4434,102 @@
           },
           "slug": {
             "type": "string"
+          }
+        }
+      },
+      "CartResponse": {
+        "required": [
+          "id",
+          "isGuest",
+          "purchases",
+          "gifts",
+          "summary",
+          "notices",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "isGuest": {
+            "type": "boolean"
+          },
+          "purchases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CartLineResponse"
+            }
+          },
+          "gifts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CartLineResponse"
+            }
+          },
+          "summary": {
+            "$ref": "#/components/schemas/CartSummaryResponse"
+          },
+          "notices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CartNoticeItem"
+            }
+          },
+          "expiresAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "CartSummaryResponse": {
+        "required": [
+          "purchasesTotal",
+          "vatIncluded",
+          "shippingTotal",
+          "giftsTotal",
+          "grandTotal",
+          "lineCount",
+          "requiresShipping",
+          "hasGifts"
+        ],
+        "type": "object",
+        "properties": {
+          "purchasesTotal": {
+            "type": "string"
+          },
+          "vatIncluded": {
+            "type": "string"
+          },
+          "shippingTotal": {
+            "type": "string"
+          },
+          "giftsTotal": {
+            "type": "string"
+          },
+          "grandTotal": {
+            "type": "string"
+          },
+          "lineCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "requiresShipping": {
+            "type": "boolean"
+          },
+          "hasGifts": {
+            "type": "boolean"
           }
         }
       },
@@ -4762,6 +5339,42 @@
           },
           "profileComplete": {
             "type": "boolean"
+          }
+        }
+      },
+      "DedicationInput": {
+        "required": [
+          "toName",
+          "toMobile",
+          "fromName",
+          "templateKey",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "toName": {
+            "type": "string"
+          },
+          "toMobile": {
+            "type": "string"
+          },
+          "fromName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "templateKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "text": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -6784,6 +7397,22 @@
           }
         }
       },
+      "UpdateCartLineRequest": {
+        "required": [
+          "quantity"
+        ],
+        "type": "object",
+        "properties": {
+          "quantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "UpdateStaffRequest": {
         "required": [
           "name",
@@ -6835,6 +7464,9 @@
     },
     {
       "name": "Admin · Settings"
+    },
+    {
+      "name": "Cart"
     },
     {
       "name": "Catalog"

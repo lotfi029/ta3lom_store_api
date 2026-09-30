@@ -63,6 +63,15 @@ internal static class ValidationDecorator
             .GroupBy(f => ToCamelCase(f.PropertyName), StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.Select(f => f.ErrorMessage).Distinct(StringComparer.Ordinal).ToArray(), StringComparer.Ordinal));
 
-    private static string ToCamelCase(string propertyPath) =>
-        string.Join('.', propertyPath.Split('.').Select(p => p.Length == 0 ? p : char.ToLowerInvariant(p[0]) + p[1..]));
+    /// `Input.SeatPrice` → `seatPrice`: the wrapper property of a command (`Input`, `Request`) is not a body field (11 §1.6).
+    private static string ToCamelCase(string propertyPath)
+    {
+        var parts = propertyPath.Split('.');
+        if (parts.Length > 1 && parts[0] is "Input" or "Request")
+        {
+            parts = parts[1..];
+        }
+
+        return string.Join('.', parts.Select(p => p.Length == 0 ? p : char.ToLowerInvariant(p[0]) + p[1..]));
+    }
 }

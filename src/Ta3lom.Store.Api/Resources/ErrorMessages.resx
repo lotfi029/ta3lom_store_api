@@ -241,4 +241,100 @@
   <data name="setting.invalid_value.detail" xml:space="preserve">
     <value>القيمة لا تناسب نوع هذا الإعداد.</value>
   </data>
+  <data name="cart.product_unavailable" xml:space="preserve">
+    <value>المنتج غير متاح</value>
+  </data>
+  <data name="cart.product_unavailable.detail" xml:space="preserve">
+    <value>هذا المنتج أو هذه النسخة غير متاحة حاليًا.</value>
+  </data>
+  <data name="cart.mode_not_allowed" xml:space="preserve">
+    <value>طريقة غير مسموحة</value>
+  </data>
+  <data name="cart.mode_not_allowed.detail" xml:space="preserve">
+    <value>لا يمكن إضافة هذا المنتج بهذه الطريقة.</value>
+  </data>
+  <data name="cart.quantity_limit" xml:space="preserve">
+    <value>تجاوزت الكمية المسموحة</value>
+  </data>
+  <data name="cart.quantity_limit.detail" xml:space="preserve">
+    <value>الكمية أكبر من الحد المسموح لهذا البند.</value>
+  </data>
+  <data name="cart.amount_below_minimum" xml:space="preserve">
+    <value>المبلغ أقل من الحد الأدنى</value>
+  </data>
+  <data name="cart.amount_below_minimum.detail" xml:space="preserve">
+    <value>المبلغ أقل من الحد الأدنى المسموح.</value>
+  </data>
+  <data name="cart.campaign_ended" xml:space="preserve">
+    <value>انتهت الحملة</value>
+  </data>
+  <data name="cart.campaign_ended.detail" xml:space="preserve">
+    <value>انتهى الإهداء أو التبرع لهذا المنتج.</value>
+  </data>
+  <data name="cart.duplicate_course" xml:space="preserve">
+    <value>الدورة في السلة</value>
+  </data>
+  <data name="cart.duplicate_course.detail" xml:space="preserve">
+    <value>هذه الدورة موجودة في سلتك.</value>
+  </data>
+  <data name="cart.course_owned" xml:space="preserve">
+    <value>أنت مسجل في الدورة</value>
+  </data>
+  <data name="cart.course_owned.detail" xml:space="preserve">
+    <value>أنت مسجل في هذه الدورة مسبقًا.</value>
+  </data>
+  <data name="cart.course_in_unpaid_order" xml:space="preserve">
+    <value>الدورة في طلب غير مدفوع</value>
+  </data>
+  <data name="cart.course_in_unpaid_order.detail" xml:space="preserve">
+    <value>هذه الدورة في طلب لم يُدفع بعد. أكمل الدفع أو انتظر انتهاء صلاحيته.</value>
+  </data>
+  <data name="cart.zakat_not_allowed" xml:space="preserve">
+    <value>الزكاة غير مسموحة</value>
+  </data>
+  <data name="cart.zakat_not_allowed.detail" xml:space="preserve">
+    <value>لا يمكن دفع الزكاة لهذا المشروع.</value>
+  </data>
+  <data name="cart.dedication_not_allowed" xml:space="preserve">
+    <value>الإهداء غير مسموح</value>
+  </data>
+  <data name="cart.dedication_not_allowed.detail" xml:space="preserve">
+    <value>لا يمكن إهداء المشتريات.</value>
+  </data>
+  <data name="cart.dedication_invalid" xml:space="preserve">
+    <value>بيانات الإهداء غير صحيحة</value>
+  </data>
+  <data name="cart.dedication_invalid.detail" xml:space="preserve">
+    <value>تحقق من اسم المُهدى إليه ورقم جواله والرسالة.</value>
+  </data>
+  <data name="cart.dedication_free_text_disabled" xml:space="preserve">
+    <value>النص الحر غير متاح</value>
+  </data>
+  <data name="cart.dedication_free_text_disabled.detail" xml:space="preserve">
+    <value>اختر رسالة من القوالب المعتمدة.</value>
+  </data>
+  <data name="cart.out_of_stock" xml:space="preserve">
+    <value>الكمية غير متوفرة</value>
+  </data>
+  <data name="cart.out_of_stock.detail" xml:space="preserve">
+    <value>الكمية المطلوبة أكبر من المتوفر.</value>
+  </data>
+  <data name="cart.too_many_lines" xml:space="preserve">
+    <value>السلة ممتلئة</value>
+  </data>
+  <data name="cart.too_many_lines.detail" xml:space="preserve">
+    <value>لا يمكن أن تزيد السلة عن 50 بندًا.</value>
+  </data>
+  <data name="cart.total_exceeded" xml:space="preserve">
+    <value>تجاوزت حد السلة</value>
+  </data>
+  <data name="cart.total_exceeded.detail" xml:space="preserve">
+    <value>مجموع السلة أكبر من الحد المسموح. للمبالغ الكبيرة تواصل مع الجمعية.</value>
+  </data>
+  <data name="cart.line_not_found" xml:space="preserve">
+    <value>البند غير موجود</value>
+  </data>
+  <data name="cart.line_not_found.detail" xml:space="preserve">
+    <value>هذا البند غير موجود في سلتك.</value>
+  </data>
 </root>

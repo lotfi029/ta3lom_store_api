@@ -6,6 +6,9 @@ public static class Policies
     /// Bearer access token with audience `store-customer`.
     public const string Customer = "customer";
 
+    /// Cart routes: guests pass; a presented customer token must be valid (401 otherwise, so the SPA refreshes).
+    public const string CustomerOptional = "customer-optional";
+
     public const string StaffRead = "staff:read";
     public const string StaffCatalogue = "staff:catalogue";
     public const string StaffStock = "staff:stock";

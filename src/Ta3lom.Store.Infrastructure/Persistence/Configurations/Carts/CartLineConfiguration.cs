@@ -32,11 +32,19 @@ internal sealed class CartLineConfiguration : IEntityTypeConfiguration<CartLine>
         e.Property(x => x.UnitPrice).HasColumnType("numeric(12,2)").IsRequired().ValueGeneratedNever();
         e.Property(x => x.Amount).HasColumnType("numeric(12,2)").IsRequired().ValueGeneratedNever();
         e.Property(x => x.Intent).HasColumnType("text").IsRequired(false).ValueGeneratedNever();
-        e.Property(x => x.Dedication).HasColumnType("jsonb").IsRequired(false).ValueGeneratedNever();
+        e.OwnsOne(x => x.Dedication, d =>                        // RUL-21; owned JSON since S-13 (column stays jsonb)
+        {
+            d.ToJson("dedication");
+            d.Property(x => x.ToName).HasJsonPropertyName("toName");
+            d.Property(x => x.ToMobile).HasJsonPropertyName("toMobile");
+            d.Property(x => x.FromName).HasJsonPropertyName("fromName");
+            d.Property(x => x.TemplateKey).HasJsonPropertyName("templateKey");
+            d.Property(x => x.Text).HasJsonPropertyName("text");
+        });
+        e.Ignore(x => x.IsGift);
         e.Property(x => x.AddedAt).HasColumnType("timestamp with time zone").IsRequired().HasDefaultValueSql("now()").ValueGeneratedNever();
         e.HasIndex(x => x.CartId).HasDatabaseName("ix_cart_line_cart");
         e.HasOne<Ta3lom.Store.Domain.Entities.Catalog.BookFormat>().WithMany().HasForeignKey(x => x.BookFormatId).HasConstraintName("cart_line_book_format_id_fkey").OnDelete(DeleteBehavior.NoAction);
-        e.HasOne<Cart>().WithMany().HasForeignKey(x => x.CartId).HasConstraintName("cart_line_cart_id_fkey").OnDelete(DeleteBehavior.Cascade);
         e.HasOne<Ta3lom.Store.Domain.Entities.Catalog.Product>().WithMany().HasForeignKey(x => x.ProductId).HasConstraintName("cart_line_product_id_fkey").OnDelete(DeleteBehavior.NoAction);
     }
 }

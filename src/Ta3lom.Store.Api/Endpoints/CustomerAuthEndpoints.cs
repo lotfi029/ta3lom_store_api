@@ -64,15 +64,21 @@ internal sealed class CustomerAuthEndpoints : IEndpoint
         [FromBody] VerifyOtpRequest request,
         HttpContext http,
         [FromServices] ICommandHandler<VerifyOtpCommand, CustomerSession> handler,
+        [FromServices] CartCookie cartCookie,
         [FromServices] IClock clock,
         CancellationToken ct)
     {
-        // The guest cart id (t3s_cart) is unsealed and passed here from S-13 on.
-        var command = new VerifyOtpCommand(request.Mobile, request.Code, GuestCartId: null, http.Request.Headers.UserAgent.ToString());
+        // The guest cart (t3s_cart) is merged into the customer's cart (RUL-17), then the cookie is dropped.
+        var command = new VerifyOtpCommand(request.Mobile, request.Code, cartCookie.Read(http.Request), http.Request.Headers.UserAgent.ToString());
         var result = await handler.HandleAsync(command, ct);
         return result.ToHttp(session =>
         {
             AuthCookies.Set(http.Response, AuthCookies.CustomerRefresh, AuthCookies.CustomerRefreshPath, session.RefreshToken, session.RefreshExpiresAt, clock.UtcNow);
+            if (command.GuestCartId is not null)
+            {
+                CartCookie.Delete(http.Response);
+            }
+
             return TypedResults.Ok(session.Body);
         });
     }
