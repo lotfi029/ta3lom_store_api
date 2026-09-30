@@ -271,6 +271,7 @@ Configuration lives in one `IEntityTypeConfiguration<T>` per table under
 | Secrets | Connection strings and Data Protection keys come from environment/secret files, never from the repo |
 | Audit | `audit_log` written by an EF Core `SaveChangesInterceptor` for staff-originated changes |
 | Append-only tables | `audit_log`, `payment_event`, `zakat_ledger`, `stock_movement`, `sponsored_unit_event`: `store_app` is granted `INSERT, SELECT` only |
+| payment_event (r2, 30 Sep) | INSERT, SELECT plus a column-level UPDATE (processed_at, error, payload) — settlement sets the first two, retention scrubs payload (03 §7). No other column may change. |
 
 ---
 

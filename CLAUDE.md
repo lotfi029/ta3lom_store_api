@@ -13,7 +13,8 @@ All docs live in `store/` in this repo.
 2. `store/03-business-rules.md` — RUL-01…RUL-63. Rules are never invented and never "fixed" in code.
 3. `store/09-backend-dotnet.md` — code shape, patterns, sketches (r2: Application → Domain only).
 4. `store/11-api-contract.md` — endpoints (index §12), DTOs, error codes (§1.6).
-5. `store/database/01-database-design.md` and the reference DDL (`db/reference/`, from S-02).
+5. `store/database/01-database-design.md` and the reference DDL in `db/reference/` — the master copy of the
+   reference SQL lives in this repo (from S-02).
 6. `store/15-payment-service-handoff.md` — the payment boundary: only the contracts named there.
 
 **Precedence when docs disagree:** 03 > 11 > database/ > 09. Report every conflict; never choose silently.
@@ -62,11 +63,14 @@ All docs live in `store/` in this repo.
 6. **Every implemented RUL has a test** tagged `[Rule("RUL-nn")]` (`Ta3lom.Store.Testing.RuleAttribute`).
    Append the session's rules to `tests/Ta3lom.Store.ArchitectureTests/ImplementedRules.txt`.
 7. **No MediatR, no AutoMapper, no FluentAssertions.** Plain handler interfaces, Scrutor, Shouldly.
-8. **No `Database.Migrate()`** (banned). Migrations ship as the idempotent script run by the deploy job;
+8. **No `Database.Migrate()`** (banned). A merged migration is never edited; changes go in a new migration. Migrations ship as the idempotent script run by the deploy job;
    schema changes are expand → migrate → contract.
 9. **DDL names are fixed** (`db/reference/001_store_schema.sql`, including PostgreSQL's constraint names).
    After a migration, edit 001 by hand until `SchemaParityTests` passes and regenerate the data dictionary.
    Every column keeps its SQL default, but EF properties are `ValueGeneratedNever()`: the domain sets values.
+   **jsonb columns** are raw JSON strings in S-02. Each becomes a typed owned JSON type (`OwnsOne(...).ToJson()`)
+   in the session that first uses it: `cart_line.dedication` → S-13, `orders.shipping_address` and
+   `shipment.address` → S-15/S-21, `setting.value` → S-09. The column type stays `jsonb`.
 10. **Personal data stays protected.** Beneficiary PII only through the protector, never logged, never in
     a donor DTO; reveal is audited; mobiles masked in logs. `RedactingEnricher` masks
     authorization/cookie/password/secret/token properties and headers.

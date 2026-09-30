@@ -33,7 +33,7 @@ internal static class SeedData
     ];
 
     /// Message templates (RUL-63, 09 §4.9). The first ten rows are the 002 seed; the rest fill the keys
-    /// 09 §4.9 lists as "added by SeedRunner". Their wording needs owner review before launch.
+    /// 09 §4.9 lists as "added by SeedRunner". That wording is an accepted draft; the final text is approved at UAT (S-38).
     public static readonly IReadOnlyList<(string Key, string Channel, string Locale, string? Subject, string Body)> Templates =
     [
         ("otp", "sms", "ar", null, "رمز الدخول لمتجر تعلّم: {{ code }} — صالح 5 دقائق. لا تشاركه مع أحد."),

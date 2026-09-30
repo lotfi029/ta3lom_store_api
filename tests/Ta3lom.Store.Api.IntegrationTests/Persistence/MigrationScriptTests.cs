@@ -15,7 +15,8 @@ public sealed class MigrationScriptTests
         await SqlRunner.ExecuteAsync(cs, StoreSchema.IdempotentMigrationScript());
 
         (await SchemaSnapshot.TakeAsync(cs)).ShouldBe(first);
-        (await SqlRunner.ScalarAsync<long>(cs, "SELECT count(*) FROM store.__ef_migrations_history")).ShouldBe(1);
+        using var db = StoreSchema.CreateContext(cs);
+        (await SqlRunner.ScalarAsync<long>(cs, "SELECT count(*) FROM store.__ef_migrations_history")).ShouldBe(db.Database.GetMigrations().Count());
     }
 
     /// The EF model and the last migration agree: a configuration change without `dotnet ef migrations add`
