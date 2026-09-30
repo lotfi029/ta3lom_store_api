@@ -28,6 +28,31 @@ public sealed class OtpLoggingTests(OtpLoggingTests.Factory factory) : IClassFix
         everything.ShouldNotContain(mobile[1..]);                                                        // 5XXXXXXXX never in clear
     }
 
+    [Fact]
+    [Rule("RUL-51")]
+    public async Task Beneficiary_names_and_mobiles_never_reach_the_logs_even_when_revealed()
+    {
+        var admin = await factory.StaffAsync(Ta3lom.Store.Domain.Constants.Roles.Admin);
+        var officer = await factory.StaffAsync(Ta3lom.Store.Domain.Constants.Roles.AllocationOfficer);
+        var mobile = ScenarioFactory.NewMobile();
+        var (_, b) = await admin.PostAsync("/v1/admin/beneficiaries", new
+        {
+            kind = "teacher",
+            beneficiaryGroup = "rural_private_school_teachers",
+            region = "الباحة",
+            fullName = "سلمى المستفيدة",
+            mobile,
+            organisationName = "مدرسة",
+        });
+        (await officer.PostAsync($"/v1/admin/beneficiaries/{b.GetProperty("id").GetGuid()}/reveal", new { reason = "تحقق" })).Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        await Task.Delay(200, TestContext.Current.CancellationToken);
+
+        var everything = string.Join("\n", factory.Sink.Events.Select(e =>
+            e.RenderMessage(System.Globalization.CultureInfo.InvariantCulture) + " " + string.Join(" ", e.Properties.Select(p => $"{p.Key}={p.Value}"))));
+        everything.ShouldNotContain("سلمى");
+        everything.ShouldNotContain(mobile[1..]);
+    }
+
     public sealed class Factory : ScenarioFactory
     {
         public LogRedactionTests.InMemoryLogSink Sink { get; } = new();

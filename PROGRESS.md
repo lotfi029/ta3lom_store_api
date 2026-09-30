@@ -1,5 +1,5 @@
 # Build progress
-Next: T-7 — endpoint integration (130 endpoints: success, 400, 401/403, business code; Mapster Compile; OpenAPI vs 11; redaction; /dev 404 in Production)
+Next: T-8 — documents and outputs (PDF text + Arabic, QR TLV decode, gapless numbering under 20 parallel settlements, CSV BOM, donor DTOs never carry beneficiary identity)
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -82,7 +82,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | T-4 allocation | done | T-3/T-4 | RUL-47 (a)–(e) on `AllocationPolicy`; API: all-or-nothing 422, admin 403 (SoD), parallel officers distinct units, FIFO, invite + customer row (RUL-52), lapse → front of queue + SMS |
 | T-5 RUL tests + ImplementedRules.txt | done | T-5 (7 commits) | 54/54 backend rules of §13.1 tagged and listed; Cart, Checkout, Catalogue, FulfilmentAndGiving, Identity, Operations, special-host classes; 1 bug fixed (unclosed Scriban block) |
 | T-6 policy matrix | done | T-6 | 80 admin routes (read from the endpoint table) × 6 roles + anonymous = 560 calls: in-policy never 401/403/5xx, out-of-policy 403, anonymous 401; SoD table asserted; customer/staff tokens not interchangeable |
-| T-7 endpoint integration | todo | | |
+| T-7 endpoint integration | done | T-7 | sweeps over the live endpoint table: every JSON endpoint → malformed body 400 `validation.failed`; every parameterless GET → 200; every customer route anonymous → 401; Mapster `Compile()`; 128 routes of 11 §12 in OpenAPI; /dev/* 404 in Production; Arabic search + ETag 304 + 15 products; audit actor; PII not logged. Success and business codes per endpoint: scenario classes T-2 … T-6 |
 | T-8 documents and outputs | todo | | |
 | T-9 coverage + Build-report.md | todo | | |
 
@@ -149,7 +149,7 @@ Build
 
 Tests (test phase)
 - [x] RUL-02 (draft invisible, archived only in history), RUL-08 (floor and cap), RUL-09 (ended campaign flagged), RUL-23 (feed never shows a name when anonymous)
-- [ ] Arabic search: مكتبة for مكتبه, حكايات with tashkeel; ETag round trip; the seed catalogue returns 15 products
+- [x] Arabic search: مكتبة for مكتبه, حكايات with tashkeel; ETag round trip; the seed catalogue returns 15 products
 
 Done when (local smoke)
 - [x] The seed catalogue is served (15 products, dev DB)
@@ -171,7 +171,7 @@ Build
 
 Tests (test phase)
 - [x] RUL-01, RUL-03, RUL-04, RUL-05, RUL-06, RUL-07, RUL-10 (`close_on_target` in `IsOpen`)
-- [ ] Audit rows for publish, price change, seed change; policy-matrix rows for #54–#77, #118, #119
+- [x] Audit rows for publish, price change, seed change; policy-matrix rows for #54–#77, #118, #119
 
 Done when (local smoke)
 - [x] A `store_manager` creates, publishes and archives one course, one book (print + digital) and one cause (M3)
