@@ -59,3 +59,10 @@ internal sealed class RefreshTokenRepository(StoreDbContext db) : GenericReposit
 }
 
 internal sealed class NotificationRepository(StoreDbContext db) : GenericRepository<Notification>(db), INotificationRepository;
+
+internal sealed class StaffUserRepository(StoreDbContext db) : GenericRepository<StaffUser>(db), IStaffUserRepository
+{
+    /// `staff_user.email` is citext: the comparison in SQL is case-insensitive.
+    public Task<StaffUser?> FindByEmailAsync(string email, CancellationToken ct = default) =>
+        Set.FirstOrDefaultAsync(s => s.Email == email, ct);
+}

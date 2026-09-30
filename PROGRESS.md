@@ -1,5 +1,5 @@
 # Build progress
-Next: S-05 — Staff identity and roles
+Next: S-08 — Public catalogue
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -24,7 +24,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-02b DMS alignment | done | 2868161 | — | — | ✅ health, 404 problem, /docs, seed (tools/smoke/S-02b.http) | 172 tests green; no migration needed; OpenAPI unchanged |
 | S-03a-lite CI | done | e96bd7d | — | — | n/a (workflow file; runs on push) | `.github/workflows/ci.yml` accepted by the push |
 | S-04 customer OTP | done | S-04 | 16–20 | PruneOtp | ✅ tools/smoke/S-04.http | 192 tests green; Build + Done-when ticked below |
-| S-05 staff identity | todo | | 47–52, 123–128 | — | | |
+| S-05 staff identity | done | S-05 | 47–52, 123–128 | — | ✅ tools/smoke/S-05.http | 204 tests green; actor bug found and fixed in smoke |
 | S-08 public catalogue | todo | | 1–7, 9 | — | | |
 | S-09 admin catalogue | todo | | 54–77, 118, 119 | — | | |
 | S-13 cart | todo | | 10–15 | ExpireGuestCarts | | |
@@ -55,7 +55,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 
 | Milestone | Smoke file | Result |
 |---|---|---|
-| M2 Identity | tools/smoke/M2.http | |
+| M2 Identity | tools/smoke/M2.http | ✅ passed (OTP sink sign-in, rotation, reuse revokes family, staff TOTP, 403s) |
 | M3 Catalogue | tools/smoke/M3.http | |
 | M4 First settled order | tools/smoke/M4.http | |
 | M5 Fulfilment | tools/smoke/M5.http | |
@@ -117,3 +117,23 @@ Done when (local smoke)
 - [x] Sign-in works with the sink (request → /dev/sms → verify → session)
 - [x] The 4th code within 15 minutes returns `otp.rate_limited` (429, `retryAfterSeconds`)
 - [x] Replaying an old refresh token logs out every session of that customer (`auth.refresh_reused`, current cookie then 401)
+
+### S-05 — Staff identity and authorisation
+
+Build
+- [x] `StaffUser`: password hash, lockout (5 failures → 1 h), TOTP secret encrypted with Data Protection, roles array
+- [x] `StaffLogin` → MFA token (store-staff-mfa, 5 min); `EnrolTotp` (otpauth URI + base32); `VerifyTotp` → access (store-staff, 10 min) + refresh 8 h in `t3s_srt` (`Path=/v1/admin/auth`)
+- [x] Policies of 11 §1.2 with segregation of duties (`staff:refund`, `staff:allocate`, `staff:reveal-pii` not satisfied by admin) — `Domain/Constants/Policies.StaffRoles`
+- [x] Staff CRUD, reset password / TOTP, unlock (#123–#128)
+- [x] `ICurrentActor` from claims feeding `audit_log.actor`
+- [x] `create-admin` CLI (one-time password, TOTP enrolment forced at first login)
+- [x] Audit §2.2: lockout per FR-53; placeholder allocate route for the policy matrix → built with the matrix in T-6
+
+Tests (test phase)
+- [ ] RUL-62 policy matrix (every endpoint group × every role → 200/403), extended by later sessions
+- [ ] Lockout; TOTP window ±1 step; staff and customer tokens not interchangeable (audience)
+
+Done when (local smoke)
+- [x] `create-admin` works (dev DB)
+- [x] A `viewer` gets 403 on every write (staff admin routes; later sessions' writes join the matrix in T-6)
+- [ ] An `admin` without `allocation_officer` gets 403 on the allocate route → verified when #112 exists (S-25)

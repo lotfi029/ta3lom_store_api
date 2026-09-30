@@ -24,4 +24,10 @@ public static class ErrorCodes
     public const string OtpInvalid = "otp.invalid";
     public const string OtpExpired = "otp.expired";
     public const string OtpTooManyAttempts = "otp.too_many_attempts";
+    public const string InvalidCredentials = "auth.invalid_credentials";
+    public const string AccountLocked = "auth.account_locked";
+    public const string TotpRequired = "auth.totp_required";
+    public const string TotpInvalid = "auth.totp_invalid";
+    public const string TotpNotEnrolled = "auth.totp_not_enrolled";
+    public const string StaffEmailTaken = "staff.email_taken";
 }

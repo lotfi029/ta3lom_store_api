@@ -10,7 +10,12 @@ internal sealed class HttpCurrentActor(IHttpContextAccessor accessor, IPseudonym
     private ClaimsPrincipal? User => accessor.HttpContext?.User;
 
     public ActorKind Kind => User?.Identity is { IsAuthenticated: true, AuthenticationType: var type }
-        ? type == AuthSchemes.Staff ? ActorKind.Staff : ActorKind.Customer
+        ? type switch
+        {
+            AuthSchemes.Staff => ActorKind.Staff,
+            AuthSchemes.Customer => ActorKind.Customer,
+            _ => ActorKind.Anonymous,          // the MFA step token is not an actor yet
+        }
         : ActorKind.Anonymous;
 
     public Guid? Id => Guid.TryParse(User?.FindFirstValue("sub"), out var id) ? id : null;

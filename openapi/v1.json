@@ -190,6 +190,558 @@
           }
         }
       }
+    },
+    "/v1/admin/auth/login": {
+      "post": {
+        "tags": [
+          "Admin · Auth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffLoginResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Locked",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/auth/totp/enrol": {
+      "post": {
+        "tags": [
+          "Admin · Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TotpEnrolResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/auth/totp/verify": {
+      "post": {
+        "tags": [
+          "Admin · Auth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TotpVerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffSessionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Locked",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/auth/refresh": {
+      "post": {
+        "tags": [
+          "Admin · Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffSessionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/auth/logout": {
+      "post": {
+        "tags": [
+          "Admin · Auth"
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/v1/admin/me": {
+      "get": {
+        "tags": [
+          "Admin · Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffMeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/staff": {
+      "get": {
+        "tags": [
+          "Admin · Staff"
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StaffUserResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Admin · Staff"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStaffRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateStaffResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/staff/{id}": {
+      "put": {
+        "tags": [
+          "Admin · Staff"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStaffRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffUserResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/staff/{id}/reset-password": {
+      "post": {
+        "tags": [
+          "Admin · Staff"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OneTimePasswordResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/staff/{id}/reset-totp": {
+      "post": {
+        "tags": [
+          "Admin · Staff"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/staff/{id}/unlock": {
+      "post": {
+        "tags": [
+          "Admin · Staff"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -225,6 +777,43 @@
             "type": "string"
           },
           "slug": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateStaffRequest": {
+        "required": [
+          "email",
+          "name",
+          "roles"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CreateStaffResponse": {
+        "required": [
+          "staff",
+          "oneTimePassword"
+        ],
+        "type": "object",
+        "properties": {
+          "staff": {
+            "$ref": "#/components/schemas/StaffUserResponse"
+          },
+          "oneTimePassword": {
             "type": "string"
           }
         }
@@ -272,6 +861,17 @@
           },
           "profileComplete": {
             "type": "boolean"
+          }
+        }
+      },
+      "OneTimePasswordResponse": {
+        "required": [
+          "oneTimePassword"
+        ],
+        "type": "object",
+        "properties": {
+          "oneTimePassword": {
+            "type": "string"
           }
         }
       },
@@ -378,6 +978,199 @@
           }
         }
       },
+      "StaffLoginRequest": {
+        "required": [
+          "email",
+          "password"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "StaffLoginResponse": {
+        "required": [
+          "mfaToken",
+          "totpEnrolled"
+        ],
+        "type": "object",
+        "properties": {
+          "mfaToken": {
+            "type": "string"
+          },
+          "totpEnrolled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "StaffMeResponse": {
+        "required": [
+          "id",
+          "email",
+          "name",
+          "roles",
+          "lastLoginAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "lastLoginAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "StaffSessionResponse": {
+        "required": [
+          "accessToken",
+          "expiresIn",
+          "staff"
+        ],
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "staff": {
+            "$ref": "#/components/schemas/StaffMeResponse"
+          }
+        }
+      },
+      "StaffUserResponse": {
+        "required": [
+          "id",
+          "email",
+          "name",
+          "roles",
+          "isActive",
+          "totpEnrolled",
+          "lockedUntil",
+          "lastLoginAt",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "totpEnrolled": {
+            "type": "boolean"
+          },
+          "lockedUntil": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastLoginAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TotpEnrolResponse": {
+        "required": [
+          "otpauthUri",
+          "secretBase32"
+        ],
+        "type": "object",
+        "properties": {
+          "otpauthUri": {
+            "type": "string"
+          },
+          "secretBase32": {
+            "type": "string"
+          }
+        }
+      },
+      "TotpVerifyRequest": {
+        "required": [
+          "code"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdateStaffRequest": {
+        "required": [
+          "name",
+          "roles",
+          "isActive"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
       "VerifyOtpRequest": {
         "required": [
           "mobile",
@@ -398,6 +1191,12 @@
   "tags": [
     {
       "name": "Auth"
+    },
+    {
+      "name": "Admin · Auth"
+    },
+    {
+      "name": "Admin · Staff"
     }
   ]
 }

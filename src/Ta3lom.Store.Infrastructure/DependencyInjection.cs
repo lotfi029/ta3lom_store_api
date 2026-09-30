@@ -83,6 +83,7 @@ public static class DependencyInjection
         services.AddScoped<IOtpChallengeRepository, OtpChallengeRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
+        services.AddScoped<IStaffUserRepository, StaffUserRepository>();
     }
 
     private static void AddSecurity(IServiceCollection services)
@@ -105,6 +106,8 @@ public static class DependencyInjection
         services.AddSingleton<IRefreshTokenCodec, RefreshTokenCodec>();
         services.AddSingleton<IPseudonymizer, Pseudonymizer>();
         services.AddSingleton<IAccessTokenIssuer, JwtTokenIssuer>();
+        services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
+        services.AddSingleton<ITotpService, TotpService>();
     }
 
     /// SMS (sink unless `Store:Sms:Provider = unifonic`) and templates.
