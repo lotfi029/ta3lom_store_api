@@ -1,5 +1,22 @@
 # CLAUDE.md — ta3lom store API
 
+## Run mode (active until `store/sessions/Build-report.md` is pushed)
+
+The continuous cloud run is governed by `store/sessions/Cloud-build-plan.md` (§2 run rules, §4b test phase,
+§4c plan 14 coverage). While it runs, these rules **override** the rest of this file:
+
+- **Tests:** no new tests until the build and close-out are finished (§2.5); existing tests, architecture tests and
+  schema parity stay green and are only adapted when a refactor moves types. Then the test phase T-1…T-9 (§4b)
+  writes every RUL, policy-matrix and endpoint test and fills `ImplementedRules.txt`.
+- **"Stop and ask" → defaults:** docs conflicts and open decisions use the defaults of §2.2–§2.3 and are logged in
+  `DECISIONS.md` (precedence 03 > 11 > database/ > 09 > 14).
+- **Staging DoD → local smoke check** (§2.7): gate, dev-DB migration, every new endpoint called once with curl
+  (`tools/smoke/S-nn.http`), integrity checks after S-16, S-21, S-23, S-25, S-42.
+- **"Ask before adding a dependency" → pre-approved list** (§2.4 + §4c item 5). Anything else: the smallest
+  well-known MIT/Apache package, logged as `REVIEW`.
+- **Git:** one draft PR for the whole run, nothing merged by the session, state in `PROGRESS.md` (first line
+  `Next:`) and `DECISIONS.md`.
+
 .NET backend for the store of ta3lom.sa (E-Learning Association, Riyadh): courses, books, seat
 sponsorships and donation products. Every session reads this file first. Work is built session by
 session from plan 14; payment processing is a separate service (plan 14 §0, doc 15).
