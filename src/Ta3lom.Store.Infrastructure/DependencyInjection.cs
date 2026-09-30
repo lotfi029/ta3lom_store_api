@@ -58,6 +58,7 @@ public static class DependencyInjection
             q.AddStoreJob<ExpireGuestCartsJob>(ExpireGuestCartsJob.Cron);
             q.AddStoreJob<ExpireUnpaidOrdersJob>(ExpireUnpaidOrdersJob.Cron);
             q.AddStoreJob<LmsProgressSyncJob>(LmsProgressSyncJob.Cron);
+            q.AddStoreJob<LowStockAlertJob>(LowStockAlertJob.Cron);
         });
         services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
         services.AddSingleton<IJobRunner, QuartzJobRunner>();

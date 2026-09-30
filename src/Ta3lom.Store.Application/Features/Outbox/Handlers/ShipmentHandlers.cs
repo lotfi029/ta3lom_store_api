@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Ta3lom.Store.Application.Abstractions.Data;
 using Ta3lom.Store.Application.Features.Notifications;
@@ -28,4 +29,18 @@ internal sealed class ShipmentDeliveredHandler(IApplicationDbContext db, Notific
         await dispatch.SendOnceAsync(envelope, MessageChannel.Sms, order.ContactMobile, "shipment_delivered", order.Locale,
             new { reference = order.Reference }, order.Id, ct);
     }
+}
+
+/// FR-S43 (S-41): staff e-mail `staff_alert`, once per message.
+internal sealed class LowStockAlertHandler(NotificationDispatch dispatch, IEmailSender email) : OutboxHandler<LowStockAlert>
+{
+    protected override Task HandleAsync(LowStockAlert message, OutboxEnvelope envelope, CancellationToken ct) =>
+        dispatch.SendOnceAsync(envelope, MessageChannel.Email, email.StaffAlertsAddress, "staff_alert", "ar",
+            new
+            {
+                subject = string.Create(CultureInfo.InvariantCulture, $"LowStockAlert {message.Sku}"),
+                body = string.Create(CultureInfo.InvariantCulture,
+                    $"مخزون منخفض: {message.TitleAr}\nsku: {message.Sku}\navailable: {message.Available}\nthreshold: {message.Threshold}\nday: {message.Day:yyyy-MM-dd}"),
+            },
+            null, ct);
 }

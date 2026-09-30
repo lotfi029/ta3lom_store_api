@@ -43,3 +43,7 @@ public sealed record ShipmentShipped(Guid ShipmentId, Guid OrderId) : IDomainEve
 
 /// FR-S42: SMS `shipment_delivered`.
 public sealed record ShipmentDelivered(Guid ShipmentId, Guid OrderId) : IDomainEvent;
+
+/// Staff e-mail (FR-S43, S-41): a print format's `available` is at or below its threshold (`low_stock_threshold`, else the
+/// `low_stock_default_threshold` setting). At most one per format per Riyadh day.
+public sealed record LowStockAlert(Guid FormatId, string Sku, string TitleAr, int Available, int Threshold, DateOnly Day) : IDomainEvent;

@@ -111,6 +111,7 @@ the owner should confirm.
 | 2026-09-30 | S-40 | Internal LMS progress | 14 S-40, Q-05, OP-3 | The internal adapter has no LMS behind it, so it reports only what `/dev/lms/progress` set (Development/Staging); in Production it reports nothing until an LMS is chosen. No certificate is produced by the store (OP-3 open) | Q-05 undecided | REVIEW |
 | 2026-09-30 | S-40 | Which enrolments sync | 09 §6 | `active` enrolments with an `lms_enrolment_ref`, plus `completed` ones still missing a certificate number; `pending_sync`, `revoked` and never-synced manual enrolments are skipped | nothing to pull for them | |
 | 2026-09-30 | S-40 | Progress semantics | 03 RUL-42/50 | Progress never decreases; `started_at`/`completed_at`/`certificate_no` are set once; completion forces 100 %. A failed LMS call is logged and retried next hour (no outbox row: the job itself is the retry) | idempotent job | |
+| 2026-09-30 | S-41 | Low-stock scope and dedupe | 14 S-41, 09 §6 | Only active print formats of non-archived products; "once per format per day" = no `LowStockAlert` outbox row for that format since 00:00 Riyadh (checked in the job, so a manual `/dev/jobs` run the same day adds nothing) | FR-S43 | |
 
 ## Bugs found by tests
 

@@ -1,5 +1,5 @@
 # Build progress
-Next: S-41 — LowStockAlert job
+Next: S-23 — Units and pooling
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -37,7 +37,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-20 digital downloads | done | S-20 | 32, 46, 94 | DigitalBookEffect | ✅ tools/smoke/S-20.http | 301-page book: 0.75 s first, 0.02 s cached; limit/reset/revoke verified |
 | S-21 shipments, stock, admin orders | done | S-21 | 78–80, 85, 86, 95–99 | PrintBookEffect; ShipmentShipped/Delivered | ✅ tools/smoke/S-21.http | integrity checks 0 rows; RUL-40 returned-line fix |
 | S-40 LMS progress sync | done | S-40 | — (dev: /dev/lms/progress) | LmsProgressSync; SponsorUnitCompleted via hook (S-25) | ✅ tools/smoke/S-40.http | idempotent over two runs |
-| S-41 low stock alert | todo | | — | LowStockAlert | | |
+| S-41 low stock alert | done | S-41 | — | LowStockAlert job + message | ✅ tools/smoke/S-41.http | once per format per day; M5 passed |
 | S-23 units and pooling | todo | | — | SponsorUnitsEffect, PoolContributionEffect | | integrity check |
 | S-24 beneficiary register | todo | | 100–108 | — | | |
 | S-25 allocation | todo | | 109–114 | AllocationAlerts, LapseUnits; SponsorUnitAllocated, AllocationAlert/Escalation, BeneficiaryInvite, UnitLapsed, LmsRevoke | | integrity check |
@@ -58,7 +58,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | M2 Identity | tools/smoke/M2.http | ✅ passed (OTP sink sign-in, rotation, reuse revokes family, staff TOTP, 403s) |
 | M3 Catalogue | tools/smoke/M3.http | ✅ passed (store_manager created/published course, book print+digital, cause; public ETags; archive → 404) |
 | M4 First settled order | tools/smoke/M4.http | ✅ passed for the gift path (receipt PDF, SMS, e-mail, repeat, review); invoice PDF re-checked in M5 |
-| M5 Fulfilment | tools/smoke/M5.http | |
+| M5 Fulfilment | tools/smoke/M5.http | ✅ passed (T3-26-001018: course enrolled + launch, digital watermarked 301 pages, print shipped → delivered → fulfilled, ledger = counters, integrity 0 rows) |
 | M6 Giving | tools/smoke/M6.http | |
 | M7 Operations-complete | tools/smoke/M7.http | |
 
@@ -328,3 +328,14 @@ Tests (test phase)
 
 Done when (local smoke)
 - [x] Progress and completion reach the enrolment; a second run changes nothing
+
+### S-41 — `LowStockAlert` job
+
+Build
+- [x] Daily 08:00 Riyadh (`0 0 8 * * ?`); `available ≤ coalesce(low_stock_threshold, low_stock_default_threshold)` → outbox `LowStockAlert`
+- [x] At most one per format per Riyadh day; active formats of non-archived products only
+- [x] `LowStockAlertHandler` → staff e-mail `staff_alert`, once per message
+
+Done when (local smoke)
+- [x] One alert over two runs; archived product skipped
+- [x] **M5 demo** passed (tools/smoke/M5.http)
