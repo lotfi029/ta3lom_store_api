@@ -308,7 +308,7 @@ Build
 
 Tests (test phase)
 - [ ] RUL-30: reserve/commit/release ledger equals counters, integrity check 3 = 0 rows
-- [ ] RUL-40 roll-up
+- [x] RUL-40 roll-up
 - [ ] a `fulfilment`-role user can ship, `finance` cannot; policy matrix extended
 
 Done when (local smoke)
@@ -402,8 +402,8 @@ Build
 - [x] Cause updates CRUD (#81–#84) with a photo via media; `notify_donors` → `CauseUpdatePublished` to distinct paid donors, once per update
 
 Tests (test phase)
-- [ ] RUL-22: card only after payment; retry never re-sends; card DTO has no amount field (reflection)
-- [ ] RUL-54: private update not public; notify sends once per donor
+- [x] RUL-22: card only after payment; retry never re-sends; card DTO has no amount field (reflection)
+- [x] RUL-54: private update not public; notify sends once per donor
 
 Done when (local smoke)
 - [x] All of the above verified with curl (tools/smoke/S-26.http)

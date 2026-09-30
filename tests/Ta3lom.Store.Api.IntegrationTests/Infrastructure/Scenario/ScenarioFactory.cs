@@ -56,6 +56,7 @@ public class ScenarioFactory : StoreApiFactory
         ["Store:Sms:Provider"] = "sink",
         ["Store:Email:Mode"] = "sink",
         ["Store:Email:SinkFolder"] = _mailFolder,
+        ["Store:Files:Root"] = Path.Combine(_mailFolder, "files"),
         ["Store:Outbox:Enabled"] = "false",
         // Every client of a test class shares one address; the limits themselves are covered by RateLimitTests and S-04.
         ["Store:RateLimits:Public:TokenLimit"] = "100000",
@@ -107,6 +108,35 @@ public class ScenarioFactory : StoreApiFactory
     public static string NewMobile() => "059" + Interlocked.Increment(ref _mobileCounter).ToString("D7", System.Globalization.CultureInfo.InvariantCulture);
 
     public static string E164(string mobile) => "+966" + mobile[1..];
+
+    /// A valid one-page PDF (for book files).
+    public static byte[] MinimalPdf()
+    {
+        string[] objects =
+        [
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << >> >>",
+            "<< /Length 5 >>\nstream\nBT ET\nendstream",
+        ];
+        var sb = new System.Text.StringBuilder("%PDF-1.4\n");
+        var offsets = new List<int>();
+        for (var i = 0; i < objects.Length; i++)
+        {
+            offsets.Add(sb.Length);
+            sb.Append(System.Globalization.CultureInfo.InvariantCulture, $"{i + 1} 0 obj\n{objects[i]}\nendobj\n");
+        }
+
+        var xref = sb.Length;
+        sb.Append("xref\n0 5\n0000000000 65535 f \n");
+        foreach (var o in offsets)
+        {
+            sb.Append(System.Globalization.CultureInfo.InvariantCulture, $"{o:D10} 00000 n \n");
+        }
+
+        sb.Append(System.Globalization.CultureInfo.InvariantCulture, $"trailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n");
+        return System.Text.Encoding.ASCII.GetBytes(sb.ToString());
+    }
 
     public IDevSmsInbox Sms => Services.GetRequiredService<IDevSmsInbox>();
 
