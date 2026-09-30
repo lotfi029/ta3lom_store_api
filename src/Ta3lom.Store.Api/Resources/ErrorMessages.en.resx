@@ -463,4 +463,28 @@
   <data name="shipment.invalid_transition.detail" xml:space="preserve">
     <value>The shipment cannot move to this state now.</value>
   </data>
+  <data name="beneficiary.not_found" xml:space="preserve">
+    <value>Beneficiary not found</value>
+  </data>
+  <data name="beneficiary.not_found.detail" xml:space="preserve">
+    <value>No beneficiary with this id.</value>
+  </data>
+  <data name="beneficiary.mobile_exists" xml:space="preserve">
+    <value>Mobile already registered</value>
+  </data>
+  <data name="beneficiary.mobile_exists.detail" xml:space="preserve">
+    <value>This mobile belongs to another beneficiary.</value>
+  </data>
+  <data name="beneficiary.import_invalid" xml:space="preserve">
+    <value>Import file invalid</value>
+  </data>
+  <data name="beneficiary.import_invalid.detail" xml:space="preserve">
+    <value>Some rows are invalid; nothing was saved. See the error list.</value>
+  </data>
+  <data name="beneficiary.no_live_seat" xml:space="preserve">
+    <value>No allocated seat</value>
+  </data>
+  <data name="beneficiary.no_live_seat.detail" xml:space="preserve">
+    <value>The beneficiary has no allocated course seat to invite to.</value>
+  </data>
 </root>

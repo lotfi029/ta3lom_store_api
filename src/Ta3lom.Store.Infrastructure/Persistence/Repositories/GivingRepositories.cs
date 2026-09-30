@@ -43,3 +43,12 @@ internal sealed class SponsorshipPoolRepository(StoreDbContext db) : ISponsorshi
             .DistinctBy(c => c.Id).OrderBy(c => c.CreatedAt).ThenBy(c => c.Id)];
     }
 }
+
+internal sealed class BeneficiaryRepository(StoreDbContext db) : GenericRepository<Beneficiary>(db), IBeneficiaryRepository
+{
+    public async Task<string> NextCodeAsync(CancellationToken ct = default)
+    {
+        var n = (await Db.Database.SqlQuery<long>($"SELECT nextval('store.beneficiary_code_seq') AS \"Value\"").ToListAsync(ct)).Single();
+        return "B-" + n.ToString("D6", System.Globalization.CultureInfo.InvariantCulture);
+    }
+}

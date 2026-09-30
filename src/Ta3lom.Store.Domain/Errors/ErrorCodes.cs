@@ -80,4 +80,8 @@ public static class ErrorCodes
     public const string DownloadLinkExpired = "download.link_expired";
     public const string StockBelowReserved = "stock.below_reserved";
     public const string ShipmentInvalidTransition = "shipment.invalid_transition";
+    public const string BeneficiaryNotFound = "beneficiary.not_found";
+    public const string BeneficiaryMobileExists = "beneficiary.mobile_exists";
+    public const string BeneficiaryImportInvalid = "beneficiary.import_invalid";
+    public const string BeneficiaryNoLiveSeat = "beneficiary.no_live_seat";
 }

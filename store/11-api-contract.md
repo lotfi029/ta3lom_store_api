@@ -1598,6 +1598,13 @@ Import report:
 
 Imported rows are `pending`; approval is a separate audited step (RUL-51).
 
+As built (S-24): `BeneficiaryDetail` = the row plus `hasGuardian`, `eligibilityNotes`, `createdAt`, `createdBy` and
+`units[]` (`{ unitId, productSlug, titleAr, status, allocatedAt, completedAt, lapsedAt }`), still masked. `beneficiaryGroup`
+is a key (`^[a-z0-9_]{1,64}$`). Import: up to 2 MB and 5,000 rows, UTF-8 (BOM optional), header row exactly as the
+template; row numbers count the header as row 1; blank lines are skipped. `dryRun: true` returns `200 ImportReport`;
+`dryRun: false` with any invalid row returns `422 beneficiary.import_invalid` with the same report in `report` and saves
+nothing. Status filter values are validated (`400`). The template is UTF-8 with a BOM.
+
 ### 9.14 Allocation (FR-S53, FR-S55, RUL-47 … RUL-50)
 
 | Method | Path | Policy | Request | Response | Errors |

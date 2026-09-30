@@ -1,5 +1,5 @@
 # Build progress
-Next: S-24 — Beneficiary register
+Next: S-25 — Allocation
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -39,7 +39,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-40 LMS progress sync | done | S-40 | — (dev: /dev/lms/progress) | LmsProgressSync; SponsorUnitCompleted via hook (S-25) | ✅ tools/smoke/S-40.http | idempotent over two runs |
 | S-41 low stock alert | done | S-41 | — | LowStockAlert job + message | ✅ tools/smoke/S-41.http | once per format per day; M5 passed |
 | S-23 units and pooling | done | S-23 | — | SponsorUnitsEffect, PoolContributionEffect; guard removed | ✅ tools/smoke/S-23.http | 100+150+120 → 1 unit, 20 left; 6 parallel OK; integrity 0 rows |
-| S-24 beneficiary register | todo | | 100–108 | — | | |
+| S-24 beneficiary register | done | S-24 | 100–108 | — | ✅ tools/smoke/S-24.http | PII encrypted + masked, SoD reveal audited, atomic import |
 | S-25 allocation | todo | | 109–114 | AllocationAlerts, LapseUnits; SponsorUnitAllocated, AllocationAlert/Escalation, BeneficiaryInvite, UnitLapsed, LmsRevoke | | integrity check |
 | S-26 dedication cards, cause updates | todo | | 45, 81–84, 93 | DedicationCard; CauseUpdatePublished | | |
 | S-42 close campaigns, sweep | todo | | 71 (sweep), 136, 137 | CloseCampaigns; PoolSwept | | integrity check |
@@ -355,3 +355,18 @@ Tests (test phase)
 
 Done when (local smoke)
 - [x] Documented example reproduced; 6 concurrent contributions consistent; integrity checks 0 rows
+
+### S-24 — Beneficiary register
+
+Build
+- [x] Create/update with encrypted `full_name_enc`, `mobile_enc`, `guardian_name_enc` (ProtectedStringConverter) and `mobile_hash` for lookup
+- [x] Code `B-000123` from `beneficiary_code_seq`; eligibility transitions with verifier and time; zakat flag
+- [x] Masked list and detail DTOs; reveal (#105, `staff:reveal-pii` only, audited with the reason)
+- [x] CSV import (#107) with a row-level report and dry run; template (#108); invite (#106, sends from S-25)
+
+Tests (test phase)
+- [ ] a DB dump contains no plaintext name or mobile; reveal writes `audit_log`; an `admin` without `allocation_officer` cannot reveal (RUL-62)
+- [ ] import is atomic per file with a dry run; a duplicate mobile is rejected via `mobile_hash`
+
+Done when (local smoke)
+- [x] All of the above verified with curl (tools/smoke/S-24.http)

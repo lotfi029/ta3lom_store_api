@@ -46,3 +46,7 @@ public sealed record ShipmentDelivered(Guid ShipmentId, Guid OrderId) : IDomainE
 /// Staff e-mail (FR-S43, S-41): a print format's `available` is at or below its threshold (`low_stock_threshold`, else the
 /// `low_stock_default_threshold` setting). At most one per format per Riyadh day.
 public sealed record LowStockAlert(Guid FormatId, string Sku, string TitleAr, int Available, int Threshold, DateOnly Day) : IDomainEvent;
+
+/// RUL-52 (sent from S-25): SMS invitation to a beneficiary with an allocated course seat (sent to the beneficiary's or the
+/// guardian's mobile; never shown to donors).
+public sealed record BeneficiaryInvite(Guid BeneficiaryId, Guid EnrolmentId) : IDomainEvent;

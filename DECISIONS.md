@@ -117,6 +117,11 @@ the owner should confirm.
 | 2026-09-30 | S-23 | funded_units for pooled units | database/01 `goal_progress` | `funded_units` counts every unit created (full via `SettlementLedger` from the line quantity, pooled via the effect); the money is counted once per line by the ledger | "sponsorship units created" | |
 | 2026-09-30 | S-23 | Same-order contributions | database/01 §4.5 | The open-contribution query also returns contributions added earlier in the same unit of work (unsaved), so two amount lines for one offer in one order pool correctly | tracked entities are not in SQL results | |
 | 2026-09-30 | S-23 | Pool row lock query | 09 §5.5 | `SELECT *, xmin … FOR UPDATE`: the pool maps `xmin` as its concurrency token and `SELECT *` does not return system columns (found in the smoke: 500 on the first pooled order) | EF shadow `xmin` | |
+| 2026-09-30 | S-24 | Import atomicity and 422 body | 11 §9.13, §1.6 | `dryRun` (default true) → 200 report; a real import with any invalid row → 422 `beneficiary.import_invalid` carrying the same report under `report`, nothing saved; otherwise all rows in one transaction. Limits 2 MB / 5,000 rows | "import is atomic per file" (plan 14 S-24) | |
+| 2026-09-30 | S-24 | Duplicate mobile race | 03 RUL-51 | Checked by `mobile_hash` before insert (and across the file); two concurrent creates with the same mobile hit `ux_beneficiary_mobile` and the second gets a 500 (no EF exception mapping in Application, K-i) | rare, admin-only | REVIEW |
+| 2026-09-30 | S-24 | Reveal audit | FR-S52, RUL-62 | Explicit `audit_log` row `beneficiary.reveal` with `{code, reason}` (IP hash, actor); the revealed values are never written or logged; only `allocation_officer` (not `admin`) | SoD | |
+| 2026-09-30 | S-24 | Invite before S-25 | 11 §9.13 #106 | The endpoint looks for an allocated unit with a live sponsored enrolment and queues `BeneficiaryInvite`; its handler (the SMS) arrives with S-25, when such seats first exist | outbox handler list (audit §2.1) | |
+| 2026-09-30 | S-24 | Group key and name mask | 11 §9.13 | `beneficiaryGroup` must be a key `^[a-z0-9_]{1,64}$` (matches `sponsorship_offer.beneficiary_group`); names masked as the first letter of each word + `•••` | 11 example `ه••• ا•••` | |
 
 ## Bugs found by tests
 

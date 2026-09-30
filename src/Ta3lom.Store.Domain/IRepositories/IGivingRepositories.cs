@@ -12,3 +12,10 @@ public interface ISponsorshipPoolRepository
     /// work added and has not saved yet.
     Task<IReadOnlyList<PoolContribution>> LockOpenContributionsAsync(Guid offerId, CancellationToken ct = default);
 }
+
+/// Beneficiary register (RUL-51).
+public interface IBeneficiaryRepository : IGenericRepository<Beneficiary>
+{
+    /// `B-000123` from `beneficiary_code_seq`.
+    Task<string> NextCodeAsync(CancellationToken ct = default);
+}

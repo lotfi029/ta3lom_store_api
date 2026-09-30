@@ -463,4 +463,28 @@
   <data name="shipment.invalid_transition.detail" xml:space="preserve">
     <value>لا يمكن نقل الشحنة إلى هذه الحالة الآن.</value>
   </data>
+  <data name="beneficiary.not_found" xml:space="preserve">
+    <value>المستفيد غير موجود</value>
+  </data>
+  <data name="beneficiary.not_found.detail" xml:space="preserve">
+    <value>لا يوجد مستفيد بهذا المعرّف.</value>
+  </data>
+  <data name="beneficiary.mobile_exists" xml:space="preserve">
+    <value>الجوال مسجّل مسبقًا</value>
+  </data>
+  <data name="beneficiary.mobile_exists.detail" xml:space="preserve">
+    <value>هذا الجوال مسجّل لمستفيد آخر.</value>
+  </data>
+  <data name="beneficiary.import_invalid" xml:space="preserve">
+    <value>ملف الاستيراد غير صالح</value>
+  </data>
+  <data name="beneficiary.import_invalid.detail" xml:space="preserve">
+    <value>في الملف صفوف غير صحيحة؛ لم يُحفظ شيء. راجع قائمة الأخطاء.</value>
+  </data>
+  <data name="beneficiary.no_live_seat" xml:space="preserve">
+    <value>لا يوجد مقعد مخصّص</value>
+  </data>
+  <data name="beneficiary.no_live_seat.detail" xml:space="preserve">
+    <value>لا يملك المستفيد مقعد دورة مخصّصًا لإرسال الدعوة.</value>
+  </data>
 </root>
