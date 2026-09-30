@@ -1,5 +1,5 @@
 # Build progress
-Next: T-9 — coverage (Domain ≥ 90 %, Application ≥ 80 %), then store/sessions/Build-report.md
+Next: run complete — Build-report.md pushed, PR marked ready; only PR events (CI, reviews) remain
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -84,12 +84,12 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | T-6 policy matrix | done | T-6 | 80 admin routes (read from the endpoint table) × 6 roles + anonymous = 560 calls: in-policy never 401/403/5xx, out-of-policy 403, anonymous 401; SoD table asserted; customer/staff tokens not interchangeable |
 | T-7 endpoint integration | done | T-7 | sweeps over the live endpoint table: every JSON endpoint → malformed body 400 `validation.failed`; every parameterless GET → 200; every customer route anonymous → 401; Mapster `Compile()`; 128 routes of 11 §12 in OpenAPI; /dev/* 404 in Production; Arabic search + ETag 304 + 15 products; audit actor; PII not logged. Success and business codes per endpoint: scenario classes T-2 … T-6 |
 | T-8 documents and outputs | done | T-8 | PdfPig text (numbers, reference, totals, Arabic), ZATCA QR decoded from the PDF image (ZXing) = stored TLV, five fields; gapless INV/DR under 20 parallel settlements; watermark text; outbox retry sends once; template en → ar fallback; donor DTO reflection + giving JSON without beneficiary identity; CSV BOM (T-5) |
-| T-9 coverage + Build-report.md | todo | | |
+| T-9 coverage + Build-report.md | done | T-9 (3 commits) + report | Domain 100.0 %, Application 85.9 % (merged line rate, ArchitectureTests excluded from instrumented runs; DECISIONS T-9); 368 domain tests (every aggregate), 22 account/staff/admin flow tests; fixes: gift VAT in the order total (RUL-27), outbox drain, 2 order-dependent tests; 803 tests green; `store/sessions/Build-report.md` |
 
-- [ ] T-1…T-9 done
-- [ ] All tests green locally (and CI green)
-- [ ] Coverage Domain ≥ 90 %, Application ≥ 80 %
-- [ ] store/sessions/Build-report.md pushed, PR marked ready
+- [x] T-1…T-9 done
+- [x] All tests green locally (and CI green)
+- [x] Coverage Domain ≥ 90 %, Application ≥ 80 %
+- [x] store/sessions/Build-report.md pushed, PR marked ready
 
 ## Per-session checklists
 

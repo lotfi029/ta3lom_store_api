@@ -155,7 +155,15 @@ public sealed partial class CheckoutRulesTests(ScenarioFactory factory) : IClass
                 b.PostAsync("/v1/checkout", Body(total, Shop.ShippingAddress), Key()));
 
             results.Count(r => r.Response.StatusCode == HttpStatusCode.Created).ShouldBe(1);
-            results.Single(r => r.Response.StatusCode != HttpStatusCode.Created).Body.Code().ShouldBe("checkout.out_of_stock");
+            // The loser either loses the reservation (RUL-30, 409) or, when the winner committed first, fails re-validation
+            // because stock is no longer available (RUL-24, 422 with the line's stock reason).
+            var loser = results.Single(r => r.Response.StatusCode != HttpStatusCode.Created).Body;
+            loser.Code().ShouldBeOneOf("checkout.out_of_stock", "checkout.lines_invalid");
+            if (loser.Code() == "checkout.lines_invalid")
+            {
+                loser.GetProperty("lines").EnumerateArray().Select(l => l.GetProperty("code").GetString()).ShouldContain("cart.out_of_stock");
+            }
+
             (await factory.ScalarAsync<bool>($"SELECT stock_reserved <= stock_on_hand FROM store.book_format WHERE id = '{print}'")).ShouldBeTrue();
         }
         finally
