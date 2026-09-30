@@ -1,3 +1,5 @@
+using Ta3lom.Store.Api.Options;
+using Ta3lom.Store.Api.Security;
 using Ta3lom.Store.Application;
 using Ta3lom.Store.Application.Abstractions.Messaging;
 using Ta3lom.Store.Application.DTOs.Staff;
@@ -45,6 +47,10 @@ internal static class CreateAdminCommand
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
         builder.Services.AddInfrastructure(builder.Configuration).AddApplication().AddDomain();
         builder.Services.AddSingleton<ICurrentActor, CliActor>();
+        // Outbox handlers in the Application layer need the storefront links; without them the Development host's
+        // service validation refuses to build.
+        builder.Services.AddOptions<StoreOptions>().BindConfiguration(StoreOptions.Section);
+        builder.Services.AddSingleton<IWebLinks, WebLinks>();
 
         using var host = builder.Build();
         await using var scope = host.Services.CreateAsyncScope();

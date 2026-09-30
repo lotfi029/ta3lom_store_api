@@ -1,5 +1,5 @@
 # Build progress
-Next: Close-out 7.1 — retry blocked, full smoke from an empty dev DB, coverage audit
+Next: H-1 — code-side hardening (STRIDE walk, package scan, Production config, headers, load smoke, index tuning)
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -48,7 +48,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-33 dashboard/reports/admin ops | done | S-33 | 53, 117, 129–133 | — | ✅ tools/smoke/S-33.http | 7 reports JSON + CSV BOM; integrity checks run from code |
 | S-35 templates, retention, integrity | done | S-35 | 120–122 | IntegrityChecks, Retention, PruneIdempotencyKeys | ✅ tools/smoke/S-35.http | Scriban trial render; CatalogChanged → repository_dispatch (debounced) |
 | S-45 sponsor digest | done | S-45 | — | SponsorDigest; outbox SponsorDigest | ✅ tools/smoke/S-45.http | monthly, once per Riyadh month, e-mail or SMS fallback; M7 passed |
-| Close-out 7.1–7.3 | todo | | | | | |
+| Close-out 7.1–7.3 | done | Close-out | all 130 answer | 12 jobs + dispatcher; 6 effects; 17/17 outbox types | ✅ tools/smoke/e2e.sh (68 checks from an empty DB) | no blocked session; 2 bugs fixed (malformed JSON → 500; create-admin in Development) |
 | H-1 code-side hardening | todo | | | | | |
 
 ## Milestones (plan 14 §2 demos, local)
@@ -63,14 +63,14 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | M7 Operations-complete | tools/smoke/M7.http | ✅ passed (/v1/me export + delete; gifts/sales/zakat reports equal the ledger sums; 12 jobs + dispatcher; 19 digest e-mails, rerun 0; integrity 0 rows) |
 
 ## Part 1 checklist
-- [ ] 130 endpoints of plan 14 §13.2 mapped and answering
-- [ ] 13 jobs of §13.3 registered (12 scheduled + OutboxDispatcher; all except ReconcilePayments)
-- [ ] Every settlement effect of §13.4 registered (5 line effects + gift/donate counters)
-- [ ] 17 outbox message types of 09 §4.9 handled (all except RefundProcessed)
-- [ ] Integrity checks 0 rows after the full smoke scenario
+- [x] 130 endpoints of plan 14 §13.2 mapped and answering (128 of 11 §12 in OpenAPI + 2 health; #43, #44, #89–#92 belong to the payment service)
+- [x] 13 jobs of §13.3 registered (12 scheduled + OutboxDispatcher; all except ReconcilePayments)
+- [x] Every settlement effect of §13.4 registered (5 line effects + gift/donate counters)
+- [x] 17 outbox message types of 09 §4.9 handled (all except RefundProcessed; + OrderPlaced, OrderCancelled, OrderExpired, DocumentsResendRequested, CatalogChanged, SponsorDigest)
+- [x] Integrity checks 0 rows after the full smoke scenario (tools/smoke/e2e.sh)
 - [x] Spikes P0-3 and P0-4 written up in store/spikes/
 - [ ] H-1 code-side hardening done
-- [ ] No session left blocked
+- [x] No session left blocked
 
 ## Test phase
 
@@ -493,3 +493,19 @@ Tests (test phase)
 
 Done when (local smoke)
 - [x] Verified with curl (tools/smoke/S-45.http); **M7 demo** passed (tools/smoke/M7.http)
+
+### Close-out 7.1–7.3
+
+- [x] 7.1 Blocked sessions: none were blocked during the run
+- [x] 7.2 Full smoke scenario from an empty database (`tools/smoke/e2e.sh` → `e2e.py`, database `ta3lom_store_e2e`): seed → guest
+      cart with 6 line kinds → OTP sign-in merges it → checkout → dev trigger → invoice + receipt PDFs, SMS + e-mail → enrolment
+      launch, watermarked download, shipment shipped/delivered, order fulfilled → second sponsor → 2 full + 1 pooled unit, pool
+      50.00 → 3 teachers approved, admin refused (SoD), officer allocates 3, 3 invitations → sponsor digest 2 sent, rerun 0 →
+      integrity checks 0 rows. **68 checks passed, 0 error log lines.**
+- [x] 7.3 Coverage audit: 11 §12 vs OpenAPI → 128 routes mapped, 0 unexpected, + /health/live and /health/ready = 130; every route
+      probed with dummy parameters answers (no 404 route miss, no 405, no 5xx after the fix); `/dev/jobs` lists the 12 scheduled
+      jobs; the dispatcher drains the outbox; effects: CourseEnrolment, DigitalBook, PrintBook, SponsorUnits, PoolContribution,
+      DonateLine; outbox handlers for all 17 required types
+- [x] Bugs found and fixed: an unbindable request body (malformed JSON, `{}` for a list) answered 500 → now 400
+      `validation.failed` (logged at Information); `create-admin` failed under `ASPNETCORE_ENVIRONMENT=Development`
+      (service validation: `IWebLinks` missing in the CLI host)

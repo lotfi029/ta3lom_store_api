@@ -4,7 +4,9 @@ using Ta3lom.Store.SharedKernel;
 
 namespace Ta3lom.Store.Api.Infrastructure;
 
-/// DomainException → 409 with its code; anything else → 500 `server.error`, no stack trace (09 §5.14).
+/// DomainException → 409 with its code; a request the framework could not bind (malformed JSON, wrong body shape, oversize
+/// body) → its 4xx status with `validation.failed` (400) or `http.error`; anything else → 500 `server.error`, no stack
+/// trace (09 §5.14).
 /// EF Core concurrency and unique-violation mappings are added with persistence (S-02).
 internal sealed partial class GlobalExceptionHandler(IProblemDetailsService problems, ILogger<GlobalExceptionHandler> logger)
     : IExceptionHandler
@@ -18,6 +20,12 @@ internal sealed partial class GlobalExceptionHandler(IProblemDetailsService prob
             status = StatusCodes.Status409Conflict;
             code = domain.Code;
             LogDomainException(logger, domain.Code);
+        }
+        else if (exception is BadHttpRequestException bad)
+        {
+            status = bad.StatusCode;
+            code = status == StatusCodes.Status400BadRequest ? ErrorCodes.ValidationFailed : ErrorCodes.HttpError;
+            LogBadRequest(logger, status);
         }
         else
         {
@@ -36,6 +44,9 @@ internal sealed partial class GlobalExceptionHandler(IProblemDetailsService prob
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Domain invariant violated: {ErrorCode}")]
     private static partial void LogDomainException(ILogger logger, string errorCode);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Request body could not be bound ({Status})")]
+    private static partial void LogBadRequest(ILogger logger, int status);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Unhandled exception")]
     private static partial void LogUnhandled(ILogger logger, Exception exception);

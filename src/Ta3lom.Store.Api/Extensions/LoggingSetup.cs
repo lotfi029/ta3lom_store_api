@@ -24,7 +24,8 @@ public static class LoggingSetup
         {
             o.Logger = app.ApplicationServices.GetRequiredService<Serilog.ILogger>();   // not the static Log.Logger
             o.GetLevel = (http, _, ex) =>
-                ex is not null || http.Response.StatusCode >= 500 ? LogEventLevel.Error
+                ex is BadHttpRequestException { StatusCode: < 500 } ? LogEventLevel.Information   // unbindable body → 4xx (GlobalExceptionHandler)
+                : ex is not null || http.Response.StatusCode >= 500 ? LogEventLevel.Error
                 : http.Request.Path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase) ? LogEventLevel.Verbose
                 : LogEventLevel.Information;
             o.EnrichDiagnosticContext = (diagnostics, http) =>
