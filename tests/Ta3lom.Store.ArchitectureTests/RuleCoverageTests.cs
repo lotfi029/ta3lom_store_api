@@ -39,6 +39,16 @@ public sealed partial class RuleCoverageTests
         unknown.ShouldBeEmpty();
     }
 
+    /// Plan 14 §13.1: every rule lands in a backend session except those of the payment service (32–34, 36–38, 56–58).
+    [Fact]
+    public void Implemented_rules_are_every_backend_rule_of_plan_14_section_13_1()
+    {
+        int[] paymentService = [32, 33, 34, 36, 37, 38, 56, 57, 58];
+        var expected = Enumerable.Range(1, 63).Except(paymentService).Select(n => $"RUL-{n:00}");
+
+        ImplementedRules().Order(StringComparer.Ordinal).ShouldBe(expected.Order(StringComparer.Ordinal));
+    }
+
     [Fact]
     public void Rule_attributes_are_found() =>
         RuleIdsOnTests().ShouldContain(t => t.Rule == "RUL-31");   // Money tests (S-01), proves the scan works

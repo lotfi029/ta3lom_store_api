@@ -108,10 +108,10 @@ Build
 
 Tests (test phase)
 - [ ] RUL-60: expiry, 5 wrong attempts, per-mobile and per-IP limits, hash not reversible, code never logged
-- [ ] RUL-61: blocked customer cannot verify
-- [ ] Refresh reuse revokes the family
-- [ ] Cookie has the exact attributes
-- [ ] OTP SMS is sent directly, not via the outbox (RUL-63 exception)
+- [x] RUL-61: blocked customer cannot verify
+- [x] Refresh reuse revokes the family
+- [x] Cookie has the exact attributes
+- [x] OTP SMS is sent directly, not via the outbox (RUL-63 exception)
 
 Done when (local smoke)
 - [x] Sign-in works with the sink (request → /dev/sms → verify → session)
@@ -307,7 +307,7 @@ Build
 - [x] Audit §2.2: carrier + tracking, deliver, return; restock/adjust with a reason; admin order detail sections; `shipment.address` owned JSON (owner fix 2)
 
 Tests (test phase)
-- [ ] RUL-30: reserve/commit/release ledger equals counters, integrity check 3 = 0 rows
+- [x] RUL-30: reserve/commit/release ledger equals counters, integrity check 3 = 0 rows
 - [x] RUL-40 roll-up
 - [ ] a `fulfilment`-role user can ship, `finance` cannot; policy matrix extended
 
@@ -365,7 +365,7 @@ Build
 - [x] CSV import (#107) with a row-level report and dry run; template (#108); invite (#106, sends from S-25)
 
 Tests (test phase)
-- [ ] a DB dump contains no plaintext name or mobile; reveal writes `audit_log`; an `admin` without `allocation_officer` cannot reveal (RUL-62)
+- [x] a DB dump contains no plaintext name or mobile; reveal writes `audit_log`; an `admin` without `allocation_officer` cannot reveal (RUL-62)
 - [ ] import is atomic per file with a dry run; a duplicate mobile is rejected via `mobile_hash`
 
 Done when (local smoke)
@@ -458,7 +458,7 @@ Build
 
 Tests (test phase)
 - [ ] report totals equal the integrity-check sums on seeded scenarios; the CSV opens with Arabic intact (BOM present)
-- [ ] blocked customer → OTP verify refused (RUL-61)
+- [x] blocked customer → OTP verify refused (RUL-61)
 
 Done when (local smoke)
 - [x] Verified with curl (tools/smoke/S-33.http)
