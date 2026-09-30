@@ -52,4 +52,12 @@ public sealed class Invoice : AggregateRoot
     public string? ZatcaQr { get; private set; }
 
     public ZatcaStatus? ZatcaStatus { get; private set; }
+
+    /// RUL-59: the invoice of the purchase lines (and shipping) of a paid order; a tax invoice only while VAT is enabled.
+    public static Invoice ForOrder(Guid orderId, string number, bool vatEnabled, string? sellerVatNo, Money gross, Money vat, DateTimeOffset now) =>
+        new(orderId, InvoiceKind.Invoice, number, vatEnabled, gross - vat, vat, gross, now)
+        {
+            SellerVatNo = vatEnabled ? sellerVatNo : null,
+            ZatcaStatus = vatEnabled ? Enums.ZatcaStatus.Pending : Enums.ZatcaStatus.NotRequired,
+        };
 }

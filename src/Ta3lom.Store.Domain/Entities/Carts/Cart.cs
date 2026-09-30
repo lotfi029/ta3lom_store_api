@@ -230,6 +230,23 @@ public sealed class Cart : AggregateRoot
         return notices;
     }
 
+    /// RUL-29: a line of an expired (or finally failed) order comes back to the active cart unless the same product is
+    /// already there or the cart is full. Returns false when skipped.
+    public bool RestoreLine(Ordering.OrderLine line, CartDedication? dedication, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(line);
+        if (_lines.Any(l => l.ProductId == line.ProductId) || _lines.Count >= CartLimits.MaxLines)
+        {
+            return false;
+        }
+
+        var spec = new CartLineSpec(line.ProductId, line.BookFormatId, line.Kind, line.Mode, line.Quantity,
+            line.Mode == LineMode.Amount ? line.Amount : null, line.Intent, line.Kind == LineKind.Buy ? null : dedication);
+        _lines.Add(CartLine.Create(Id, spec, line.Quantity, line.UnitPrice, now));
+        Touch(now);
+        return true;
+    }
+
     /// Checkout turned the cart into an order (S-15).
     public void MarkConverted(DateTimeOffset now)
     {

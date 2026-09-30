@@ -1,5 +1,5 @@
 # Build progress
-Next: S-16 — Settlement core and payment hand-off
+Next: P0-3 — Arabic PDF spike (then S-17)
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -29,7 +29,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-09 admin catalogue | done | S-09 | 54–77, 118, 119 | — | ✅ tools/smoke/S-09.http | 230 tests green; offer/cause UTC bug + money-setting wire bug found and fixed in smoke |
 | S-13 cart | done | S-13 | 10–15 | ExpireGuestCarts | ✅ tools/smoke/S-13.http | 262 tests green; S-04 merge hook filled (RUL-17); dedication owned JSON |
 | S-15 checkout | done | S-15 | 40–42 | — | ✅ tools/smoke/S-15.http | 286 tests green; last-copy race: one 201, one 409 |
-| S-16 settlement core | todo | | 87 + dev trigger | ExpireUnpaidOrders; gift/donate effects | | integrity check |
+| S-16 settlement core | done | S-16 | 87 + dev trigger | ExpireUnpaidOrders; DonateLineEffect + ledger | ✅ tools/smoke/S-16.http | 290 tests green; integrity checks 0 rows; doc 15 updated |
 | P0-3 Arabic PDF spike | todo | | — | — | | |
 | S-17 outbox, documents | todo | | 88 | OutboxDispatcher; OrderPaid, RenderDocuments, FinanceAlert, DedicationCard (stub) | | |
 | S-19 enrolment + LMS | todo | | 29 | CourseEnrolmentEffect; LmsEnrol | | |
@@ -217,3 +217,27 @@ Tests (test phase)
 
 Done when (local smoke)
 - [x] The prototype cart becomes order `T3-26-001000` in `pending_payment`, with stock reserved and a status token
+
+### S-16 — Settlement core and payment hand-off
+
+Build
+- [x] `IOrderSettlement` + `PaymentConfirmation` + `SettlementOutcome` (doc 15 §2) in `Application/Features/Settlement`; `OrderSettlement` = database/01 §4.4 without the inbox step
+- [x] `ILineSettlementEffect` registry (Scrutor) + `DonateLineEffect` (RUL-53); `settlement.effect_missing` guard with `FinanceAlert`
+- [x] Order state change, goal counters, donor count, zakat ledger `in` (RUL-20), dedication and order-paid outbox rows, document number reservation (RUL-59)
+- [x] `Order.MarkPaid` (RUL-29 table, RUL-35 amount + late capture → `payment_review` + `FinanceAlert`); `Order.Expire` with cart restore and stock release (RUL-29/30)
+- [x] Row-lock helpers in Infrastructure repositories; retrying execution strategy (UnitOfWork); `IPaymentInitiator` + `NullPaymentInitiator` (S-15)
+- [x] `CancelOrder` (#87, staff:finance, from `pending_payment`/`payment_failed` only, stock released); `ExpireUnpaidOrders` job
+- [x] Dev trigger `POST /dev/orders/{ref}/confirm-payment` (+ `/dev/jobs`)
+- [x] Audit §2.2: staff cancel; expiry restores the cart; retry on serialization failure; `FinanceAlert`; doc 15 updated to the code
+
+Tests (test phase)
+- [ ] Same confirmation 5× → one state change and one set of effects; two confirmations in parallel → one settlement
+- [ ] Amount mismatch → `payment_review`, no effects; confirmation after expiry → `payment_review`
+- [ ] Expiry releases stock and restores the lines; duplicate course race → no second enrolment, line flagged, `FinanceAlert` (S-19)
+- [ ] Donate with zakat → `zakat_ledger in`; goal counters once per product per order; architecture test: only `IOrderSettlement` sets `paid`
+
+Done when (local smoke)
+- [x] The dev trigger settles an order → `paid`/`fulfilled`, with effects and outbox messages
+- [x] Repeating the trigger changes nothing; a wrong amount parks the order in `payment_review`
+- [x] Killing the API mid-settlement leaves no partial state (single transaction on the retrying strategy; verified by design, crash test in T-2)
+- [x] The contract in 15 §2 matches the code (15 §2.3a added)

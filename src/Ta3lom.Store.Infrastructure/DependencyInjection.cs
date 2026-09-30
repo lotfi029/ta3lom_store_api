@@ -53,8 +53,10 @@ public static class DependencyInjection
         {
             q.AddStoreJob<PruneOtpJob>(PruneOtpJob.Cron);
             q.AddStoreJob<ExpireGuestCartsJob>(ExpireGuestCartsJob.Cron);
+            q.AddStoreJob<ExpireUnpaidOrdersJob>(ExpireUnpaidOrdersJob.Cron);
         });
         services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
+        services.AddSingleton<IJobRunner, QuartzJobRunner>();
         return services;
     }
 
@@ -66,10 +68,13 @@ public static class DependencyInjection
             .ValidateOnStart();
 
         services.AddScoped<AuditSaveChangesInterceptor>();
+        services.AddScoped<OutboxSaveChangesInterceptor>();
+        services.AddScoped<IOutbox, Services.Outbox.Outbox>();
         services.AddDbContext<StoreDbContext>((sp, options) =>
         {
             StoreDbContextOptions.Configure(options, sp.GetRequiredService<IOptions<DatabaseOptions>>().Value.ConnectionString);
-            options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
+            // Audit first (it audits business rows), then the outbox rows for the raised domain events (09 §3.4).
+            options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>(), sp.GetRequiredService<OutboxSaveChangesInterceptor>());
         });
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<StoreDbContext>());
         services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -93,6 +98,8 @@ public static class DependencyInjection
         services.AddScoped<ICartRepository, CartRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IStockRepository, StockRepository>();
+        services.AddScoped<IGoalProgressRepository, GoalProgressRepository>();
+        services.AddScoped<IDocumentNumberAllocator, DocumentNumberAllocator>();
     }
 
     private static void AddSecurity(IServiceCollection services)

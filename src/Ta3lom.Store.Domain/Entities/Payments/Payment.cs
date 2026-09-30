@@ -36,4 +36,9 @@ public sealed class Payment : AggregateRoot
     public DateTimeOffset CreatedAt { get; private set; }
 
     public DateTimeOffset UpdatedAt { get; private set; }
+
+    /// A capture reported by a provider (doc 15 §4: the payment service owns this table). In this backend only the
+    /// Development trigger records one, so the integrity check "paid orders have a captured payment" holds.
+    public static Payment Captured(Guid orderId, string provider, string providerPaymentId, PaymentMethod? method, Money amount, DateTimeOffset now) =>
+        new(orderId, provider, amount, now) { ProviderPaymentId = providerPaymentId, Method = method, Status = PaymentStatus.Captured };
 }

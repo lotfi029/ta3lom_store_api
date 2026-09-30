@@ -10,3 +10,10 @@ public sealed record OrderContact(string Name, string MobileE164, string Email);
 
 /// Order-level shipping (RUL-26): the flat fee, its included VAT and the address snapshot.
 public sealed record OrderShipping(Money Fee, Money Vat, ShippingAddress? Address);
+
+public enum PaidOutcome
+{
+    Paid,
+    AlreadyPaid,
+    Review,
+}

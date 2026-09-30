@@ -35,4 +35,8 @@ public sealed class DonationReceipt : AggregateRoot
     public Guid? ReferencesReceiptId { get; private set; }
 
     public Guid? PdfAssetId { get; private set; }
+
+    /// RUL-59, RUL-23: the donor's real name even when the gift is anonymous.
+    public static DonationReceipt ForOrder(Guid orderId, string number, string donorName, Money total, Money zakat, DateTimeOffset now) =>
+        new(orderId, number, donorName, total, now) { ZakatAmount = zakat };
 }

@@ -1,3 +1,5 @@
+using Ta3lom.Store.Domain.Events;
+
 namespace Ta3lom.Store.Domain.Entities.Ordering;
 
 /// Table `orders` (RUL-24 … RUL-31). Created by checkout in `pending_payment`; settlement (S-16) moves it on.
@@ -131,6 +133,95 @@ public sealed class Order : AggregateRoot
             }
         }
 
+        order.Raise(new OrderPlaced(order.Id, reference));
         return (order, dedications);
     }
+
+    public static bool IsPaidState(OrderStatus s) =>
+        s is OrderStatus.Paid or OrderStatus.Fulfilled or OrderStatus.PartiallyRefunded or OrderStatus.Refunded;
+
+    /// RUL-33/35 (09 §5.3): called only from settlement (`IOrderSettlement`). A replay is `AlreadyPaid`; a capture on an
+    /// expired/cancelled order or with another amount parks the order in `payment_review` with a `FinanceAlert`.
+    public PaidOutcome MarkPaid(Money captured, DateTimeOffset now)
+    {
+        if (IsPaidState(Status))
+        {
+            return PaidOutcome.AlreadyPaid;
+        }
+
+        switch (Status)
+        {
+            case OrderStatus.Expired or OrderStatus.Cancelled:
+                Status = OrderStatus.PaymentReview;
+                Raise(new FinanceAlert(FinanceAlertKinds.LateCapture, Id, Reference, captured.ToWire()));
+                return PaidOutcome.Review;
+            case OrderStatus.PaymentReview:
+                return PaidOutcome.Review;
+        }
+
+        if (captured != GrandTotal)
+        {
+            Status = OrderStatus.PaymentReview;
+            Raise(new FinanceAlert(FinanceAlertKinds.AmountMismatch, Id, Reference, $"captured {captured.ToWire()}, expected {GrandTotal.ToWire()}"));
+            return PaidOutcome.Review;
+        }
+
+        Status = OrderStatus.Paid;
+        PaidAt = now;
+        return PaidOutcome.Paid;
+    }
+
+    /// After every effect ran: the order-level outbox messages (RUL-39, RUL-59, RUL-63) and the fulfilment roll-up.
+    public void CompleteSettlement(DateTimeOffset now)
+    {
+        RecomputeFulfilment(now);
+        Raise(new OrderPaid(Id, Reference));
+        Raise(new RenderDocuments(Id));
+    }
+
+    /// RUL-40: `fulfilled` once every line is in its terminal state.
+    public void RecomputeFulfilment(DateTimeOffset now)
+    {
+        if (Status == OrderStatus.Paid && _lines.Count > 0 && _lines.All(l => l.IsTerminal))
+        {
+            Status = OrderStatus.Fulfilled;
+            FulfilledAt = now;
+        }
+    }
+
+    public bool CanBeCancelled => Status is OrderStatus.PendingPayment or OrderStatus.PaymentFailed;
+
+    /// RUL-29: staff cancel, only from `pending_payment` / `payment_failed`. The caller releases the stock (RUL-30).
+    public bool Cancel(string reason, DateTimeOffset now)
+    {
+        if (!CanBeCancelled)
+        {
+            return false;
+        }
+
+        Status = OrderStatus.Cancelled;
+        CancelledAt = now;
+        Raise(new OrderCancelled(Id, Reference, reason));
+        return true;
+    }
+
+    /// RUL-29: no success within the payment window. The caller releases stock (RUL-30) and restores the cart.
+    public bool Expire(DateTimeOffset now, bool cartRestored)
+    {
+        if (!CanBeCancelled || now < PaymentDueAt)
+        {
+            return false;
+        }
+
+        Status = OrderStatus.Expired;
+        Raise(new OrderExpired(Id, Reference, cartRestored));
+        return true;
+    }
+
+    /// Print quantities still reserved for this order (RUL-30).
+    public IReadOnlyList<(Guid BookFormatId, int Quantity)> PrintReservations(IReadOnlySet<Guid> printFormatIds) =>
+        [.. _lines.Where(l => l.Kind == LineKind.Buy && l.BookFormatId is { } f && printFormatIds.Contains(f)).Select(l => (l.BookFormatId!.Value, l.Quantity))];
+
+    /// Raised on behalf of a settlement effect so it lands in the same transaction.
+    public void RaiseEvent(IDomainEvent domainEvent) => Raise(domainEvent);
 }

@@ -36,12 +36,13 @@ when the payment service confirms payment through the contract below.
 
 ## 2. Contract the backend provides — `IOrderSettlement`
 
-Built in backend session S-16 (plan 14). Lives in `Ta3lom.Store.Application/Checkout/Settlement/`.
+Built in backend session S-16 (plan 14). Lives in `src/Ta3lom.Store.Application/Features/Settlement/` (namespace
+`Ta3lom.Store.Application.Features.Settlement`, DMS layout r3); the line effects are in `Features/Settlement/Effects/`.
 
 ### 2.1 Types
 
 ```csharp
-namespace Ta3lom.Store.Application.Checkout.Settlement;
+namespace Ta3lom.Store.Application.Features.Settlement;
 
 /// Raised by the payment service after a VERIFIED capture (webhook or reconciliation). Never from a return URL.
 public sealed record PaymentConfirmation(
@@ -83,6 +84,21 @@ These are **not yet built** by the backend plan. Add them in the payment session
 | `IOrderPayments.MarkPaymentFailedAsync(orderId, reason)` | `pending_payment → payment_failed` (retry still allowed until `payment_due_at`) | RUL-29, RUL-37 |
 | `IOrderPayments.AcceptReviewAsync(orderId, confirmation)` | `payment_review → paid` and runs the same settlement effects | RUL-35 |
 | `IOrderRefunds.ApplyAsync(RefundApplied)` | RUL-58 reversals in one transaction: goal counters; units `awaiting_allocation → cancelled`; the unconverted pool remainder; zakat `refund`; enrolment `revoked`; download grant revoked; shipping refunded when every print line is cancelled before shipment; order `partially_refunded / refunded` (also from `fulfilled`); credit note / cancellation receipt via the outbox | RUL-57, RUL-58 |
+
+### 2.3a As built (S-16)
+
+- `SettleAsync` returns `NotFound` as a success outcome (unknown order id); `Result` failures are only the internal
+  `settlement.effect_missing` (a line kind without an effect: nothing commits, a `FinanceAlert` is written in its own
+  transaction; the guard is removed after S-23).
+- `PaymentReview` commits the status change and a `FinanceAlert` (`payment_review_amount` or
+  `payment_review_late_capture`) and runs no effect.
+- `Paid` commits in one transaction: status/`paid_at`, the line effects, goal counters (atomic upsert, donor +1 per
+  product per order), zakat `in`, `DedicationCard` rows, `INV`/`DR` numbers with their `invoice`/`donation_receipt` rows,
+  the fulfilment roll-up and the `OrderPaid` + `RenderDocuments` outbox rows.
+- Settlement never touches `payment`: the payment service records the capture (and, with Option A, the
+  `payment_event` inbox row) in the same transaction as its `SettleAsync` call.
+- `IPaymentInitiator`, `OrderPaymentRequest` and `PaymentStart` live in `Ta3lom.Store.Application.Interfaces`;
+  `NullPaymentInitiator` in `Infrastructure/Services/Payments`.
 
 ### 2.4 Test trigger (backend, Development/Staging only)
 

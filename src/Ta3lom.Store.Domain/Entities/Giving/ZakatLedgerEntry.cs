@@ -31,4 +31,8 @@ public sealed class ZakatLedgerEntry
     public DateTimeOffset At { get; private set; }
 
     public string Actor { get; private set; } = null!;
+
+    /// RUL-20: zakat received on a paid gift line.
+    public static ZakatLedgerEntry In(Guid productId, Money amount, Guid orderLineId, DateTimeOffset now) =>
+        new(productId, ZakatDirection.In, amount, "settlement", now) { OrderLineId = orderLineId };
 }

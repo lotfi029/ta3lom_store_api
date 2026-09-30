@@ -71,4 +71,10 @@ public sealed class OrderLine : Entity
             Intent = d.Kind == LineKind.Buy ? null : d.Intent,
             TitleEn = d.TitleEn,
         };
+
+    /// RUL-40: course `enrolled`, digital `available`, print `delivered` (or `returned`), sponsor `funded`, donate `received`.
+    public bool IsTerminal => FulfilmentStatus is FulfilmentStatus.Enrolled or FulfilmentStatus.Available or FulfilmentStatus.Delivered
+        or FulfilmentStatus.Returned or FulfilmentStatus.Funded or FulfilmentStatus.Received or FulfilmentStatus.Refunded;
+
+    public void SetFulfilment(FulfilmentStatus status) => FulfilmentStatus = status;
 }

@@ -71,4 +71,6 @@ public static class ErrorCodes
     public const string CheckoutTermsNotAccepted = "checkout.terms_not_accepted";
     public const string CheckoutGatewayUnavailable = "checkout.gateway_unavailable";
     public const string OrderNotFound = "order.not_found";
+    public const string SettlementEffectMissing = "settlement.effect_missing";
+    public const string OrderCancelNotAllowed = "order.cancel_not_allowed";
 }

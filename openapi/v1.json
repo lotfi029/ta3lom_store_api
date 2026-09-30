@@ -1989,6 +1989,65 @@
         }
       }
     },
+    "/v1/admin/orders/{reference}/cancel": {
+      "post": {
+        "tags": [
+          "Admin orders"
+        ],
+        "parameters": [
+          {
+            "name": "reference",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelOrderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrderDetailResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/cart": {
       "get": {
         "tags": [
@@ -3962,6 +4021,354 @@
           }
         }
       },
+      "AdminOrderContact": {
+        "required": [
+          "name",
+          "mobile",
+          "email"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "mobile": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          }
+        }
+      },
+      "AdminOrderCustomer": {
+        "required": [
+          "id",
+          "mobile",
+          "fullName"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mobile": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "AdminOrderDetailResponse": {
+        "required": [
+          "reference",
+          "status",
+          "placedAt",
+          "paidAt",
+          "paymentDueAt",
+          "cancelledAt",
+          "purchasesTotal",
+          "shippingTotal",
+          "giftsTotal",
+          "vatTotal",
+          "grandTotal",
+          "refundedTotal",
+          "isAnonymous",
+          "lines",
+          "documents",
+          "shipment",
+          "customer",
+          "contact",
+          "shippingAddress",
+          "payments",
+          "events",
+          "notifications",
+          "refunds",
+          "sourceCartId"
+        ],
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "placedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "paidAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "paymentDueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cancelledAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "purchasesTotal": {
+            "type": "string"
+          },
+          "shippingTotal": {
+            "type": "string"
+          },
+          "giftsTotal": {
+            "type": "string"
+          },
+          "vatTotal": {
+            "type": "string"
+          },
+          "grandTotal": {
+            "type": "string"
+          },
+          "refundedTotal": {
+            "type": "string"
+          },
+          "isAnonymous": {
+            "type": "boolean"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderLineResponse"
+            }
+          },
+          "documents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderDocumentItem"
+            }
+          },
+          "shipment": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OrderShipmentInfo"
+              }
+            ]
+          },
+          "customer": {
+            "$ref": "#/components/schemas/AdminOrderCustomer"
+          },
+          "contact": {
+            "$ref": "#/components/schemas/AdminOrderContact"
+          },
+          "shippingAddress": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AdminShippingAddress"
+              }
+            ]
+          },
+          "payments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminOrderPayment"
+            }
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminPaymentEvent"
+            }
+          },
+          "notifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminOrderNotification"
+            }
+          },
+          "refunds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminOrderRefund"
+            }
+          },
+          "sourceCartId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "AdminOrderNotification": {
+        "required": [
+          "channel",
+          "templateKey",
+          "recipient",
+          "status",
+          "sentAt"
+        ],
+        "type": "object",
+        "properties": {
+          "channel": {
+            "type": "string"
+          },
+          "templateKey": {
+            "type": "string"
+          },
+          "recipient": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "sentAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "AdminOrderPayment": {
+        "required": [
+          "id",
+          "provider",
+          "providerPaymentId",
+          "method",
+          "amount",
+          "status",
+          "failureCode",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "providerPaymentId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "method": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "amount": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "failureCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AdminOrderRefund": {
+        "required": [
+          "id",
+          "amount",
+          "status",
+          "reason",
+          "createdAt",
+          "completedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "AdminPaymentEvent": {
+        "required": [
+          "providerEventId",
+          "eventType",
+          "signatureValid",
+          "receivedAt",
+          "processedAt",
+          "error"
+        ],
+        "type": "object",
+        "properties": {
+          "providerEventId": {
+            "type": "string"
+          },
+          "eventType": {
+            "type": "string"
+          },
+          "signatureValid": {
+            "type": "boolean"
+          },
+          "receivedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "processedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "AdminProductResponse": {
         "required": [
           "id",
@@ -4227,6 +4634,60 @@
           }
         }
       },
+      "AdminShippingAddress": {
+        "required": [
+          "recipientName",
+          "recipientMobile",
+          "city",
+          "district",
+          "shortAddress",
+          "street",
+          "buildingNo",
+          "postalCode"
+        ],
+        "type": "object",
+        "properties": {
+          "recipientName": {
+            "type": "string"
+          },
+          "recipientMobile": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "district": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "shortAddress": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "street": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "buildingNo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "postalCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "BookBlock": {
         "required": [
           "authorAr",
@@ -4429,6 +4890,17 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "CancelOrderRequest": {
+        "required": [
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
           }
         }
       },
@@ -6672,6 +7144,134 @@
           }
         }
       },
+      "OrderDocumentItem": {
+        "required": [
+          "kind",
+          "number",
+          "issuedAt",
+          "ready"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "issuedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ready": {
+            "type": "boolean"
+          }
+        }
+      },
+      "OrderLineDedication": {
+        "required": [
+          "toName",
+          "smsStatus"
+        ],
+        "type": "object",
+        "properties": {
+          "toName": {
+            "type": "string"
+          },
+          "smsStatus": {
+            "type": "string"
+          }
+        }
+      },
+      "OrderLineResponse": {
+        "required": [
+          "lineNo",
+          "kind",
+          "mode",
+          "titleAr",
+          "titleEn",
+          "format",
+          "quantity",
+          "unitPrice",
+          "amount",
+          "vatAmount",
+          "intent",
+          "fulfilmentStatus",
+          "refundedAmount",
+          "dedication"
+        ],
+        "type": "object",
+        "properties": {
+          "lineNo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int16"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "titleAr": {
+            "type": "string"
+          },
+          "titleEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "format": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "quantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unitPrice": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "vatAmount": {
+            "type": "string"
+          },
+          "intent": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fulfilmentStatus": {
+            "type": "string"
+          },
+          "refundedAmount": {
+            "type": "string"
+          },
+          "dedication": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OrderLineDedication"
+              }
+            ]
+          }
+        }
+      },
       "OrderPaymentStatus": {
         "required": [
           "status",
@@ -6690,6 +7290,31 @@
             ]
           },
           "failureMessage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "OrderShipmentInfo": {
+        "required": [
+          "status",
+          "carrier",
+          "trackingNo"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "carrier": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "trackingNo": {
             "type": [
               "null",
               "string"
@@ -8178,6 +8803,9 @@
     },
     {
       "name": "Admin · Settings"
+    },
+    {
+      "name": "Admin orders"
     },
     {
       "name": "Cart"

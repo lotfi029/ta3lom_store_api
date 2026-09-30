@@ -18,7 +18,9 @@ public static class DependencyInjection
             .AddClasses(c => c.AssignableTo(typeof(ICommandHandler<,>)), publicOnly: false)
                 .AsImplementedInterfaces().WithScopedLifetime()
             .AddClasses(c => c.AssignableTo(typeof(IQueryHandler<,>)), publicOnly: false)
-                .AsImplementedInterfaces().WithScopedLifetime());
+                .AsImplementedInterfaces().WithScopedLifetime()
+            .AddClasses(c => c.AssignableTo<Features.Settlement.ILineSettlementEffect>(), publicOnly: false)   // one per line case (§13.4)
+                .As<Features.Settlement.ILineSettlementEffect>().WithScopedLifetime());
 
         services.AddValidatorsFromAssemblyContaining<ApplicationAssemblyMarker>(includeInternalTypes: true);
         services.AddHandlerDecorators();
@@ -28,6 +30,10 @@ public static class DependencyInjection
         services.AddScoped<Features.Cart.CartCatalog>();
         services.AddScoped<Features.Cart.CartAccess>();
         services.AddScoped<Features.Checkout.CheckoutPricing>();
+        services.AddScoped<Features.Settlement.SettlementLedger>();
+        services.AddScoped<Features.Orders.OrderReader>();
+        services.AddScoped<Features.Orders.OrderStock>();
+        services.AddScoped<Features.Settlement.IOrderSettlement, Features.Settlement.OrderSettlement>();
         services.AddScoped<Features.Catalog.CatalogReader>();
         services.AddScoped<Features.AdminCatalog.AdminCatalogReader>();
         return services;
