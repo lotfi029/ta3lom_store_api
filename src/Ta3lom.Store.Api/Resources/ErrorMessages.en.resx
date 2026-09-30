@@ -571,4 +571,10 @@
   <data name="zakat.balance_insufficient.detail" xml:space="preserve">
     <value>The voucher amount is above this product's zakat balance.</value>
   </data>
+  <data name="template.render_failed" xml:space="preserve">
+    <value>Template invalid</value>
+  </data>
+  <data name="template.render_failed.detail" xml:space="preserve">
+    <value>The template has a syntax error; see line and column.</value>
+  </data>
 </root>

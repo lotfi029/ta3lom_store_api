@@ -1,5 +1,5 @@
 # Build progress
-Next: S-35 — Templates, retention, integrity and remaining events
+Next: S-45 — SponsorDigest job
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -46,7 +46,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-43 zakat ledger | done | S-43 | 115, 116 | — | ✅ tools/smoke/S-43.http | balance guard serialised; M6 passed |
 | S-31 /v1/me | done | S-31 | 21–28, 30, 31, 33–39 | — | ✅ tools/smoke/S-31.http | delete = anonymise; donor views without beneficiary identity |
 | S-33 dashboard/reports/admin ops | done | S-33 | 53, 117, 129–133 | — | ✅ tools/smoke/S-33.http | 7 reports JSON + CSV BOM; integrity checks run from code |
-| S-35 templates, retention, integrity | todo | | 120–122 | IntegrityChecks, Retention, PruneIdempotencyKeys | | |
+| S-35 templates, retention, integrity | done | S-35 | 120–122 | IntegrityChecks, Retention, PruneIdempotencyKeys | ✅ tools/smoke/S-35.http | Scriban trial render; CatalogChanged → repository_dispatch (debounced) |
 | S-45 sponsor digest | todo | | — | SponsorDigest | | |
 | Close-out 7.1–7.3 | todo | | | | | |
 | H-1 code-side hardening | todo | | | | | |
@@ -462,3 +462,21 @@ Tests (test phase)
 
 Done when (local smoke)
 - [x] Verified with curl (tools/smoke/S-33.http)
+
+### S-35 — Templates, retention, integrity and remaining events
+
+Build
+- [x] Template list, update and test send (#120–#122); Scriban validated on save (parse + trial render → `template.render_failed` with line/column)
+- [x] Job `IntegrityChecks` (003_integrity_checks.sql → FinanceAlert `integrity_check_failed` on any row)
+- [x] Job `Retention` (database/03 §7: payload scrub, notification/outbox/download-log delete, beneficiary PII erasure)
+- [x] Job `PruneIdempotencyKeys` (24 h)
+- [x] Debounced `repository_dispatch` rebuild of ta3lom-web after publish/archive (`CatalogChanged` outbox message)
+- [x] Remaining RUL-63 events verified end to end (order paid, shipped/delivered, allocation, completion, cause update, card, pool swept, low stock, integrity)
+
+Tests (test phase)
+- [ ] an invalid template is rejected at save
+- [ ] the integrity job raises an alert on a deliberately corrupted counter
+- [ ] retention scrubs `payment_event.payload` older than 18 months
+
+Done when (local smoke)
+- [x] Verified with curl (tools/smoke/S-35.http); integrity checks 0 rows

@@ -71,3 +71,6 @@ public sealed record CauseUpdatePublished(Guid UpdateId, Guid ProductId) : IDoma
 /// RUL-46: a pool remainder moved to the general fund (account-history note for the contributors, shown from
 /// `swept_to_fund_at`; nothing is sent).
 public sealed record PoolSwept(Guid OfferId, Guid ProductId, Guid GeneralFundId, Guid PairId, string Amount) : IDomainEvent;
+
+/// A product was published or archived: ask ta3lom-web to rebuild (debounced — at most one pending message).
+public sealed record CatalogChanged(Guid ProductId, string Change) : IDomainEvent;

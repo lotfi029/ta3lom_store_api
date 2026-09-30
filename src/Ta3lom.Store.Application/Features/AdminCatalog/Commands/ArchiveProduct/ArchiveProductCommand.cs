@@ -5,7 +5,7 @@ namespace Ta3lom.Store.Application.Features.AdminCatalog.Commands.ArchiveProduct
 /// `POST /v1/admin/products/{id}/archive` (#65, RUL-02): leaves the catalogue; history keeps it.
 public sealed record ArchiveProductCommand(Guid ProductId) : ICommand<AdminProductResponse>;
 
-internal sealed class ArchiveProductCommandHandler(IProductRepository products, AdminCatalogReader reader, IUnitOfWork uow, IClock clock)
+internal sealed class ArchiveProductCommandHandler(IProductRepository products, AdminCatalogReader reader, CatalogChanges catalogChanges, IUnitOfWork uow, IClock clock)
     : ICommandHandler<ArchiveProductCommand, AdminProductResponse>
 {
     public async Task<Result<AdminProductResponse>> HandleAsync(ArchiveProductCommand command, CancellationToken ct = default)
@@ -17,6 +17,7 @@ internal sealed class ArchiveProductCommandHandler(IProductRepository products, 
         }
 
         product.Archive(clock.UtcNow);
+        await catalogChanges.NotifyAsync(command.ProductId, "archived", ct);
         await uow.SaveChangesAsync(ct);
         return (await reader.ProductAsync(product.Id, ct))!;
     }

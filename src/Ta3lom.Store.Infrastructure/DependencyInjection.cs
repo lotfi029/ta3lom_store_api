@@ -62,6 +62,9 @@ public static class DependencyInjection
             q.AddStoreJob<AllocationAlertsJob>(AllocationAlertsJob.Cron);
             q.AddStoreJob<LapseUnitsJob>(LapseUnitsJob.Cron);
             q.AddStoreJob<CloseCampaignsJob>(CloseCampaignsJob.Cron);
+            q.AddStoreJob<IntegrityChecksJob>(IntegrityChecksJob.Cron);
+            q.AddStoreJob<RetentionJob>(RetentionJob.Cron);
+            q.AddStoreJob<PruneIdempotencyKeysJob>(PruneIdempotencyKeysJob.Cron);
         });
         services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
         services.AddSingleton<IJobRunner, QuartzJobRunner>();
@@ -107,6 +110,9 @@ public static class DependencyInjection
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IStockRepository, StockRepository>();
         services.AddScoped<IOperationsStatus, Services.Operations.OperationsStatus>();
+        services.AddScoped<IOperationsMaintenance, Services.Operations.OperationsMaintenance>();
+        services.AddOptions<Services.SiteRebuild.SiteRebuildOptions>().BindConfiguration(Services.SiteRebuild.SiteRebuildOptions.Section);
+        services.AddHttpClient<ISiteRebuildTrigger, Services.SiteRebuild.GitHubSiteRebuildTrigger>(c => c.Timeout = TimeSpan.FromSeconds(10));
         services.AddScoped<IGoalProgressRepository, GoalProgressRepository>();
         services.AddScoped<ISponsorshipPoolRepository, SponsorshipPoolRepository>();
         services.AddScoped<IBeneficiaryRepository, BeneficiaryRepository>();

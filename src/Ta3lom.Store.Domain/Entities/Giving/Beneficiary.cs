@@ -90,6 +90,20 @@ public sealed class Beneficiary : AggregateRoot
         VerifiedAt = now;
     }
 
+    /// Retention (database/03 §7): personal data erased two years after the beneficiary stopped being active; the code,
+    /// kind, group, region and history stay. `full_name_enc` is NOT NULL, so the name becomes a fixed placeholder.
+    public const string ErasedName = "محذوف";
+
+    public bool PiiErased => FullName == ErasedName && Mobile is null && GuardianName is null;
+
+    public void ErasePii()
+    {
+        FullName = ErasedName;
+        Mobile = null;
+        MobileHash = null;
+        GuardianName = null;
+    }
+
     /// RUL-52: set at the first course-seat allocation.
     public void LinkCustomer(Guid customerId) => CustomerId ??= Guard.NotEmpty(customerId);
 

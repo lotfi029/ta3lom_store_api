@@ -35,3 +35,16 @@ public sealed record BlockCustomerRequest(string? Reason);
 
 /// 11 §9.21: `diff` is the stored JSON object (personal fields already masked as `***`).
 public sealed record AuditEntry(long Id, DateTimeOffset At, string Actor, string Action, string Entity, string? EntityId, JsonElement? Diff);
+
+/// 11 §9.18 `Template`: `variables` are the `{{ name }}` placeholders found in the subject and body.
+public sealed record TemplateResponse(string Key, string Channel, string Locale, string? Subject, string Body, DateTimeOffset UpdatedAt,
+    IReadOnlyList<string> Variables);
+
+public sealed record TemplateUpdateRequest(string? Subject, string? Body);
+
+/// `POST …/test`: sends the **saved** template to one recipient with sample values (unset variables show as `[name]`).
+public sealed record TemplateTestRequest(string? Recipient, IReadOnlyDictionary<string, string>? SampleData);
+
+public sealed record TemplateTestResponse(TemplateRendered Rendered);
+
+public sealed record TemplateRendered(string? Subject, string Body);

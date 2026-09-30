@@ -13,6 +13,7 @@ internal sealed class PublishProductCommandHandler(
     IProductRepository products,
     IApplicationDbContext db,
     AdminCatalogReader reader,
+    CatalogChanges catalogChanges,
     IUnitOfWork uow,
     IClock clock) : ICommandHandler<PublishProductCommand, AdminProductResponse>
 {
@@ -31,6 +32,7 @@ internal sealed class PublishProductCommandHandler(
         }
 
         product.Publish(clock.UtcNow);
+        await catalogChanges.NotifyAsync(command.ProductId, "published", ct);
         await uow.SaveChangesAsync(ct);
         return (await reader.ProductAsync(product.Id, ct))!;
     }

@@ -571,4 +571,10 @@
   <data name="zakat.balance_insufficient.detail" xml:space="preserve">
     <value>مبلغ السند أكبر من رصيد الزكاة لهذا المنتج.</value>
   </data>
+  <data name="template.render_failed" xml:space="preserve">
+    <value>القالب غير صالح</value>
+  </data>
+  <data name="template.render_failed.detail" xml:space="preserve">
+    <value>في القالب خطأ في الصياغة؛ راجع السطر والعمود.</value>
+  </data>
 </root>

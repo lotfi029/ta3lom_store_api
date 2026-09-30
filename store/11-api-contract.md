@@ -1779,6 +1779,13 @@ counts and percentages are integers.
   "variables": [ "reference", "total", "link" ], "updatedAt": "2026-09-01T00:00:00Z" }
 ```
 
+As built (S-35): `variables` are the distinct `{{ name }}` identifiers of subject and body, in order of appearance.
+Save validates the Scriban syntax and then trial-renders with every variable set to a sample value, so a template that
+parses but fails at render time is also refused; the 422 body carries `line` and `column` (1-based) of the first
+error. The test send renders the **saved** template; `sampleData` fills variables, any variable left
+unset shows as `[name]`. `recipient` is a Saudi mobile for `sms` and an e-mail address for `email` (else
+`validation.failed`); an unknown key/channel/locale → `404 http.not_found`. Updates are audited (`template.update`).
+
 ### 9.19 Staff users (RUL-62, FR-S71)
 
 | Method | Path | Policy | Request | Response | Errors |

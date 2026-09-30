@@ -15,5 +15,9 @@ public static class GivingErrors
     public static Error ZakatBalanceInsufficient(Money balance) =>
         Error.Unprocessable(ErrorCodes.ZakatBalanceInsufficient, "The voucher is above the zakat balance.").With("balance", balance.ToWire());
 
+    /// FR-S77: a Scriban syntax error with its position.
+    public static Error TemplateRenderFailed(string message, int line, int column) =>
+        Error.Unprocessable(ErrorCodes.TemplateRenderFailed, message).With("line", line).With("column", column);
+
     public static Error CauseUpdateAlreadyNotified => Error.Conflict(ErrorCodes.CauseUpdateAlreadyNotified, "Donors were already notified of this update.");
 }

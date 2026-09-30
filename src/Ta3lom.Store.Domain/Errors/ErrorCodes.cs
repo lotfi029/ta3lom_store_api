@@ -98,4 +98,5 @@ public static class ErrorCodes
     public const string CauseUpdateAlreadyNotified = "cause_update.already_notified";
     public const string GoalAdjustmentInvalid = "goal.adjustment_invalid";
     public const string ZakatBalanceInsufficient = "zakat.balance_insufficient";
+    public const string TemplateRenderFailed = "template.render_failed";
 }

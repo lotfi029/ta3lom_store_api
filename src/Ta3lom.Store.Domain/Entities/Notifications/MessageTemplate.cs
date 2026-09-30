@@ -27,4 +27,12 @@ public sealed class MessageTemplate
     public string Body { get; private set; } = null!;
 
     public DateTimeOffset UpdatedAt { get; private set; }
+
+    /// FR-S77: staff edit (validated by the caller: the text must parse as Scriban).
+    public void Edit(string? subject, string body, DateTimeOffset now)
+    {
+        Subject = string.IsNullOrWhiteSpace(subject) ? null : subject;
+        Body = Guard.NotNull(body);
+        UpdatedAt = now;
+    }
 }

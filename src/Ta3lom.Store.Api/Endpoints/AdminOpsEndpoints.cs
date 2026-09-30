@@ -7,7 +7,8 @@ using Ta3lom.Store.Domain.Constants;
 
 namespace Ta3lom.Store.Api.Endpoints;
 
-/// Dashboard (#53), reports (#117), customers (#129–#132) and the audit log (#133) — 11 §9.2, §9.16, §9.20, §9.21.
+/// Dashboard (#53), reports (#117), message templates (#120–#122), customers (#129–#132) and the audit log (#133) — 11 §9.2,
+/// §9.16, §9.18, §9.20, §9.21.
 internal sealed class AdminOpsEndpoints : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
@@ -32,6 +33,17 @@ internal sealed class AdminOpsEndpoints : IEndpoint
         admin.MapPost("/customers/{id:guid}/unblock", async (Guid id, [FromServices] ICommandHandler<UnblockCustomerCommand, CustomerRow> h, CancellationToken ct) =>
             (await h.HandleAsync(new UnblockCustomerCommand(id), ct)).ToHttp())
             .RequireAuthorization(Policies.StaffFinance).Produces<CustomerRow>().ProducesProblem(StatusCodes.Status404NotFound);
+
+        admin.MapGet("/templates", async ([FromServices] IQueryHandler<ListTemplatesQuery, IReadOnlyList<TemplateResponse>> h, CancellationToken ct) =>
+            (await h.HandleAsync(new ListTemplatesQuery(), ct)).ToHttp()).RequireAuthorization(Policies.StaffRead).Produces<IReadOnlyList<TemplateResponse>>();
+        admin.MapPut("/templates/{key}/{channel}/{locale}", async (string key, string channel, string locale, [FromBody] TemplateUpdateRequest body,
+                [FromServices] ICommandHandler<UpdateTemplateCommand, TemplateResponse> h, CancellationToken ct) =>
+            (await h.HandleAsync(new UpdateTemplateCommand(key, channel, locale, body), ct)).ToHttp())
+            .RequireAuthorization(Policies.StaffAdmin).Produces<TemplateResponse>().ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+        admin.MapPost("/templates/{key}/{channel}/{locale}/test", async (string key, string channel, string locale, [FromBody] TemplateTestRequest body,
+                [FromServices] ICommandHandler<TestTemplateCommand, TemplateTestResponse> h, CancellationToken ct) =>
+            (await h.HandleAsync(new TestTemplateCommand(key, channel, locale, body), ct)).ToHttp(r => TypedResults.Accepted((string?)null, r)))
+            .RequireAuthorization(Policies.StaffAdmin).Produces<TemplateTestResponse>(StatusCodes.Status202Accepted);
 
         admin.MapGet("/audit", async ([FromServices] IQueryHandler<AuditQuery, PagedResult<AuditEntry>> h, CancellationToken ct, string? actor = null,
                 string? entity = null, string? entityId = null, string? action = null, DateOnly? from = null, DateOnly? to = null, int page = 1, int pageSize = 50) =>

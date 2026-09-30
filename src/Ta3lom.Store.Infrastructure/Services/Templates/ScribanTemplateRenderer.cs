@@ -24,6 +24,46 @@ internal sealed class ScribanTemplateRenderer(StoreDbContext db) : ITemplateRend
             Render(template.Body, model));
     }
 
+    public TemplateSyntaxError? Check(string text)
+    {
+        var parsed = Template.Parse(text);
+        if (parsed.HasErrors)
+        {
+            var first = parsed.Messages[0];
+            return new TemplateSyntaxError(first.Message, first.Span.Start.Line + 1, first.Span.Start.Column + 1);
+        }
+
+        // An unclosed `{{` parses as code up to the end and only fails when rendered: try once with no values.
+        try
+        {
+            parsed.Render(new TemplateContext { StrictVariables = false });
+            return null;
+        }
+        catch (Scriban.Syntax.ScriptRuntimeException e)
+        {
+            return new TemplateSyntaxError(e.OriginalMessage, e.Span.Start.Line + 1, e.Span.Start.Column + 1);
+        }
+    }
+
+    public string RenderText(string text, IReadOnlyDictionary<string, object?> model)
+    {
+        var parsed = Template.Parse(text);
+        if (parsed.HasErrors)
+        {
+            throw new InvalidOperationException("Template syntax error: " + string.Join("; ", parsed.Messages));
+        }
+
+        var globals = new ScriptObject();
+        foreach (var (k, v) in model)
+        {
+            globals[k] = v;
+        }
+
+        var context = new TemplateContext { StrictVariables = false };
+        context.PushGlobal(globals);
+        return parsed.Render(context);
+    }
+
     public static string Render(string text, object model)
     {
         var parsed = Template.Parse(text);

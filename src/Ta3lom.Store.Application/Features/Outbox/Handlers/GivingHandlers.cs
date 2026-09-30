@@ -86,3 +86,10 @@ internal sealed class PoolSweptHandler : OutboxHandler<PoolSwept>
 {
     protected override Task HandleAsync(PoolSwept message, OutboxEnvelope envelope, CancellationToken ct) => Task.CompletedTask;
 }
+
+/// Plan 14 S-35: asks ta3lom-web to rebuild after a publish/archive (debounced at enqueue); a failed dispatch is retried.
+internal sealed class CatalogChangedHandler(ISiteRebuildTrigger trigger) : OutboxHandler<CatalogChanged>
+{
+    protected override Task HandleAsync(CatalogChanged message, OutboxEnvelope envelope, CancellationToken ct) =>
+        trigger.TriggerAsync($"{message.Change} {message.ProductId}", ct);
+}
