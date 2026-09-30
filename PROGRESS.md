@@ -148,7 +148,7 @@ Build
 - [x] Audit §2.2: gift feed anonymised; config endpoint; locale-free output cache; tashkeel-insensitive search
 
 Tests (test phase)
-- [ ] RUL-02 (draft invisible, archived only in history), RUL-08 (floor and cap), RUL-09 (ended campaign flagged), RUL-23 (feed never shows a name when anonymous)
+- [x] RUL-02 (draft invisible, archived only in history), RUL-08 (floor and cap), RUL-09 (ended campaign flagged), RUL-23 (feed never shows a name when anonymous)
 - [ ] Arabic search: مكتبة for مكتبه, حكايات with tashkeel; ETag round trip; the seed catalogue returns 15 products
 
 Done when (local smoke)
@@ -170,7 +170,7 @@ Build
 - [x] Audit §2.2: `StoreSettings` covers every key (addendum 8); `LocalFileStorage` + `/files/public`; SkiaSharp re-encode
 
 Tests (test phase)
-- [ ] RUL-01, RUL-03, RUL-04, RUL-05, RUL-06, RUL-07, RUL-10 (`close_on_target` in `IsOpen`)
+- [x] RUL-01, RUL-03, RUL-04, RUL-05, RUL-06, RUL-07, RUL-10 (`close_on_target` in `IsOpen`)
 - [ ] Audit rows for publish, price change, seed change; policy-matrix rows for #54–#77, #118, #119
 
 Done when (local smoke)
