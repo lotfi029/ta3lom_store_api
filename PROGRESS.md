@@ -1,5 +1,5 @@
 # Build progress
-Next: S-02b — DMS alignment (step 1: SharedKernel)
+Next: S-03a-lite — CI workflow
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -21,7 +21,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 |---|---|---|---|---|---|---|
 | STEP 0 | done | — | — | — | — | baseline above |
 | S-RUN run mode | done | S-RUN | — | — | — | state files, run mode, review files copied |
-| S-02b DMS alignment | todo | | — | — | | |
+| S-02b DMS alignment | done | 2868161 | — | — | ✅ health, 404 problem, /docs, seed (tools/smoke/S-02b.http) | 172 tests green; no migration needed; OpenAPI unchanged |
 | S-03a-lite CI | todo | | — | — | | |
 | S-04 customer OTP | todo | | 16–20 | PruneOtp | | |
 | S-05 staff identity | todo | | 47–52, 123–128 | — | | |
