@@ -149,10 +149,16 @@ public class ScenarioFactory : StoreApiFactory
     /// the FakeClock was ahead carry a future `next_attempt_at`; never-attempted ones are made due first.
     public async Task DrainOutboxAsync()
     {
-        await ExecuteSqlAsync("UPDATE store.outbox_message SET next_attempt_at = now() WHERE processed_at IS NULL AND attempts = 0 AND next_attempt_at > now()");
+        // Rows take `next_attempt_at` from the FakeClock, which may be ahead of the database's now(); rows that handlers
+        // enqueue during the drain are made due on every pass, not only those that existed before it.
         var dispatcher = Services.GetServices<IHostedService>().OfType<OutboxDispatcher>().Single();
-        for (var i = 0; i < 50 && await dispatcher.RunOnceAsync(TestContext.Current.CancellationToken) > 0; i++)
+        for (var i = 0; i < 50; i++)
         {
+            await ExecuteSqlAsync("UPDATE store.outbox_message SET next_attempt_at = now() WHERE processed_at IS NULL AND attempts = 0 AND next_attempt_at > now()");
+            if (await dispatcher.RunOnceAsync(TestContext.Current.CancellationToken) == 0)
+            {
+                break;
+            }
         }
     }
 

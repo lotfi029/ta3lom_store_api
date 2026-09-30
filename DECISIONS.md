@@ -178,3 +178,4 @@ the owner should confirm.
 | Test | Rule | Fix commit |
 |---|---|---|
 | `OperationsTests.An_invalid_template_is_rejected_at_save` — a template with an unclosed `{{` (e.g. "طلبك {{ reference") was saved (200): Scriban parses it without errors and the S-35 trial render with non-strict variables renders it as empty. `ScribanTemplateRenderer.Check` now walks the lexer tokens and refuses an unmatched `CodeEnter` → 422 `template.render_failed` with line/column; valid templates still save. (The S-35 smoke's 422 came from the runtime-error branch, not from this case.) | RUL-63, FR-S77 | a34012d |
+| `OrderTests.Vat_on_a_gift_draft_never_reaches_the_order_total` (T-9 domain review): `Order.Place` summed `VatTotal` over every draft while `OrderLine.FromDraft` forces gift VAT to 0, so a gift draft carrying VAT would have put VAT on the order that no line shows. Checkout always sends 0, so no order was affected; `VatTotal` now sums buy lines only | RUL-27 | T-9 part 2 |

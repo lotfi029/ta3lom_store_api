@@ -114,7 +114,7 @@ public sealed class Order : AggregateRoot
             PurchasesTotal = purchases,
             ShippingTotal = shipping.Fee,
             GiftsTotal = gifts,
-            VatTotal = lines.Select(l => l.VatAmount).Sum() + shipping.Vat,              // informational, included in the prices
+            VatTotal = lines.Where(l => l.Kind == LineKind.Buy).Select(l => l.VatAmount).Sum() + shipping.Vat,   // RUL-27: gifts carry no VAT
             IsAnonymous = isAnonymous && lines.Any(l => l.Kind != LineKind.Buy),            // RUL-23: only with gifts
             Locale = locale,
             ShippingAddress = shipping.Address,

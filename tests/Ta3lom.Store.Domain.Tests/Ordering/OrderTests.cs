@@ -205,6 +205,18 @@ public sealed class OrderTests
     }
 
     [Fact]
+    [Rule("RUL-27")]
+    public void Vat_on_a_gift_draft_never_reaches_the_order_total()
+    {
+        var gift = Gift(LineKind.Donate, 100m) with { VatAmount = new Money(13.04m) };
+
+        var order = Place([Buy(115m, vat: 15m), gift]).Order;
+
+        order.VatTotal.ShouldBe(new Money(15m));
+        order.Lines.Select(l => l.VatAmount).Sum().ShouldBe(order.VatTotal);
+    }
+
+    [Fact]
     public void The_constructor_starts_pending_payment_with_zero_subtotals()
     {
         var order = new Order("T3-26-000002", Guid.CreateVersion7(), new Money(100m), "نورة", "+966551234567", "n@example.com", T0, Due, T0);
