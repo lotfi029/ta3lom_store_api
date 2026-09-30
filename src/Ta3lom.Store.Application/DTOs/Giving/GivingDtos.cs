@@ -28,3 +28,15 @@ public sealed record GoalCorrectionInput(string? Amount, int Units, string? Note
 
 /// 201: the correction and the product's goal figures after it.
 public sealed record GoalCorrectionResponse(GoalAdjustmentRow Adjustment, DTOs.AdminCatalog.GoalFiguresResponse Goal);
+
+/// `v_zakat_balance` row (#115, RUL-20).
+public sealed record ZakatBalance(Guid ProductId, string Slug, string Received, string Disbursed, string Refunded, string Balance);
+
+/// A `zakat_ledger` row: `in` (paid zakat line), `out` (unit allocation or voucher), `refund`.
+public sealed record ZakatEntry(long Id, Guid ProductId, string Slug, string Direction, string Amount, Guid? OrderLineId, string? Reference,
+    DateTimeOffset At, string Actor);
+
+public sealed record ZakatLedgerResponse(IReadOnlyList<ZakatBalance> Balances, Abstractions.Pagination.PagedResult<ZakatEntry> Entries);
+
+/// `ZakatVoucherInput` (#116).
+public sealed record ZakatVoucherInput(Guid ProductId, string? Amount, string? VoucherNo, DateOnly? DisbursedOn, string? Purpose);

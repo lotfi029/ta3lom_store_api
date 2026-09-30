@@ -1,5 +1,5 @@
 # Build progress
-Next: S-43 — Zakat ledger and disbursement vouchers
+Next: S-31 — /v1/me account
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -43,7 +43,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-25 allocation | done | S-25 | 109–114 | AllocationAlerts, LapseUnits; BeneficiaryInvite, UnitLapsed, AllocationAlert/Escalation, SponsorUnitAllocated/Completed; S-40 hook filled | ✅ tools/smoke/S-25.http | all-or-nothing, SKIP LOCKED verified; integrity 0 rows |
 | S-26 cards and cause updates | done | S-26 | 45, 81–84, 93 | DedicationCard complete; CauseUpdatePublished | ✅ tools/smoke/S-26.http | card has no amount; notify once per donor |
 | S-42 close/sweep/corrections | done | S-42 | 71 (sweep), 136, 137 | CloseCampaigns; PoolSwept | ✅ tools/smoke/S-42.http | sweeps once; zakat stays; integrity 0 rows |
-| S-43 zakat ledger, vouchers | todo | | 115, 116 | — | | |
+| S-43 zakat ledger | done | S-43 | 115, 116 | — | ✅ tools/smoke/S-43.http | balance guard serialised; M6 passed |
 | S-31 `/v1/me` | todo | | 21–28, 30, 31, 33–39 | — | | |
 | S-33 dashboard, reports, admin ops | todo | | 53, 117, 129–133 | — | | |
 | S-35 templates, retention, integrity | todo | | 120–122 | IntegrityChecks, Retention, PruneIdempotencyKeys | | |
@@ -59,7 +59,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | M3 Catalogue | tools/smoke/M3.http | ✅ passed (store_manager created/published course, book print+digital, cause; public ETags; archive → 404) |
 | M4 First settled order | tools/smoke/M4.http | ✅ passed for the gift path (receipt PDF, SMS, e-mail, repeat, review); invoice PDF re-checked in M5 |
 | M5 Fulfilment | tools/smoke/M5.http | ✅ passed (T3-26-001018: course enrolled + launch, digital watermarked 301 pages, print shipped → delivered → fulfilled, ledger = counters, integrity 0 rows) |
-| M6 Giving | tools/smoke/M6.http | |
+| M6 Giving | tools/smoke/M6.http | ✅ passed (T3-26-001036: 5 seats + 100.00 share → units + pool; allocation → invites → enrolments; card SMS; close sweeps the pool; integrity 0 rows) |
 | M7 Operations-complete | tools/smoke/M7.http | |
 
 ## Part 1 checklist
@@ -420,3 +420,15 @@ Tests (test phase)
 
 Done when (local smoke)
 - [x] Verified with curl and the dev job (tools/smoke/S-42.http); integrity checks 0 rows
+
+### S-43 — Zakat ledger and disbursement vouchers
+
+Build
+- [x] Zakat ledger view per product (#115, `v_zakat_balance`) with entries
+- [x] Disbursement voucher (#116, `staff:finance`): `zakat_ledger` `out` with a voucher reference, amount, date and purpose; rejected above the balance
+
+Tests (test phase)
+- [ ] a voucher above the balance → `zakat.balance_insufficient`; `v_zakat_balance` never negative (integrity check 7)
+
+Done when (local smoke)
+- [x] Verified with curl including parallel vouchers (tools/smoke/S-43.http); **M6 demo** passed (tools/smoke/M6.http)

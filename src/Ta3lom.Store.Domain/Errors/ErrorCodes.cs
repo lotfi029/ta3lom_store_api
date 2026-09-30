@@ -97,4 +97,5 @@ public static class ErrorCodes
     public const string CardNotFound = "card.not_found";
     public const string CauseUpdateAlreadyNotified = "cause_update.already_notified";
     public const string GoalAdjustmentInvalid = "goal.adjustment_invalid";
+    public const string ZakatBalanceInsufficient = "zakat.balance_insufficient";
 }

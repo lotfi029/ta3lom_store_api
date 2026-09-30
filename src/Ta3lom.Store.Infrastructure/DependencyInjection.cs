@@ -110,6 +110,7 @@ public static class DependencyInjection
         services.AddScoped<ISponsorshipPoolRepository, SponsorshipPoolRepository>();
         services.AddScoped<IBeneficiaryRepository, BeneficiaryRepository>();
         services.AddScoped<ISponsoredUnitRepository, SponsoredUnitRepository>();
+        services.AddScoped<IZakatLedgerRepository, ZakatLedgerRepository>();
         services.AddScoped<IDocumentNumberAllocator, DocumentNumberAllocator>();
         services.AddScoped<IEnrolmentRepository, EnrolmentRepository>();
         services.AddScoped<IDownloadGrantRepository, DownloadGrantRepository>();

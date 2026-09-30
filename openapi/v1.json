@@ -3680,6 +3680,116 @@
         }
       }
     },
+    "/v1/admin/zakat": {
+      "get": {
+        "tags": [
+          "Admin zakat"
+        ],
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ZakatLedgerResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/zakat/disbursements": {
+      "post": {
+        "tags": [
+          "Admin zakat"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ZakatVoucherInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ZakatEntry"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/cart": {
       "get": {
         "tags": [
@@ -10920,6 +11030,47 @@
           }
         }
       },
+      "PagedResultOfZakatEntry": {
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ZakatEntry"
+            }
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "PoolBalance": {
         "required": [
           "balance"
@@ -12510,6 +12661,154 @@
             "type": "string"
           }
         }
+      },
+      "ZakatBalance": {
+        "required": [
+          "productId",
+          "slug",
+          "received",
+          "disbursed",
+          "refunded",
+          "balance"
+        ],
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "received": {
+            "type": "string"
+          },
+          "disbursed": {
+            "type": "string"
+          },
+          "refunded": {
+            "type": "string"
+          },
+          "balance": {
+            "type": "string"
+          }
+        }
+      },
+      "ZakatEntry": {
+        "required": [
+          "id",
+          "productId",
+          "slug",
+          "direction",
+          "amount",
+          "orderLineId",
+          "reference",
+          "at",
+          "actor"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "direction": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "orderLineId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "reference": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actor": {
+            "type": "string"
+          }
+        }
+      },
+      "ZakatLedgerResponse": {
+        "required": [
+          "balances",
+          "entries"
+        ],
+        "type": "object",
+        "properties": {
+          "balances": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ZakatBalance"
+            }
+          },
+          "entries": {
+            "$ref": "#/components/schemas/PagedResultOfZakatEntry"
+          }
+        }
+      },
+      "ZakatVoucherInput": {
+        "required": [
+          "productId",
+          "amount",
+          "voucherNo",
+          "disbursedOn",
+          "purpose"
+        ],
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amount": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "voucherNo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "disbursedOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "purpose": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
       }
     }
   },
@@ -12552,6 +12851,9 @@
     },
     {
       "name": "Admin orders"
+    },
+    {
+      "name": "Admin zakat"
     },
     {
       "name": "Cart"

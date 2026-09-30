@@ -73,3 +73,16 @@ internal sealed class SponsoredUnitRepository(StoreDbContext db) : GenericReposi
     public async Task<SponsoredUnit?> LockAsync(Guid unitId, CancellationToken ct = default) =>
         (await Set.FromSql($"SELECT *, xmin FROM store.sponsored_unit WHERE id = {unitId} FOR UPDATE").ToListAsync(ct)).SingleOrDefault();
 }
+
+internal sealed class ZakatLedgerRepository(StoreDbContext db) : IZakatLedgerRepository
+{
+    public async Task<Money> LockBalanceAsync(Guid productId, CancellationToken ct = default)
+    {
+        await db.Database.ExecuteSqlAsync($"SELECT 1 FROM store.product WHERE id = {productId} FOR UPDATE", ct);
+        var balance = (await db.Database.SqlQuery<decimal>($"""
+            SELECT coalesce(sum(CASE WHEN direction = 'in' THEN amount ELSE -amount END), 0) AS "Value"
+              FROM store.zakat_ledger WHERE product_id = {productId}
+            """).ToListAsync(ct)).Single();
+        return new Money(balance);
+    }
+}

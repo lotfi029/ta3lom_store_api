@@ -23,6 +23,13 @@ public interface IBeneficiaryRepository : IGenericRepository<Beneficiary>
     Task<IReadOnlyList<Beneficiary>> LockManyAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct = default);
 }
 
+/// RUL-20: serialises zakat vouchers per product (the product row is locked `FOR UPDATE`) so two vouchers can never
+/// overdraw the balance together; returns the balance read under the lock.
+public interface IZakatLedgerRepository
+{
+    Task<Money> LockBalanceAsync(Guid productId, CancellationToken ct = default);
+}
+
 /// Unit row locks (database/01 §4.6).
 public interface ISponsoredUnitRepository : IGenericRepository<SponsoredUnit>
 {

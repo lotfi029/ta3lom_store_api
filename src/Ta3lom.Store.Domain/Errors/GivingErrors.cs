@@ -11,5 +11,9 @@ public static class GivingErrors
 
     public static Error GoalAdjustmentInvalid => Error.Unprocessable(ErrorCodes.GoalAdjustmentInvalid, "Empty correction, or a counter would go negative.");
 
+    /// RUL-20: a voucher above the product's zakat balance (`balance` = what is left).
+    public static Error ZakatBalanceInsufficient(Money balance) =>
+        Error.Unprocessable(ErrorCodes.ZakatBalanceInsufficient, "The voucher is above the zakat balance.").With("balance", balance.ToWire());
+
     public static Error CauseUpdateAlreadyNotified => Error.Conflict(ErrorCodes.CauseUpdateAlreadyNotified, "Donors were already notified of this update.");
 }

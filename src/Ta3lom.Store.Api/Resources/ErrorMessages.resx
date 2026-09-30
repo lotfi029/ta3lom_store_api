@@ -565,4 +565,10 @@
   <data name="goal.adjustment_invalid.detail" xml:space="preserve">
     <value>التصحيح فارغ أو سيجعل أحد العدادات سالبًا.</value>
   </data>
+  <data name="zakat.balance_insufficient" xml:space="preserve">
+    <value>رصيد الزكاة غير كافٍ</value>
+  </data>
+  <data name="zakat.balance_insufficient.detail" xml:space="preserve">
+    <value>مبلغ السند أكبر من رصيد الزكاة لهذا المنتج.</value>
+  </data>
 </root>

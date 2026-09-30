@@ -139,6 +139,8 @@ the owner should confirm.
 | 2026-09-30 | S-42 | Offers closed without a sweep | 03 RUL-46 | `CloseCampaigns` also sweeps offers past `ends_at` that were closed manually with `sweepPool: false` and still hold a non-zakat remainder | "the remainder moves to the general fund" at the offer's end | |
 | 2026-09-30 | S-42 | No general fund | 03 RUL-07/46 | Without a cause flagged `is_general_fund` nothing is swept (`swept: null`); the offer still closes | cannot invent a target | |
 | 2026-09-30 | S-42 | Correction limits | 11 §9.2, §1.6 | `goal.adjustment_invalid` when amount and units are both 0 or `raised_amount`/`funded_units` would go below 0; amount ±10,000,000.00, units ±100,000, note 1–500 | 11 §1.6 | |
+| 2026-09-30 | S-43 | Voucher purpose and date | 11 §9.15, DDL `zakat_ledger` | The ledger has no purpose/date columns: `at` = noon Riyadh of `disbursedOn`, `reference` = voucher number, the purpose goes to `audit_log` (`zakat.voucher`). A schema column would need an owner-approved migration | no schema change in this run | REVIEW |
+| 2026-09-30 | S-43 | Voucher scope and numbers | 03 RUL-20 | Vouchers only for cause products (sponsorship zakat leaves at allocation); voucher numbers upper-cased and unique across `out` rows; per-product serialisation by locking the product row | RUL-20 two outflow paths | |
 
 ## Bugs found by tests
 

@@ -1698,6 +1698,12 @@ Disbursement voucher for cause zakat (RUL-20); sponsorship zakat goes out automa
 
 The row is written with `reference = voucherNo`; the balance can never go below zero (integrity check 7).
 
+As built (S-43): `ZakatEntry` = `{ id, productId, slug, direction, amount, orderLineId, reference, at, actor }`; `entries` is
+`Page<ZakatEntry>` (newest first; `from`/`to` are Riyadh dates). Vouchers are for **cause** products only; `voucherNo` is
+upper-cased and must be unused (`400`); `at` is noon Riyadh of `disbursedOn`; the purpose is kept in `audit_log`
+(`zakat.voucher`) because the ledger has no purpose column. Vouchers for one product are serialised (product row lock), so two
+parallel vouchers can never overdraw the balance.
+
 ### 9.16 Reports (FR-S75)
 
 | Method | Path | Policy | Request | Response |

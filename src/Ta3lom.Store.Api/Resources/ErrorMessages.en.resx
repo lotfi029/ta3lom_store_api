@@ -565,4 +565,10 @@
   <data name="goal.adjustment_invalid.detail" xml:space="preserve">
     <value>The correction is empty or would make a counter negative.</value>
   </data>
+  <data name="zakat.balance_insufficient" xml:space="preserve">
+    <value>Insufficient zakat balance</value>
+  </data>
+  <data name="zakat.balance_insufficient.detail" xml:space="preserve">
+    <value>The voucher amount is above this product's zakat balance.</value>
+  </data>
 </root>
