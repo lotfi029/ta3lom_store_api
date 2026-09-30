@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <!-- Arabic (neutral language, 11 §1.3). Key = error code (title); key.detail = detail. -->
+  <data name="validation.failed" xml:space="preserve">
+    <value>البيانات المدخلة غير صحيحة</value>
+  </data>
+  <data name="validation.failed.detail" xml:space="preserve">
+    <value>راجع الحقول المذكورة في errors ثم أعد المحاولة.</value>
+  </data>
+  <data name="http.not_found" xml:space="preserve">
+    <value>غير موجود</value>
+  </data>
+  <data name="http.not_found.detail" xml:space="preserve">
+    <value>المسار أو المورد المطلوب غير موجود.</value>
+  </data>
+  <data name="http.rate_limited" xml:space="preserve">
+    <value>طلبات كثيرة</value>
+  </data>
+  <data name="http.rate_limited.detail" xml:space="preserve">
+    <value>تجاوزت الحد المسموح من الطلبات. أعد المحاولة بعد المدة المذكورة في Retry-After.</value>
+  </data>
+  <data name="http.origin_forbidden" xml:space="preserve">
+    <value>مصدر الطلب غير مسموح</value>
+  </data>
+  <data name="http.origin_forbidden.detail" xml:space="preserve">
+    <value>لا يُقبل هذا الطلب من هذا الموقع.</value>
+  </data>
+  <data name="auth.unauthenticated" xml:space="preserve">
+    <value>يلزم تسجيل الدخول</value>
+  </data>
+  <data name="auth.unauthenticated.detail" xml:space="preserve">
+    <value>رمز الدخول مفقود أو منتهي الصلاحية.</value>
+  </data>
+  <data name="auth.forbidden" xml:space="preserve">
+    <value>غير مصرح</value>
+  </data>
+  <data name="auth.forbidden.detail" xml:space="preserve">
+    <value>صلاحياتك لا تسمح بهذا الإجراء.</value>
+  </data>
+  <data name="concurrency.conflict" xml:space="preserve">
+    <value>تم تعديل البيانات</value>
+  </data>
+  <data name="concurrency.conflict.detail" xml:space="preserve">
+    <value>عدّل شخص آخر هذه البيانات. أعد تحميلها ثم حاول مرة أخرى.</value>
+  </data>
+  <data name="http.error" xml:space="preserve">
+    <value>تعذّر تنفيذ الطلب</value>
+  </data>
+  <data name="http.error.detail" xml:space="preserve">
+    <value>لا يمكن تنفيذ هذا الطلب بهذه الصيغة.</value>
+  </data>
+  <data name="server.error" xml:space="preserve">
+    <value>خطأ غير متوقع</value>
+  </data>
+  <data name="server.error.detail" xml:space="preserve">
+    <value>حدث خطأ غير متوقع. حاول مرة أخرى لاحقًا.</value>
+  </data>
+</root>

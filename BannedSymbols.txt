@@ -1,0 +1,7 @@
+P:System.DateTime.Now;Use IClock (09 §3.5)
+P:System.DateTime.UtcNow;Use IClock (09 §3.5)
+P:System.DateTime.Today;Use IClock.RiyadhToday (09 §3.5)
+P:System.DateTimeOffset.Now;Use IClock (09 §3.5)
+P:System.DateTimeOffset.UtcNow;Use IClock (09 §3.5)
+M:Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.Migrate(Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade);Migrations ship as the idempotent script (09 §12 rule 8)
+M:Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.MigrateAsync(Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade,System.Threading.CancellationToken);Migrations ship as the idempotent script (09 §12 rule 8)

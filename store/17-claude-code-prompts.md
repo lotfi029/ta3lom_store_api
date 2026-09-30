@@ -25,6 +25,13 @@ As of 30 September 2026:
 same date as .NET 10, and RC1 is licensed for production. Pin the RC SDK in `global.json` and move to GA
 the week it ships. Where the docs say *.NET 10 / C# 14 / EF Core 10*, read *.NET 11 / C# 15 / EF Core 11*.
 
+**Current state (S-01 review, 30 Sep 2026): build on .NET 10 LTS for now.** The cloud container can
+install only the .NET 10 SDK (Ubuntu archive); the .NET 11 download host is blocked. The move to
+.NET 11 happens at GA as **its own PR**: it changes the TFM, `global.json`, and the package majors
+(EF Core, Npgsql EF Core provider, Microsoft.AspNetCore.OpenApi, Microsoft.AspNetCore.Mvc.Testing and the
+other `10.0.x` Microsoft packages). `LangVersion` is not pinned, so C# follows the TFM, and `global.json`
+uses `rollForward: latestFeature`.
+
 **Fallback rule:** if a required library (Npgsql EF Core provider, QuestPDF, Quartz.NET, Scalar)
 does not yet support .NET 11 during RC, keep the library at its latest stable version (packages built
 for `net10.0` or `netstandard2.x` run on .NET 11). If that fails, stop and report. Do not downgrade the
