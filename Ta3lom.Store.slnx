@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Ta3lom.Store.Api/Ta3lom.Store.Api.csproj" />
+    <Project Path="src/Ta3lom.Store.Application/Ta3lom.Store.Application.csproj" />
+    <Project Path="src/Ta3lom.Store.Contracts/Ta3lom.Store.Contracts.csproj" />
+    <Project Path="src/Ta3lom.Store.Domain/Ta3lom.Store.Domain.csproj" />
+    <Project Path="src/Ta3lom.Store.Infrastructure/Ta3lom.Store.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Ta3lom.Store.Api.IntegrationTests/Ta3lom.Store.Api.IntegrationTests.csproj" />
+    <Project Path="tests/Ta3lom.Store.Application.Tests/Ta3lom.Store.Application.Tests.csproj" />
+    <Project Path="tests/Ta3lom.Store.ArchitectureTests/Ta3lom.Store.ArchitectureTests.csproj" />
+    <Project Path="tests/Ta3lom.Store.Domain.Tests/Ta3lom.Store.Domain.Tests.csproj" />
+    <Project Path="tests/Ta3lom.Store.Testing/Ta3lom.Store.Testing.csproj" />
+  </Folder>
+</Solution>

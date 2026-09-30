@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- WebApplicationFactory tests. S-01 needs no database; Testcontainers/external PostgreSQL arrive in S-02. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Ta3lom.Store.Api/Ta3lom.Store.Api.csproj" />
+    <ProjectReference Include="../Ta3lom.Store.Testing/Ta3lom.Store.Testing.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Shouldly" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Shouldly" />
+    <Using Include="Xunit" />
+    <Using Include="Ta3lom.Store.Testing" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Implements the Application ports. Never references Api. -->
+  <ItemGroup>
+    <ProjectReference Include="../Ta3lom.Store.Application/Ta3lom.Store.Application.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Quartz.Extensions.Hosting" />
+  </ItemGroup>
+</Project>

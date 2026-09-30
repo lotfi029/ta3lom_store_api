@@ -1,0 +1,3 @@
+# Business rules implemented so far (plan 14 §13.1). RuleCoverageTests requires each listed rule
+# to exist in store/03-business-rules.md and to have at least one test tagged [Rule("RUL-nn")].
+# Each session appends the rules it closes, one per line. S-01 implements none.

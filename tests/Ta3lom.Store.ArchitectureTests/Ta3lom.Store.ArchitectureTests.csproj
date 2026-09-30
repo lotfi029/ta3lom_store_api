@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Layer rules, banned libraries, floating-point money, RUL coverage, error-code catalogue. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Ta3lom.Store.Api/Ta3lom.Store.Api.csproj" />
+    <!-- Scanned for [Rule] attributes by RuleCoverageTests. -->
+    <ProjectReference Include="../Ta3lom.Store.Domain.Tests/Ta3lom.Store.Domain.Tests.csproj" />
+    <ProjectReference Include="../Ta3lom.Store.Application.Tests/Ta3lom.Store.Application.Tests.csproj" />
+    <ProjectReference Include="../Ta3lom.Store.Api.IntegrationTests/Ta3lom.Store.Api.IntegrationTests.csproj" />
+    <ProjectReference Include="../Ta3lom.Store.Testing/Ta3lom.Store.Testing.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="NetArchTest.Rules" />
+    <PackageReference Include="Shouldly" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Shouldly" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ImplementedRules.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../store/03-business-rules.md" Link="docs/03-business-rules.md" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../store/11-api-contract.md" Link="docs/11-api-contract.md" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../Directory.Packages.props" Link="docs/Directory.Packages.props" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

@@ -40,7 +40,7 @@ fix whichever is wrong in the same pull request (09 §10.3).
 | | |
 |---|---|
 | Production | `https://store-api.ta3lom.sa/v1` |
-| Staging | `https://staging-store-api.ta3lom.sa/v1` |
+| Staging | `https://store-api-staging.ta3lom.sa/v1` |
 | Local | `https://localhost:7180/v1` |
 | Health | `/health/live`, `/health/ready` (unversioned) |
 
@@ -76,7 +76,7 @@ site as `ta3lom.sa`):
 
 CORS: origins `https://ta3lom.sa`, `https://www.ta3lom.sa` (plus `http://localhost:4200` in
 Development), `Access-Control-Allow-Credentials: true`, exposed headers `ETag`, `Retry-After`,
-`Location`. Browser calls to cookie routes use `withCredentials: true`. Unsafe requests to cookie
+`Location`, `Idempotent-Replayed`. Browser calls to cookie routes use `withCredentials: true`. Unsafe requests to cookie
 routes with any other `Origin` return `403 http.origin_forbidden`.
 
 Staff roles (RUL-62, FR-S71) and the policies used in this document:
@@ -258,6 +258,7 @@ The client switches on `code`, never on `title`.
 | `setting.unknown_key` / `setting.invalid_value` | 404 / 422 | settings editor | FR-S76 |
 | `template.render_failed` | 422 | Scriban syntax error; `line`, `column` | FR-S77 |
 | `staff.email_taken` | 409 | `staff_user.email` unique | — |
+| `http.error` | 4xx | any other HTTP-level error without a specific code (e.g. 405 method not allowed, 415); default of 09 §5.14 | — |
 | `server.error` | 500 | unexpected; no internals | — |
 
 ### 1.7 Caching

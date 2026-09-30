@@ -145,7 +145,7 @@ them is **same-site** (though cross-origin).
 | Credentials | `true` (cookies `t3s_rt`, `t3s_srt`, `t3s_cart`) |
 | Methods | `GET, POST, PUT, PATCH, DELETE` |
 | Headers | `Authorization, Content-Type, Idempotency-Key, Accept-Language` |
-| Exposed | `Location, Retry-After` |
+| Exposed | `ETag, Retry-After, Location, Idempotent-Replayed` (same list as 11 §1.2) |
 | Preflight cache | `Access-Control-Max-Age: 600` |
 | Not covered | `/v1/payments/webhooks/*` (server-to-server, no CORS), `/health/*` |
 

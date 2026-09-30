@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- BCL only (09 §2). No EF Core, no Microsoft.Extensions.*, no Contracts. -->
+  <ItemGroup>
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)../../BannedSymbols.Money.txt" Link="BannedSymbols.Money.txt" />
+  </ItemGroup>
+</Project>

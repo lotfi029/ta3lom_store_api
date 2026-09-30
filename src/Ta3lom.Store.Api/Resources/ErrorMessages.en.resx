@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <!-- English. Key = error code (title); key.detail = detail. -->
+  <data name="validation.failed" xml:space="preserve">
+    <value>Validation failed</value>
+  </data>
+  <data name="validation.failed.detail" xml:space="preserve">
+    <value>Check the fields listed in errors and try again.</value>
+  </data>
+  <data name="http.not_found" xml:space="preserve">
+    <value>Not found</value>
+  </data>
+  <data name="http.not_found.detail" xml:space="preserve">
+    <value>The requested route or resource does not exist.</value>
+  </data>
+  <data name="http.rate_limited" xml:space="preserve">
+    <value>Too many requests</value>
+  </data>
+  <data name="http.rate_limited.detail" xml:space="preserve">
+    <value>You have sent too many requests. Try again after the Retry-After delay.</value>
+  </data>
+  <data name="http.origin_forbidden" xml:space="preserve">
+    <value>Origin not allowed</value>
+  </data>
+  <data name="http.origin_forbidden.detail" xml:space="preserve">
+    <value>This request is not accepted from this site.</value>
+  </data>
+  <data name="auth.unauthenticated" xml:space="preserve">
+    <value>Sign-in required</value>
+  </data>
+  <data name="auth.unauthenticated.detail" xml:space="preserve">
+    <value>The access token is missing or has expired.</value>
+  </data>
+  <data name="auth.forbidden" xml:space="preserve">
+    <value>Forbidden</value>
+  </data>
+  <data name="auth.forbidden.detail" xml:space="preserve">
+    <value>Your role does not allow this action.</value>
+  </data>
+  <data name="concurrency.conflict" xml:space="preserve">
+    <value>Data changed</value>
+  </data>
+  <data name="concurrency.conflict.detail" xml:space="preserve">
+    <value>Someone else changed this data. Reload it and try again.</value>
+  </data>
+  <data name="http.error" xml:space="preserve">
+    <value>Request not supported</value>
+  </data>
+  <data name="http.error.detail" xml:space="preserve">
+    <value>This request cannot be processed in this form.</value>
+  </data>
+  <data name="server.error" xml:space="preserve">
+    <value>Unexpected error</value>
+  </data>
+  <data name="server.error.detail" xml:space="preserve">
+    <value>An unexpected error occurred. Please try again later.</value>
+  </data>
+</root>

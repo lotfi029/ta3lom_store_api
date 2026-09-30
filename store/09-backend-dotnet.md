@@ -1,6 +1,6 @@
 # 09 — Backend Implementation Guide (.NET)
 
-**Revision:** S1 draft r1 · 29 September 2026 (reconciled with the canonical changes after round 1)
+**Revision:** S1 draft r2 · 30 September 2026 (r1 reconciled after round 1; r2: Application → Domain only, ErrorCodes in Application, staging host — S-01 plan review)
 
 Implementation guide for the new repository `repos/ta3lom-store-api`: an ASP.NET Core **.NET 10 LTS**
 (C# 14) modular monolith exposing Minimal APIs at `https://store-api.ta3lom.sa/v1`, backed by
@@ -89,7 +89,7 @@ ta3lom-store-api/
 │   │   └── DependencyInjection.cs
 │   ├── Ta3lom.Store.Contracts/        # request/response records only; no logic; source for OpenAPI → TS
 │   │   ├── Catalog/  Cart/  Checkout/  Me/  Admin/ …
-│   │   └── Common/                    # PagedResponse<T>, MoneyString converter, ErrorCodes (constants)
+│   │   └── Common/                    # PagedResponse<T>, MoneyString converter (ErrorCodes live in Application/Abstractions)
 │   └── Ta3lom.Store.Api/
 │       ├── Program.cs
 │       ├── Endpoints/                 # one static class per module: MapCatalogEndpoints(), MapAdminOrderEndpoints() …
@@ -232,7 +232,6 @@ flowchart LR
     Api --> Infrastructure
     Infrastructure[Ta3lom.Store.Infrastructure<br/>EF Core, adapters, jobs, PDF] --> Application
     Application[Ta3lom.Store.Application<br/>handlers, validators, ports] --> Domain
-    Application --> Contracts
     Domain[Ta3lom.Store.Domain<br/>entities, value objects, rules, events]
     Contracts[Ta3lom.Store.Contracts<br/>DTOs only]
 ```
@@ -240,10 +239,15 @@ flowchart LR
 | Project | May reference | Must not reference |
 |---|---|---|
 | `Domain` | BCL only | anything else, including EF Core attributes, `Microsoft.Extensions.*`, `Contracts` |
-| `Contracts` | BCL only | `Domain` (DTOs are not entities) |
-| `Application` | `Domain`, `Contracts`, FluentValidation, `Microsoft.Extensions.Logging.Abstractions` | EF Core, Npgsql, ASP.NET Core, any adapter SDK |
+| `Contracts` | BCL only | `Domain` (DTOs are not entities), `Application` |
+| `Application` | `Domain`, FluentValidation, `Microsoft.Extensions.Logging.Abstractions`, `Microsoft.Extensions.DependencyInjection.Abstractions`, Scrutor | `Contracts`, EF Core, Npgsql, ASP.NET Core, any adapter SDK |
 | `Infrastructure` | `Application`, `Domain`, EF Core, Npgsql, Quartz, QuestPDF, PdfSharp, Scriban, HTTP resilience | `Api` |
 | `Api` | all of the above | — (composition root) |
+
+**r2 (S-01 review, 30 Sep 2026):** Application references **Domain only**. `Contracts` are HTTP DTOs and
+belong to the presentation side: handlers return Application result records (and `PagedResult<T>`),
+and the Api maps them to Contracts with static mappers in `Api/Mapping/` (no AutoMapper). Error-code
+constants live in `Application/Abstractions/ErrorCodes.cs`.
 
 Module isolation inside a layer: a module reaches another module only through an application
 interface (for example `Checkout` calls `ICatalogPricing`, not `Catalog` internals) or through a
@@ -271,7 +275,7 @@ public sealed class LayerTests
     public void Application_does_not_know_EF_or_AspNet() =>
         Types.InAssembly(Application).ShouldNot()
             .HaveDependencyOnAny("Microsoft.EntityFrameworkCore", "Npgsql", "Microsoft.AspNetCore",
-                                 "Ta3lom.Store.Infrastructure", "Ta3lom.Store.Api")
+                                 "Ta3lom.Store.Contracts", "Ta3lom.Store.Infrastructure", "Ta3lom.Store.Api")
             .GetResult().IsSuccessful.ShouldBeTrue();
 
     [Fact]
@@ -360,7 +364,7 @@ public readonly record struct Result<T>
 Domain methods throw `DomainException(code)` only for invariant violations that indicate a bug or a
 race (for example a unit already allocated). Expected business outcomes — "campaign ended",
 "duplicate course" — are returned as `Error` values with a stable `code` from
-`Contracts/Common/ErrorCodes.cs`. The code list is in [11 §1.6](11-api-contract.md#16-errors--problemdetails-rfc-9457).
+`Application/Abstractions/ErrorCodes.cs`. The code list is in [11 §1.6](11-api-contract.md#16-errors--problemdetails-rfc-9457).
 
 ### 3.3 Validation
 
@@ -2546,7 +2550,7 @@ export const options = {
     http_req_failed: ['rate<0.01'],
   },
 };
-const API = __ENV.API ?? 'https://staging-store-api.ta3lom.sa/v1';
+const API = __ENV.API ?? 'https://store-api-staging.ta3lom.sa/v1';
 export function browse() { http.get(`${API}/catalog/products?type=course`); http.get(`${API}/catalog/live?slugs=water-for-schools,digital-teacher`); sleep(1); }
 export function cart() { /* POST /cart/lines (sponsor digital-teacher amount 100.00), GET /cart, PATCH qty, DELETE */ }
 export function checkout() { /* OTP via staging fixed code → POST /checkout with Idempotency-Key → fake capture webhook → poll /orders/{ref}/status */ }

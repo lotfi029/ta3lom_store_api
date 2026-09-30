@@ -1,0 +1,2 @@
+T:System.Double;Never float money: use decimal or Money (RUL-31)
+T:System.Single;Never float money: use decimal or Money (RUL-31)
