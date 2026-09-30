@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<ICartMergeHook, Features.Cart.CartMergeHook>();            // RUL-17 (S-13 fills the S-04 hook)
         services.AddScoped<ISponsoredUnitCompletion, Features.Allocation.Commands.SponsoredUnitCompletion>();   // RUL-50 (S-25 fills the S-40 hook)
         services.AddScoped<Features.Allocation.AllocationReader>();
+        services.AddScoped<Features.Giving.PoolSweeper>();
         services.AddScoped<Features.Cart.CartCatalog>();
         services.AddScoped<Features.Cart.CartAccess>();
         services.AddScoped<Features.Checkout.CheckoutPricing>();

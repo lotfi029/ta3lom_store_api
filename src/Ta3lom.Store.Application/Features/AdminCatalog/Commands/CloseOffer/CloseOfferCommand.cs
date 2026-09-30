@@ -3,14 +3,16 @@ using Ta3lom.Store.Domain.Entities.Catalog;
 
 namespace Ta3lom.Store.Application.Features.AdminCatalog.Commands.CloseOffer;
 
-/// `POST /v1/admin/offers/{offerId}/close` (#71): `is_active = false`. The pool sweep (RUL-46, `sweepPool`) is
-/// added by S-42; until then the response carries `swept: null`.
+/// `POST /v1/admin/offers/{offerId}/close` (#71): `is_active = false`; with `sweepPool` the non-zakat pool remainder moves to
+/// the general fund in the same transaction (RUL-46, `PoolSweeper`; `swept`/`pairId` in the response, null when nothing moved).
 public sealed record CloseOfferCommand(Guid OfferId, bool SweepPool) : ICommand<CloseOfferResponse>;
 
 internal sealed class CloseOfferCommandHandler(
     IGenericRepository<SponsorshipOffer> offers,
     IProductRepository products,
     AdminCatalogReader reader,
+    Giving.PoolSweeper sweeper,
+    ICurrentActor actor,
     IUnitOfWork uow,
     IClock clock) : ICommandHandler<CloseOfferCommand, CloseOfferResponse>
 {
@@ -22,9 +24,15 @@ internal sealed class CloseOfferCommandHandler(
             return GeneralErrors.NotFound;
         }
 
-        offer.Close();
-        (await products.GetByIdAsync(offer.ProductId, ct))?.Touch(clock.UtcNow);
-        await uow.SaveChangesAsync(ct);
-        return new CloseOfferResponse(await reader.OfferAsync(offer, ct), null, null);
+        var swept = await uow.ExecuteInTransactionAsync(async token =>
+        {
+            var now = clock.UtcNow;
+            offer.Close();
+            (await products.GetByIdAsync(offer.ProductId, token))?.Touch(now);
+            var result = command.SweepPool ? await sweeper.SweepAsync(offer.Id, offer.ProductId, actor.Name ?? "staff", now, token) : null;
+            await uow.SaveChangesAsync(token);
+            return Result.Success(result);
+        }, ct);
+        return new CloseOfferResponse(await reader.OfferAsync(offer, ct), swept.Value?.Amount.ToWire(), swept.Value?.PairId);
     }
 }

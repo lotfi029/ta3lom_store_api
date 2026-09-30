@@ -18,3 +18,13 @@ public sealed record CauseUpdateInput(string? TitleAr, string? TitleEn, string? 
 /// Staff view of a cause update (#81–#83).
 public sealed record AdminCauseUpdate(Guid Id, Guid ProductId, string TitleAr, string? TitleEn, string? BodyAr, string? BodyEn, ImageResponse? Image,
     int? UnitsDelivered, DateOnly OccurredOn, bool IsPublic, bool NotifyDonors, DateTimeOffset? NotifiedAt, DateTimeOffset CreatedAt, string CreatedBy);
+
+/// `GET /v1/admin/products/{id}/goal-adjustments` row (#136): sweeps (signed amounts, shared `pairId`) and corrections.
+public sealed record GoalAdjustmentRow(long Id, string Kind, string Amount, int Units, Guid? OfferId, Guid? PairId, string? Note, DateTimeOffset At,
+    string Actor);
+
+/// `POST …/goal-adjustments` (#137): a signed correction; `amount` as a money string ("-50.00").
+public sealed record GoalCorrectionInput(string? Amount, int Units, string? Note);
+
+/// 201: the correction and the product's goal figures after it.
+public sealed record GoalCorrectionResponse(GoalAdjustmentRow Adjustment, DTOs.AdminCatalog.GoalFiguresResponse Goal);

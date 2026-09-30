@@ -36,6 +36,13 @@ public sealed class PoolContribution : Entity
     public static PoolContribution FromLine(Guid sponsorshipOfferId, Guid orderLineId, Money amount, bool isZakat, DateTimeOffset now) =>
         new(sponsorshipOfferId, orderLineId, amount, amount, now) { IsZakat = isZakat };
 
+    /// RUL-46: the unconverted remainder moved to the general fund at campaign end.
+    public void Sweep(DateTimeOffset now)
+    {
+        Remaining = Money.Zero;
+        SweptToFundAt = now;
+    }
+
     /// FIFO conversion (database/01 §4.5): takes `min(remaining, need)` and returns it.
     public Money Consume(Money need)
     {

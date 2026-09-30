@@ -559,4 +559,10 @@
   <data name="cause_update.already_notified.detail" xml:space="preserve">
     <value>لا يمكن حذف تحديث أُرسل إلى المتبرعين.</value>
   </data>
+  <data name="goal.adjustment_invalid" xml:space="preserve">
+    <value>تصحيح غير صالح</value>
+  </data>
+  <data name="goal.adjustment_invalid.detail" xml:space="preserve">
+    <value>التصحيح فارغ أو سيجعل أحد العدادات سالبًا.</value>
+  </data>
 </root>

@@ -1,5 +1,5 @@
 # Build progress
-Next: S-42 — Close campaigns, pool sweep, goal corrections
+Next: S-43 — Zakat ledger and disbursement vouchers
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -42,7 +42,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-24 beneficiary register | done | S-24 | 100–108 | — | ✅ tools/smoke/S-24.http | PII encrypted + masked, SoD reveal audited, atomic import |
 | S-25 allocation | done | S-25 | 109–114 | AllocationAlerts, LapseUnits; BeneficiaryInvite, UnitLapsed, AllocationAlert/Escalation, SponsorUnitAllocated/Completed; S-40 hook filled | ✅ tools/smoke/S-25.http | all-or-nothing, SKIP LOCKED verified; integrity 0 rows |
 | S-26 cards and cause updates | done | S-26 | 45, 81–84, 93 | DedicationCard complete; CauseUpdatePublished | ✅ tools/smoke/S-26.http | card has no amount; notify once per donor |
-| S-42 close campaigns, sweep | todo | | 71 (sweep), 136, 137 | CloseCampaigns; PoolSwept | | integrity check |
+| S-42 close/sweep/corrections | done | S-42 | 71 (sweep), 136, 137 | CloseCampaigns; PoolSwept | ✅ tools/smoke/S-42.http | sweeps once; zakat stays; integrity 0 rows |
 | S-43 zakat ledger, vouchers | todo | | 115, 116 | — | | |
 | S-31 `/v1/me` | todo | | 21–28, 30, 31, 33–39 | — | | |
 | S-33 dashboard, reports, admin ops | todo | | 53, 117, 129–133 | — | | |
@@ -407,3 +407,16 @@ Tests (test phase)
 
 Done when (local smoke)
 - [x] All of the above verified with curl (tools/smoke/S-26.http)
+
+### S-42 — Close campaigns, pool sweep, goal corrections
+
+Build
+- [x] `CloseCampaigns` job (00:05 Riyadh) and offer close (#71): deactivate; sweep each pool remainder to the general fund as a `goal_adjustment` pair (`pool_sweep_out` / `pool_sweep_in`, shared `pair_id`)
+- [x] `swept_to_fund_at` set; outbox `PoolSwept` (account note); zakat never swept
+- [x] Finance `correction` adjustments (#136, #137), audited
+
+Tests (test phase)
+- [ ] after a sweep, integrity checks 4 and 6 return 0 rows; running the job twice sweeps once
+
+Done when (local smoke)
+- [x] Verified with curl and the dev job (tools/smoke/S-42.http); integrity checks 0 rows

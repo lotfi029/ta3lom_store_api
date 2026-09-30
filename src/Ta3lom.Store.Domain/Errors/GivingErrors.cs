@@ -9,5 +9,7 @@ public static class GivingErrors
 
     public static Error DedicationNotFound => Error.NotFound(ErrorCodes.NotFound, "Dedication not found.");
 
+    public static Error GoalAdjustmentInvalid => Error.Unprocessable(ErrorCodes.GoalAdjustmentInvalid, "Empty correction, or a counter would go negative.");
+
     public static Error CauseUpdateAlreadyNotified => Error.Conflict(ErrorCodes.CauseUpdateAlreadyNotified, "Donors were already notified of this update.");
 }

@@ -135,6 +135,10 @@ the owner should confirm.
 | 2026-09-30 | S-26 | Cause update donors and channel | 03 RUL-54, 09 §4.3 | One SMS per distinct contact mobile of paid gift orders (`donate`/`sponsor`) for the product, in the order's locale; e-mail not used (every donor has a mobile, not every donor an e-mail); private updates can still notify | "SMS or email" | |
 | 2026-09-30 | S-26 | Cards before S-26 in the dev DB | RUL-22 | Dedications of orders paid before S-26 stayed `pending` (the S-17 stub consumed their messages); dev data only — staff resend (#93) sends them | no production data yet | |
 | 2026-09-30 | S-26 | Update assets and product types | 11 §9.8 | `assetId` must be a public media asset; updates are allowed on any product (11 shows them on any product page), not only causes | 11 §2.6 | |
+| 2026-09-30 | S-42 | Zakat remainder at campaign end | 03 RUL-46, 09 §5.5 | The sweep moves only non-zakat remainders; zakat contributions stay open in the pool (finance moves them, from S2) instead of failing the whole close as the 09 sketch (`pool.zakat_sweep`) would | "zakat money is never swept"; the job must not fail nightly | |
+| 2026-09-30 | S-42 | Offers closed without a sweep | 03 RUL-46 | `CloseCampaigns` also sweeps offers past `ends_at` that were closed manually with `sweepPool: false` and still hold a non-zakat remainder | "the remainder moves to the general fund" at the offer's end | |
+| 2026-09-30 | S-42 | No general fund | 03 RUL-07/46 | Without a cause flagged `is_general_fund` nothing is swept (`swept: null`); the offer still closes | cannot invent a target | |
+| 2026-09-30 | S-42 | Correction limits | 11 §9.2, §1.6 | `goal.adjustment_invalid` when amount and units are both 0 or `raised_amount`/`funded_units` would go below 0; amount ±10,000,000.00, units ±100,000, note 1–500 | 11 §1.6 | |
 
 ## Bugs found by tests
 

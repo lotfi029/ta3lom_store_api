@@ -3344,6 +3344,110 @@
         }
       }
     },
+    "/v1/admin/products/{id}/goal-adjustments": {
+      "get": {
+        "tags": [
+          "Admin goal adjustments"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedResultOfGoalAdjustmentRow"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Admin goal adjustments"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoalCorrectionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalCorrectionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/orders": {
       "get": {
         "tags": [
@@ -9078,6 +9182,71 @@
           }
         }
       },
+      "GoalAdjustmentRow": {
+        "required": [
+          "id",
+          "kind",
+          "amount",
+          "units",
+          "offerId",
+          "pairId",
+          "note",
+          "at",
+          "actor"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "units": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "offerId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "pairId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actor": {
+            "type": "string"
+          }
+        }
+      },
       "GoalCard": {
         "required": [
           "unitAmount",
@@ -9149,6 +9318,51 @@
           },
           "isGeneralFund": {
             "type": "boolean"
+          }
+        }
+      },
+      "GoalCorrectionInput": {
+        "required": [
+          "amount",
+          "units",
+          "note"
+        ],
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "units": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "GoalCorrectionResponse": {
+        "required": [
+          "adjustment",
+          "goal"
+        ],
+        "type": "object",
+        "properties": {
+          "adjustment": {
+            "$ref": "#/components/schemas/GoalAdjustmentRow"
+          },
+          "goal": {
+            "$ref": "#/components/schemas/GoalFiguresResponse"
           }
         }
       },
@@ -10432,6 +10646,47 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CauseUpdateResponse"
+            }
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "PagedResultOfGoalAdjustmentRow": {
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GoalAdjustmentRow"
             }
           },
           "total": {
@@ -12291,6 +12546,9 @@
     },
     {
       "name": "Admin fulfilment"
+    },
+    {
+      "name": "Admin goal adjustments"
     },
     {
       "name": "Admin orders"

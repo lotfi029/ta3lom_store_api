@@ -67,3 +67,7 @@ public sealed record AllocationEscalation(Guid ProductId, string Slug, int Units
 
 /// RUL-54: SMS to every distinct paid donor of the product, once per update (and once per donor on retry).
 public sealed record CauseUpdatePublished(Guid UpdateId, Guid ProductId) : IDomainEvent;
+
+/// RUL-46: a pool remainder moved to the general fund (account-history note for the contributors, shown from
+/// `swept_to_fund_at`; nothing is sent).
+public sealed record PoolSwept(Guid OfferId, Guid ProductId, Guid GeneralFundId, Guid PairId, string Amount) : IDomainEvent;

@@ -559,4 +559,10 @@
   <data name="cause_update.already_notified.detail" xml:space="preserve">
     <value>An update already sent to donors cannot be deleted.</value>
   </data>
+  <data name="goal.adjustment_invalid" xml:space="preserve">
+    <value>Invalid correction</value>
+  </data>
+  <data name="goal.adjustment_invalid.detail" xml:space="preserve">
+    <value>The correction is empty or would make a counter negative.</value>
+  </data>
 </root>

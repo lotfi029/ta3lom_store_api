@@ -1297,6 +1297,11 @@ Five failures (password or TOTP) in 15 minutes lock the account for one hour (FR
 
 `ProductInput`:
 
+As built (S-42): `GoalAdjustment` = `{ id, kind, amount, units, offerId, pairId, note, at, actor }` (signed amount; a sweep is
+two rows with the same `pairId`). `POST` returns `{ adjustment, goal: GoalFigures }`; `amount` is a signed money string
+(`"-50.00"`), `note` is required. The offer close (#71) with `sweepPool` returns `swept` (amount string) and `pairId`, both
+null when nothing moved or no general fund exists; zakat contributions are never swept and stay in the pool.
+
 ```json
 {
   "type": "cause", "slug": "school-bag", "categoryId": null, "coverAssetId": "0199a200-3c4d-7e5f-9a6b-7c8d9e0f1a01",

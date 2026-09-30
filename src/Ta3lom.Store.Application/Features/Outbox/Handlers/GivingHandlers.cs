@@ -80,3 +80,9 @@ internal sealed class CauseUpdatePublishedHandler(IApplicationDbContext db, Noti
         }
     }
 }
+
+/// RUL-46: the sweep is shown in the contributors' account history (from `swept_to_fund_at`, S-31); nothing is sent.
+internal sealed class PoolSweptHandler : OutboxHandler<PoolSwept>
+{
+    protected override Task HandleAsync(PoolSwept message, OutboxEnvelope envelope, CancellationToken ct) => Task.CompletedTask;
+}

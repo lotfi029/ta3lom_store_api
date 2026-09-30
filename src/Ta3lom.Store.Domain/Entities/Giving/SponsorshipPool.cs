@@ -81,6 +81,28 @@ public sealed class SponsorshipPool
         UpdatedAt = now;
         return new PoolingResult(units, fundings);
     }
+
+    /// RUL-46 at campaign end: the non-zakat remainder moves to the general fund (`open` = the locked open contributions);
+    /// zakat contributions are never swept and stay in the pool for finance. Returns the swept amount (zero = nothing).
+    public Money Sweep(IReadOnlyList<PoolContribution> open, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(open);
+        var sweepable = open.Where(c => !c.IsZakat && c.Remaining > Money.Zero && c.SweptToFundAt is null).ToList();
+        var amount = sweepable.Select(c => c.Remaining).Sum();
+        if (amount == Money.Zero)
+        {
+            return Money.Zero;
+        }
+
+        foreach (var c in sweepable)
+        {
+            c.Sweep(now);
+        }
+
+        Balance -= amount;
+        UpdatedAt = now;
+        return amount;
+    }
 }
 
 /// What one pooling step produced: new pooled units and the contributions that funded them.
