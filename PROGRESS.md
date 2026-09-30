@@ -190,7 +190,7 @@ Build
 - [x] Audit §2.2: badge endpoint; `MergeInto` (RUL-17); owned course dropped on merge with a notice
 
 Tests (test phase)
-- [ ] One test per RUL-11 … RUL-19 and RUL-21; print qty 21 rejected; digital qty forced to 1; `amount` line never merges; a dedicated line never merges; zakat on a non-eligible cause → `cart.zakat_not_allowed`; campaign ended → `cart.campaign_ended`; the merge drops an owned course with a notice
+- [x] One test per RUL-11 … RUL-19 and RUL-21; print qty 21 rejected; digital qty forced to 1; `amount` line never merges; a dedicated line never merges; zakat on a non-eligible cause → `cart.zakat_not_allowed`; campaign ended → `cart.campaign_ended`; the merge drops an owned course with a notice
 
 Done when (local smoke)
 - [x] A guest adds the prototype's mixed cart, signs in and keeps it (merge verified, cookie removed)

@@ -57,7 +57,40 @@ public class ScenarioFactory : StoreApiFactory
         ["Store:Email:Mode"] = "sink",
         ["Store:Email:SinkFolder"] = _mailFolder,
         ["Store:Outbox:Enabled"] = "false",
+        // Every client of a test class shares one address; the limits themselves are covered by RateLimitTests and S-04.
+        ["Store:RateLimits:Public:TokenLimit"] = "100000",
+        ["Store:RateLimits:Public:TokensPerPeriod"] = "100000",
+        ["Store:RateLimits:OtpRequest:PermitLimit"] = "100000",
+        ["Store:RateLimits:OtpVerify:PermitLimit"] = "100000",
+        ["Store:RateLimits:AuthRefresh:PermitLimit"] = "100000",
+        ["Store:RateLimits:StaffLogin:PermitLimit"] = "100000",
+        ["Store:RateLimits:Cart:PermitLimit"] = "100000",
+        ["Store:RateLimits:Checkout:PermitLimit"] = "100000",
+        ["Store:RateLimits:Me:PermitLimit"] = "100000",
+        ["Store:RateLimits:Download:PermitLimit"] = "100000",
+        ["Store:RateLimits:Admin:PermitLimit"] = "100000",
     };
+
+    /// A client for the browser flows with cookies (`t3s_cart`, `t3s_rt` are Secure, so the base address is https).
+    public HttpClient Browser(string? remoteIp = null)
+    {
+        var client = CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
+        client.DefaultRequestHeaders.Add(RemoteIpStartupFilter.Header, remoteIp ?? $"198.51.100.{Random.Shared.Next(1, 250)}");
+        return client;
+    }
+
+    /// OTP sign-in through the API (code read from the SMS sink); returns the verify body (token, customer, cart notices).
+    public async Task<JsonElement> SignInAsync(HttpClient browser, string mobile)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        (await browser.PostAsJsonAsync("/v1/auth/otp/request", new { mobile }, ct)).StatusCode.ShouldBe(System.Net.HttpStatusCode.Accepted);
+        var code = System.Text.RegularExpressions.Regex.Match(SmsTo(mobile)[0].Body, @"\d{6}").Value;
+        var verified = await browser.PostAsJsonAsync("/v1/auth/otp/verify", new { mobile, code }, ct);
+        verified.StatusCode.ShouldBe(System.Net.HttpStatusCode.OK, await verified.Content.ReadAsStringAsync(ct));
+        var body = JsonDocument.Parse(await verified.Content.ReadAsStringAsync(ct)).RootElement.Clone();
+        browser.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", body.GetProperty("accessToken").GetString());
+        return body;
+    }
 
     protected override void ConfigureTestServices(IServiceCollection services)
     {

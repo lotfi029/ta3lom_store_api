@@ -90,3 +90,22 @@ public static class Shop
 }
 
 public sealed record PlacedOrder(string Reference, string GrandTotal, Guid OrderId);
+
+/// JSON calls on a plain client (browser flows with cookies).
+public static class HttpJson
+{
+    public static async Task<(HttpStatusCode Status, JsonElement Body)> SendJsonAsync(this HttpClient client, HttpMethod method, string path, object? body = null)
+    {
+        using var request = new HttpRequestMessage(method, path);
+        if (body is not null)
+        {
+            request.Content = System.Net.Http.Json.JsonContent.Create(body);
+        }
+
+        var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+        var text = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        return (response.StatusCode, text.Length > 0 && text[0] is '{' or '[' ? JsonDocument.Parse(text).RootElement.Clone() : default);
+    }
+
+    public static string Code(this JsonElement problem) => problem.GetProperty("code").GetString()!;
+}
