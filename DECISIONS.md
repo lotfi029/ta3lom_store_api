@@ -168,6 +168,7 @@ the owner should confirm.
 | 2026-09-30 | H-1 | Checkout at 50 simultaneous requests | NFR-S03 | 20 concurrent: p95 145 ms ✅; 50 released at one instant on a 4-vCPU box that also runs PostgreSQL and the load client: p95 0.79 s, 0 errors — CPU queueing, not a lock (every checkout statement < 1 ms); re-measure with k6 on staging | local box is not production-sized | REVIEW |
 | 2026-09-30 | H-1 | Indexes | plan 14 §12 "tune from pg_stat_statements" | None added: all reads < 1 ms mean; seq scans only on tables < 100 rows; the settlement burst waits on the gapless `document_counter` row by design (RUL-59) | nothing to tune at dev volumes; re-check on staging | |
 | 2026-09-30 | H-1 | Permissions-Policy | 08 §6.3 headers | `camera=(), microphone=(), geolocation=(), payment=()` on every response | standard header-scan item for a JSON API | |
+| 2026-09-30 | T-1 | Test isolation | Run-plan-review §3 T-1 ("shared fixture with a reset") | One migrated + seeded database per test class (`ScenarioFactory` as `IClassFixture`) instead of Respawn resets; tokens minted with the app's `IAccessTokenIssuer` (OTP/TOTP flows keep their own S-04/S-05 tests); outbox and Quartz off, run on demand | classes run in parallel without sharing state; no extra package | |
 
 ## Bugs found by tests
 

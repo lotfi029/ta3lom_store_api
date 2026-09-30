@@ -1,5 +1,5 @@
 # Build progress
-Next: T-1 — test infrastructure (shared PG fixture with reset, FakeClock factory, sink readers, role tokens, builders, SettleViaDevTrigger)
+Next: T-2 — settlement tests (repeat 5×, parallel, amount mismatch, expiry, duplicate course, zakat, counters, only IOrderSettlement sets paid)
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -76,7 +76,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 
 | Step | Status | Commits | Notes |
 |---|---|---|---|
-| T-1 test infrastructure | todo | | |
+| T-1 test infrastructure | done | T-1 | `ScenarioFactory` (own migrated + seeded DB per class, FakeClock, sinks, outbox/jobs on demand, minted customer/staff tokens, `SettleAsync`), `Shop` builders; 2 self-tests |
 | T-2 settlement | todo | | |
 | T-3 pooling | todo | | |
 | T-4 allocation | todo | | |
