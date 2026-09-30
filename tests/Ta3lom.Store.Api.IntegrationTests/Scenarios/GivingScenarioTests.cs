@@ -156,10 +156,15 @@ public sealed class GivingScenarioTests(ScenarioFactory factory) : IClassFixture
         var fundedAt = await factory.ScalarAsync<DateTime>($"SELECT funded_at FROM store.sponsored_unit WHERE id = '{oldest}'");
 
         var start = factory.Clock.UtcNow;
+        var neverStarted = await factory.ScalarAsync<long>("""
+            SELECT count(*) FROM store.sponsored_unit u JOIN store.enrolment e ON e.sponsored_unit_id = u.id
+            WHERE u.status = 'allocated' AND e.started_at IS NULL AND e.status IN ('pending_sync', 'active')
+            """);                                                                                                       // other tests of the class may leave some
+        neverStarted.ShouldBeGreaterThanOrEqualTo(1);
         try
         {
             factory.Clock.Advance(TimeSpan.FromDays(61));                                                               // never started
-            (await factory.RunAsync<LapseUnitsCommand, int>(new LapseUnitsCommand())).Value.ShouldBe(1);
+            (await factory.RunAsync<LapseUnitsCommand, int>(new LapseUnitsCommand())).Value.ShouldBe((int)neverStarted);
         }
         finally
         {
