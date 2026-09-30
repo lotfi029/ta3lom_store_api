@@ -1739,6 +1739,12 @@ parallel vouchers can never overdraw the balance.
   "rows": [ { "day": "2026-09-14", "productType": "course", "orders": 7, "gross": "2380.00", "vat": "0.00", "refunded": "0.00" } ] }
 ```
 
+As built (S-33): `from`/`to` are Riyadh days (default the last 30, at most 366, else `400`); unknown `{name}` → `404`. JSON
+keys are the camelCase column names; `format=csv` returns `text/csv; charset=utf-8` with a UTF-8 BOM, the snake_case header
+row and `Content-Disposition: attachment; filename={name}-{from}-{to}.csv`. `productId` filters `gifts`, `zakat` and
+`allocation`. `refunds` reads the payment service's rows (empty until it writes them). Plan 14's names (`sales-vat`,
+`gifts-by-product`) are not used; the names above are the contract.
+
 ### 9.17 Settings (FR-S76, RUL §M)
 
 | Method | Path | Policy | Request | Response | Errors |
@@ -1802,7 +1808,10 @@ change, reset) are audited.
 | POST | `/admin/customers/{id}/block` | `staff:finance` | `{ reason }` | `CustomerRow` (`blocked`; tokens revoked) | — |
 | POST | `/admin/customers/{id}/unblock` | `staff:finance` | — | `CustomerRow` (`active`) | — |
 
-Lookup is by exact mobile or email only (no browsing of the customer base).
+Lookup is by exact mobile or email only (no browsing of the customer base). As built (S-33): `CustomerRow` = `{ id, mobile, fullName, email,
+status, createdAt, lastLoginAt, ordersCount }`; `Customer360` = `{ customer, orders: OrderSummary[] (latest 50), giving:
+GivingTotals, enrolments }`; neither `mobile` nor `email` → `400`; block needs a `reason` (audited as `customer.block`);
+an anonymised account → `404`.
 
 ### 9.21 Audit log (FR-S78)
 

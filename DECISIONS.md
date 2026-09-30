@@ -147,6 +147,9 @@ the owner should confirm.
 | 2026-09-30 | S-31 | Access token after delete | RUL-61, 08 | Stateless 15-minute access tokens are not revoked; refresh tokens are, so the session ends at expiry (the data behind it is already anonymised) | no per-request status lookup | REVIEW |
 | 2026-09-30 | S-31 | Giving numbers | 11 §5.8 | `shareOfSeat` = contribution ÷ seat price (11 example 100/350 = 0.29); `converted` = Σ `unit_funding`; lapsed seats count as `awaitingAllocation` ("being re-allocated", RUL-50); `given` subtracts refunds | 11 example | |
 | 2026-09-30 | S-31 | Certificate target | 11 §5.5, OP-3 | 302 to `{web}/{locale}/store/certificates/{no}` (where the storefront shows it); the owner may point it at the LMS once Q-05/OP-3 are decided | OP-3 open | REVIEW |
+| 2026-09-30 | S-33 | Report names | 11 §9.16 vs plan 14 S-33 | 11 wins (precedence): `sales`, `vat`, `gifts`, `zakat`, `allocation`, `refunds`, `shipments` instead of plan 14's `sales-vat`, `gifts-by-product`; `refunds` is served too (read-only over the payment service's tables) | 11 > 14 | |
+| 2026-09-30 | S-33 | Integrity checks from code | database/03 §6 | `db/reference/003_integrity_checks.sql` is embedded in Infrastructure and run statement by statement (`SELECT count(*) FROM (…)` with `search_path = store`) — one source for the dashboard alert and the S-35 job | no drift between script and job | |
+| 2026-09-30 | S-33 | Customer block / anonymised | 03 RUL-61, 11 §9.20 | Block needs a reason (explicit `customer.block` audit row), revokes every refresh token; access tokens run out within 15 min. Deleted (anonymised) accounts answer 404 to block/unblock | a deleted account is gone | |
 
 ## Bugs found by tests
 

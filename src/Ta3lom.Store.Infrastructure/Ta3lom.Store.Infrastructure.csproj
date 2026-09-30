@@ -27,6 +27,8 @@
   <ItemGroup>
     <!-- P0-3: fonts for the PDF documents (SIL OFL 1.1, licences next to the files). -->
     <EmbeddedResource Include="Resources/Fonts/*.ttf" LogicalName="Fonts.%(Filename)%(Extension)" />
+    <!-- The nightly checks run from code (S-33 dashboard, S-35 IntegrityChecks job): one source, db/reference/003. -->
+    <EmbeddedResource Include="../../db/reference/003_integrity_checks.sql" LogicalName="Integrity.003_integrity_checks.sql" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Ta3lom.Store.Api.IntegrationTests" />

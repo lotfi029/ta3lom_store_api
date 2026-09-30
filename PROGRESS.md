@@ -1,5 +1,5 @@
 # Build progress
-Next: S-33 — Dashboard, reports and admin operations
+Next: S-35 — Templates, retention, integrity and remaining events
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -45,7 +45,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-42 close/sweep/corrections | done | S-42 | 71 (sweep), 136, 137 | CloseCampaigns; PoolSwept | ✅ tools/smoke/S-42.http | sweeps once; zakat stays; integrity 0 rows |
 | S-43 zakat ledger | done | S-43 | 115, 116 | — | ✅ tools/smoke/S-43.http | balance guard serialised; M6 passed |
 | S-31 /v1/me | done | S-31 | 21–28, 30, 31, 33–39 | — | ✅ tools/smoke/S-31.http | delete = anonymise; donor views without beneficiary identity |
-| S-33 dashboard, reports, admin ops | todo | | 53, 117, 129–133 | — | | |
+| S-33 dashboard/reports/admin ops | done | S-33 | 53, 117, 129–133 | — | ✅ tools/smoke/S-33.http | 7 reports JSON + CSV BOM; integrity checks run from code |
 | S-35 templates, retention, integrity | todo | | 120–122 | IntegrityChecks, Retention, PruneIdempotencyKeys | | |
 | S-45 sponsor digest | todo | | — | SponsorDigest | | |
 | Close-out 7.1–7.3 | todo | | | | | |
@@ -448,3 +448,17 @@ Tests (test phase)
 
 Done when (local smoke)
 - [x] Verified with curl (tools/smoke/S-31.http); integrity checks 0 rows
+
+### S-33 — Dashboard, reports and admin operations
+
+Build
+- [x] Dashboard (#53): today/7/30-day sales and gifts, top products, campaign progress, allocation backlog, open alerts
+- [x] Reports (#117) as JSON and CSV (UTF-8 BOM), Riyadh date range: the 11 §9.16 set (sales, vat, gifts, zakat, allocation, refunds, shipments)
+- [x] Audit log query (#133); customer lookup, detail, block/unblock (#129–#132)
+
+Tests (test phase)
+- [ ] report totals equal the integrity-check sums on seeded scenarios; the CSV opens with Arabic intact (BOM present)
+- [ ] blocked customer → OTP verify refused (RUL-61)
+
+Done when (local smoke)
+- [x] Verified with curl (tools/smoke/S-33.http)

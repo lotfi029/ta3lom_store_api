@@ -106,6 +106,7 @@ public static class DependencyInjection
         services.AddScoped<ICartRepository, CartRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IStockRepository, StockRepository>();
+        services.AddScoped<IOperationsStatus, Services.Operations.OperationsStatus>();
         services.AddScoped<IGoalProgressRepository, GoalProgressRepository>();
         services.AddScoped<ISponsorshipPoolRepository, SponsorshipPoolRepository>();
         services.AddScoped<IBeneficiaryRepository, BeneficiaryRepository>();
