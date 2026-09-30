@@ -59,6 +59,8 @@ public static class DependencyInjection
             q.AddStoreJob<ExpireUnpaidOrdersJob>(ExpireUnpaidOrdersJob.Cron);
             q.AddStoreJob<LmsProgressSyncJob>(LmsProgressSyncJob.Cron);
             q.AddStoreJob<LowStockAlertJob>(LowStockAlertJob.Cron);
+            q.AddStoreJob<AllocationAlertsJob>(AllocationAlertsJob.Cron);
+            q.AddStoreJob<LapseUnitsJob>(LapseUnitsJob.Cron);
         });
         services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
         services.AddSingleton<IJobRunner, QuartzJobRunner>();
@@ -106,6 +108,7 @@ public static class DependencyInjection
         services.AddScoped<IGoalProgressRepository, GoalProgressRepository>();
         services.AddScoped<ISponsorshipPoolRepository, SponsorshipPoolRepository>();
         services.AddScoped<IBeneficiaryRepository, BeneficiaryRepository>();
+        services.AddScoped<ISponsoredUnitRepository, SponsoredUnitRepository>();
         services.AddScoped<IDocumentNumberAllocator, DocumentNumberAllocator>();
         services.AddScoped<IEnrolmentRepository, EnrolmentRepository>();
         services.AddScoped<IDownloadGrantRepository, DownloadGrantRepository>();

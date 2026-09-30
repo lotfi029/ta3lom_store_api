@@ -1,6 +1,6 @@
 namespace Ta3lom.Store.Domain.Entities.Giving;
 
-/// Table `allocation_batch` (db/reference/001_store_schema.sql). State only in S-02; behaviour arrives with its session.
+/// Table `allocation_batch` (RUL-47): one officer request; all of its units were allocated together.
 public sealed class AllocationBatch : AggregateRoot
 {
     public AllocationBatch(Guid productId, string createdBy, DateTimeOffset now) : base(Guid.CreateVersion7())
@@ -21,4 +21,7 @@ public sealed class AllocationBatch : AggregateRoot
     public string CreatedBy { get; private set; } = null!;
 
     public DateTimeOffset CreatedAt { get; private set; }
+
+    public static AllocationBatch Create(Guid productId, string? note, string createdBy, DateTimeOffset now) =>
+        new(productId, createdBy, now) { Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim() };
 }

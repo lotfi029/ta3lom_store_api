@@ -18,4 +18,6 @@ internal sealed class WebLinks(IOptions<StoreOptions> options) : IWebLinks
 
     public string Learn(string locale, string courseSlug, string token) =>
         $"{Base}/{locale}/learn/{Uri.EscapeDataString(courseSlug)}?t={Uri.EscapeDataString(token)}";
+
+    public string MyCourses(string locale) => $"{Base}/{locale}/store/account/courses";
 }

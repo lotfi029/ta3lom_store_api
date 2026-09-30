@@ -35,4 +35,8 @@ public sealed class ZakatLedgerEntry
     /// RUL-20: zakat received on a paid gift line.
     public static ZakatLedgerEntry In(Guid productId, Money amount, Guid orderLineId, DateTimeOffset now) =>
         new(productId, ZakatDirection.In, amount, "settlement", now) { OrderLineId = orderLineId };
+
+    /// RUL-20: the zakat share of a sponsored unit leaves the ring-fence at allocation (`reference` = unit id; once per unit).
+    public static ZakatLedgerEntry OutForUnit(Guid productId, Money amount, Guid unitId, string actor, DateTimeOffset now) =>
+        new(productId, ZakatDirection.Out, amount, actor, now) { Reference = unitId.ToString() };
 }

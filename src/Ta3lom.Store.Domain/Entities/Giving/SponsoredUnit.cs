@@ -57,4 +57,59 @@ public sealed class SponsoredUnit : AggregateRoot
 
     /// RUL-47d: any zakat contribution in its funding makes the unit zakat-funded.
     public void MarkZakatFunded() => HasZakat = true;
+
+    /// RUL-47/50: `awaiting_allocation → allocated` (policy checked by the caller); raises `SponsorUnitAllocated`.
+    public SponsoredUnitEvent Allocate(Guid beneficiaryId, Guid batchId, string actor, DateTimeOffset now)
+    {
+        if (Status != UnitStatus.AwaitingAllocation)
+        {
+            throw new DomainException("unit.not_awaiting", "Only awaiting units can be allocated.");
+        }
+
+        BeneficiaryId = Guard.NotEmpty(beneficiaryId);
+        AllocationBatchId = Guard.NotEmpty(batchId);
+        AllocatedAt = now;
+        AllocatedBy = Guard.NotNull(actor);
+        Raise(new Events.SponsorUnitAllocated(Id, ProductId, OrderLineId));
+        return Move(UnitStatus.Allocated, actor, now);
+    }
+
+    /// RUL-50: `allocated → completed` (course finished or copy delivered); raises `SponsorUnitCompleted`. Null when the unit
+    /// is not allocated (idempotent for the sync job; the manual route maps it to `unit.invalid_transition`).
+    public SponsoredUnitEvent? Complete(string actor, DateTimeOffset now)
+    {
+        if (Status != UnitStatus.Allocated)
+        {
+            return null;
+        }
+
+        CompletedAt = now;
+        Raise(new Events.SponsorUnitCompleted(Id, ProductId, OrderLineId));
+        return Move(UnitStatus.Completed, actor, now);
+    }
+
+    /// RUL-50: `allocated → lapsed → awaiting_allocation`; keeps `funded_at`, so it returns to the front of the FIFO queue
+    /// (RUL-48). Returns both events; the former beneficiary is returned for the SMS.
+    public (IReadOnlyList<SponsoredUnitEvent> Events, Guid FormerBeneficiaryId) Lapse(string actor, DateTimeOffset now)
+    {
+        if (Status != UnitStatus.Allocated || BeneficiaryId is not { } former)
+        {
+            throw new DomainException("unit.not_allocated", "Only allocated units lapse.");
+        }
+
+        LapsedAt = now;
+        var lapsed = Move(UnitStatus.Lapsed, actor, now);
+        BeneficiaryId = null;
+        AllocationBatchId = null;
+        AllocatedAt = null;
+        AllocatedBy = null;
+        return ([lapsed, Move(UnitStatus.AwaitingAllocation, actor, now)], former);
+    }
+
+    private SponsoredUnitEvent Move(UnitStatus to, string actor, DateTimeOffset now)
+    {
+        var from = Status;
+        Status = to;
+        return SponsoredUnitEvent.Transition(Id, from, to, actor, now);
+    }
 }

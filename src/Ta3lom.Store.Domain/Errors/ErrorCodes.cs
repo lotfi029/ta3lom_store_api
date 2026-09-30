@@ -84,4 +84,14 @@ public static class ErrorCodes
     public const string BeneficiaryMobileExists = "beneficiary.mobile_exists";
     public const string BeneficiaryImportInvalid = "beneficiary.import_invalid";
     public const string BeneficiaryNoLiveSeat = "beneficiary.no_live_seat";
+    public const string AllocationNoUnits = "allocation.no_units";
+    public const string AllocationRejected = "allocation.rejected";
+    public const string AllocationNotApproved = "allocation.not_approved";
+    public const string AllocationGroupMismatch = "allocation.group_mismatch";
+    public const string AllocationAlreadyEnrolled = "allocation.already_enrolled";
+    public const string AllocationZakatMismatch = "allocation.zakat_mismatch";
+    public const string AllocationNoMatchingUnit = "allocation.no_matching_unit";
+    public const string AllocationMobileRequired = "allocation.mobile_required";
+    public const string AllocationConflict = "allocation.conflict";
+    public const string UnitInvalidTransition = "unit.invalid_transition";
 }

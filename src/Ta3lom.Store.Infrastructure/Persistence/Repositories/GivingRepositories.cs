@@ -51,4 +51,25 @@ internal sealed class BeneficiaryRepository(StoreDbContext db) : GenericReposito
         var n = (await Db.Database.SqlQuery<long>($"SELECT nextval('store.beneficiary_code_seq') AS \"Value\"").ToListAsync(ct)).Single();
         return "B-" + n.ToString("D6", System.Globalization.CultureInfo.InvariantCulture);
     }
+
+    public async Task<IReadOnlyList<Beneficiary>> LockManyAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct = default)
+    {
+        var array = ids.ToArray();
+        return await Set.FromSql($"SELECT * FROM store.beneficiary WHERE id = ANY({array}) ORDER BY id FOR UPDATE").ToListAsync(ct);
+    }
+}
+
+internal sealed class SponsoredUnitRepository(StoreDbContext db) : GenericRepository<SponsoredUnit>(db), ISponsoredUnitRepository
+{
+    public async Task<IReadOnlyList<SponsoredUnit>> LockOldestAwaitingAsync(Guid productId, int count, CancellationToken ct = default) =>
+        await Set.FromSql($"""
+            SELECT *, xmin FROM store.sponsored_unit
+             WHERE product_id = {productId} AND status = 'awaiting_allocation'
+             ORDER BY funded_at, id
+             LIMIT {count}
+             FOR UPDATE SKIP LOCKED
+            """).ToListAsync(ct);
+
+    public async Task<SponsoredUnit?> LockAsync(Guid unitId, CancellationToken ct = default) =>
+        (await Set.FromSql($"SELECT *, xmin FROM store.sponsored_unit WHERE id = {unitId} FOR UPDATE").ToListAsync(ct)).SingleOrDefault();
 }

@@ -158,6 +158,7 @@ public sealed class StoreDbContext(DbContextOptions<StoreDbContext> options, IPi
         MapView<GoalView>(modelBuilder, "v_goal");
         MapView<SalesDailyView>(modelBuilder, "v_sales_daily");
         MapView<AllocationBacklogView>(modelBuilder, "v_allocation_backlog");
+        modelBuilder.Entity<AllocationBacklogView>().Property(v => v.Overdue30).HasColumnName("overdue_30");   // the convention would say overdue30
         MapView<ZakatBalanceView>(modelBuilder, "v_zakat_balance");
 
         ApplyEnumConverters(modelBuilder);

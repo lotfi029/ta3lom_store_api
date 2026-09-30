@@ -50,3 +50,17 @@ public sealed record LowStockAlert(Guid FormatId, string Sku, string TitleAr, in
 /// RUL-52 (sent from S-25): SMS invitation to a beneficiary with an allocated course seat (sent to the beneficiary's or the
 /// guardian's mobile; never shown to donors).
 public sealed record BeneficiaryInvite(Guid BeneficiaryId, Guid EnrolmentId) : IDomainEvent;
+
+/// RUL-50 digest feed (S-45): a unit was allocated / completed. No customer message.
+public sealed record SponsorUnitAllocated(Guid UnitId, Guid ProductId, Guid? OrderLineId) : IDomainEvent;
+
+public sealed record SponsorUnitCompleted(Guid UnitId, Guid ProductId, Guid? OrderLineId) : IDomainEvent;
+
+/// RUL-50: short SMS to the former beneficiary (or guardian) of a lapsed seat.
+public sealed record UnitLapsed(Guid UnitId, Guid BeneficiaryId, Guid ProductId) : IDomainEvent;
+
+/// RUL-49: units awaiting allocation past `allocation_alert_days` (staff) / `allocation_escalate_days` (manager), once per
+/// product per Riyadh day.
+public sealed record AllocationAlert(Guid ProductId, string Slug, int Units, DateTimeOffset OldestFundedAt, DateOnly Day) : IDomainEvent;
+
+public sealed record AllocationEscalation(Guid ProductId, string Slug, int Units, DateTimeOffset OldestFundedAt, DateOnly Day) : IDomainEvent;

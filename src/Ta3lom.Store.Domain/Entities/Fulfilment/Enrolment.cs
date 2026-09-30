@@ -45,6 +45,15 @@ public sealed class Enrolment : AggregateRoot
 
     public bool IsLive => Status is EnrolmentStatus.PendingSync or EnrolmentStatus.Active or EnrolmentStatus.Completed;
 
+    /// RUL-47/52: a sponsored seat for the beneficiary's customer row; `pending_sync` until the LMS accepts it.
+    public static Enrolment ForSponsoredUnit(Guid customerId, Guid productId, Guid sponsoredUnitId, int? accessDays, DateTimeOffset now) =>
+        new(customerId, productId, EnrolmentSource.Sponsored, now)
+        {
+            SponsoredUnitId = Guard.NotEmpty(sponsoredUnitId),
+            Status = EnrolmentStatus.PendingSync,
+            ExpiresAt = accessDays is > 0 ? now.AddDays(accessDays.Value) : null,
+        };
+
     /// RUL-39/42: a purchase starts `pending_sync`; the `LmsEnrol` outbox message grants access and makes it `active`.
     /// Access is lifetime unless the course defines `access_days`.
     public static Enrolment ForPurchase(Guid customerId, Guid productId, Guid orderLineId, int? accessDays, DateTimeOffset now) =>

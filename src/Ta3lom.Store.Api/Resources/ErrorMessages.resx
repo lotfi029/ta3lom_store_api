@@ -487,4 +487,64 @@
   <data name="beneficiary.no_live_seat.detail" xml:space="preserve">
     <value>لا يملك المستفيد مقعد دورة مخصّصًا لإرسال الدعوة.</value>
   </data>
+  <data name="allocation.no_units" xml:space="preserve">
+    <value>لا توجد وحدات متاحة</value>
+  </data>
+  <data name="allocation.no_units.detail" xml:space="preserve">
+    <value>لا توجد وحدات بانتظار التخصيص لهذا المنتج الآن.</value>
+  </data>
+  <data name="allocation.rejected" xml:space="preserve">
+    <value>تعذّر التخصيص</value>
+  </data>
+  <data name="allocation.rejected.detail" xml:space="preserve">
+    <value>لم يُخصَّص شيء؛ راجع أسباب الرفض لكل مستفيد.</value>
+  </data>
+  <data name="allocation.not_approved" xml:space="preserve">
+    <value>المستفيد غير معتمد</value>
+  </data>
+  <data name="allocation.not_approved.detail" xml:space="preserve">
+    <value>لم يُعتمد المستفيد بعد.</value>
+  </data>
+  <data name="allocation.group_mismatch" xml:space="preserve">
+    <value>فئة غير مطابقة</value>
+  </data>
+  <data name="allocation.group_mismatch.detail" xml:space="preserve">
+    <value>المستفيد ليس من الفئة المستهدفة لهذا العرض.</value>
+  </data>
+  <data name="allocation.already_enrolled" xml:space="preserve">
+    <value>مسجّل مسبقًا</value>
+  </data>
+  <data name="allocation.already_enrolled.detail" xml:space="preserve">
+    <value>المستفيد مسجّل في هذه الدورة بالفعل.</value>
+  </data>
+  <data name="allocation.zakat_mismatch" xml:space="preserve">
+    <value>غير مستحق للزكاة</value>
+  </data>
+  <data name="allocation.zakat_mismatch.detail" xml:space="preserve">
+    <value>الوحدة مموّلة من الزكاة والمستفيد غير مستحق لها.</value>
+  </data>
+  <data name="allocation.no_matching_unit" xml:space="preserve">
+    <value>لا توجد وحدة مناسبة</value>
+  </data>
+  <data name="allocation.no_matching_unit.detail" xml:space="preserve">
+    <value>لا توجد وحدة متاحة تناسب هذا المستفيد.</value>
+  </data>
+  <data name="allocation.mobile_required" xml:space="preserve">
+    <value>الجوال مطلوب</value>
+  </data>
+  <data name="allocation.mobile_required.detail" xml:space="preserve">
+    <value>مقعد الدورة يحتاج رقم جوال للمستفيد أو وليّ أمره.</value>
+  </data>
+  <data name="allocation.conflict" xml:space="preserve">
+    <value>تعارض في التخصيص</value>
+  </data>
+  <data name="allocation.conflict.detail" xml:space="preserve">
+    <value>تغيّرت البيانات أثناء التخصيص؛ أعد المحاولة.</value>
+  </data>
+  <data name="unit.invalid_transition" xml:space="preserve">
+    <value>تغيير غير مسموح</value>
+  </data>
+  <data name="unit.invalid_transition.detail" xml:space="preserve">
+    <value>لا يمكن نقل الوحدة إلى هذه الحالة الآن.</value>
+  </data>
 </root>

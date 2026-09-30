@@ -1655,6 +1655,16 @@ enrolment (`source = 'sponsored'`), sets `beneficiary.customer_id` and queues th
 RUL-52). A unit that later lapses (`LapseUnits`) gets its enrolment `revoked` and the beneficiary a
 short SMS; they can be allocated again (RUL-50).
 
+As built (S-25): `BacklogRow` = `{ productId, slug, titleAr, awaiting, overdue30, allocated, completed, oldestAwaiting,
+groupLabelAr }`. `UnitRow` = `{ id, source, unitPrice, hasZakat, status, fundedAt, beneficiaryCode, allocatedAt, allocatedBy,
+completedAt, lapsedAt }` (beneficiaries by code only). `AllocationBatch` = `{ id, productId, slug, note, createdBy, createdAt,
+units: UnitRow[] }`. The per-person checks (a, c, e) and the group (b) run first for every selected beneficiary and are all
+reported at once; zakat-funded units are matched first to zakat-eligible people (d). `allocation.rejected` also lists
+`allocation.no_matching_unit` when free units remain that nobody in the request may take. `POST /admin/units/{id}/complete`
+is for book copies only (course seats complete through `LmsProgressSync`); it writes the `sponsor_distribution` stock
+movement (OP-9) and can fail with `stock.below_reserved`. Escalations go to `Store:Email:ManagerAlerts` (the staff
+mailbox when empty).
+
 ### 9.15 Zakat ledger (FR-S61, RUL-20)
 
 | Method | Path | Policy | Request | Response | Errors |

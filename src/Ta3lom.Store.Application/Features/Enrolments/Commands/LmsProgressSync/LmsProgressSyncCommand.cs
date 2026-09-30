@@ -84,9 +84,3 @@ internal sealed partial class LmsProgressSyncCommandHandler(
         || (p.CompletedAt is not null && e.Status != EnrolmentStatus.Completed)
         || (!string.IsNullOrWhiteSpace(p.CertificateNo) && e.CertificateNo is null);
 }
-
-/// S-40 placeholder for the sponsored-unit hook; S-25 replaces it with the real transition.
-internal sealed class NoSponsoredUnitCompletion : ISponsoredUnitCompletion
-{
-    public Task CompleteAsync(Guid sponsoredUnitId, DateTimeOffset completedAt, CancellationToken ct = default) => Task.CompletedTask;
-}

@@ -12,9 +12,10 @@ internal sealed class NotificationDispatch(
     IClock clock)
 {
     public async Task SendOnceAsync(OutboxEnvelope envelope, MessageChannel channel, string recipient, string templateKey, string locale,
-        object model, Guid? relatedOrderId, CancellationToken ct, IReadOnlyList<EmailAttachment>? attachments = null)
+        object model, Guid? relatedOrderId, CancellationToken ct, IReadOnlyList<EmailAttachment>? attachments = null, string? storedRecipient = null)
     {
-        var row = await notifications.TryClaimAsync(envelope.Id, channel, recipient, templateKey, locale, relatedOrderId, clock.UtcNow, ct);
+        // `storedRecipient`: what `notification.recipient` keeps when the address itself is protected (beneficiary mobiles, PDPL).
+        var row = await notifications.TryClaimAsync(envelope.Id, channel, storedRecipient ?? recipient, templateKey, locale, relatedOrderId, clock.UtcNow, ct);
         if (row is null)
         {
             return;                                                                     // already sent or in flight

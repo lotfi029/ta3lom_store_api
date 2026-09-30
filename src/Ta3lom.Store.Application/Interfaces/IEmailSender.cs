@@ -7,6 +7,9 @@ public interface IEmailSender
     /// The staff alert mailbox (`Store:Email:StaffAlerts`).
     string StaffAlertsAddress { get; }
 
+    /// The manager's mailbox for escalations (`Store:Email:ManagerAlerts`; the staff mailbox when empty, RUL-49).
+    string ManagerAlertsAddress { get; }
+
     Task<DeliveryResult> SendAsync(EmailMessage message, CancellationToken ct = default);
 }
 

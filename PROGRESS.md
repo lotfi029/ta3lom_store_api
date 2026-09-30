@@ -1,5 +1,5 @@
 # Build progress
-Next: S-25 — Allocation
+Next: S-26 — Dedication cards and cause updates
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -40,7 +40,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-41 low stock alert | done | S-41 | — | LowStockAlert job + message | ✅ tools/smoke/S-41.http | once per format per day; M5 passed |
 | S-23 units and pooling | done | S-23 | — | SponsorUnitsEffect, PoolContributionEffect; guard removed | ✅ tools/smoke/S-23.http | 100+150+120 → 1 unit, 20 left; 6 parallel OK; integrity 0 rows |
 | S-24 beneficiary register | done | S-24 | 100–108 | — | ✅ tools/smoke/S-24.http | PII encrypted + masked, SoD reveal audited, atomic import |
-| S-25 allocation | todo | | 109–114 | AllocationAlerts, LapseUnits; SponsorUnitAllocated, AllocationAlert/Escalation, BeneficiaryInvite, UnitLapsed, LmsRevoke | | integrity check |
+| S-25 allocation | done | S-25 | 109–114 | AllocationAlerts, LapseUnits; BeneficiaryInvite, UnitLapsed, AllocationAlert/Escalation, SponsorUnitAllocated/Completed; S-40 hook filled | ✅ tools/smoke/S-25.http | all-or-nothing, SKIP LOCKED verified; integrity 0 rows |
 | S-26 dedication cards, cause updates | todo | | 45, 81–84, 93 | DedicationCard; CauseUpdatePublished | | |
 | S-42 close campaigns, sweep | todo | | 71 (sweep), 136, 137 | CloseCampaigns; PoolSwept | | integrity check |
 | S-43 zakat ledger, vouchers | todo | | 115, 116 | — | | |
@@ -370,3 +370,25 @@ Tests (test phase)
 
 Done when (local smoke)
 - [x] All of the above verified with curl (tools/smoke/S-24.http)
+
+### S-25 — Allocation
+
+Build
+- [x] Backlog (#109, `v_allocation_backlog`), FIFO unit list (#110), candidate search (#111: approved, group, region, zakat-only, no live enrolment)
+- [x] `AllocateUnits` (#112): all-or-nothing; units `FOR UPDATE SKIP LOCKED` in `funded_at` order; RUL-47 (a)–(e) for every pair
+- [x] Course seats: find or create the `customer` by mobile, set `beneficiary.customer_id`, `sponsored` enrolment, `BeneficiaryInvite`; books: `distribution` row
+- [x] Zakat `out` for the zakat share of the unit (once per unit)
+- [x] `SponsorUnitAllocated` outbox message
+- [x] Batch view (#113) and manual complete (#114, books with proof; `sponsor_distribution` stock movement)
+- [x] `AllocationAlerts` (30/90 days) and `LapseUnits` (→ `awaiting_allocation`, original `funded_at`, enrolment `revoked`, `UnitLapsed` SMS)
+- [x] Owner fix 1: the S-40 `LmsProgressSync` hook completes the sponsored unit (`SponsorUnitCompleted`)
+- [x] Outbox handlers: BeneficiaryInvite, UnitLapsed, AllocationAlert, AllocationEscalation, SponsorUnitAllocated, SponsorUnitCompleted (+ LmsRevoke from S-19)
+
+Tests (test phase)
+- [ ] One test per RUL-47 (a)–(e); the batch rolls back entirely on one failure
+- [ ] Two officers allocating the same product in parallel never get the same unit
+- [ ] A zakat-funded unit is rejected for a non-zakat beneficiary; a seat without a mobile → `allocation.mobile_required`
+- [ ] Lapse → re-queue at the front; invite SMS in the sink
+
+Done when (local smoke)
+- [x] All of the above verified with curl and the dev jobs; integrity checks 0 rows

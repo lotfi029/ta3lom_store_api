@@ -18,4 +18,18 @@ public interface IBeneficiaryRepository : IGenericRepository<Beneficiary>
 {
     /// `B-000123` from `beneficiary_code_seq`.
     Task<string> NextCodeAsync(CancellationToken ct = default);
+
+    /// The selected beneficiaries, locked `FOR UPDATE` in id order (an allocation batch sees a stable register).
+    Task<IReadOnlyList<Beneficiary>> LockManyAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct = default);
+}
+
+/// Unit row locks (database/01 §4.6).
+public interface ISponsoredUnitRepository : IGenericRepository<SponsoredUnit>
+{
+    /// RUL-48: the `count` oldest awaiting units of the product (`funded_at, id`), `FOR UPDATE SKIP LOCKED` — two officers
+    /// allocating the same product at once get disjoint slices.
+    Task<IReadOnlyList<SponsoredUnit>> LockOldestAwaitingAsync(Guid productId, int count, CancellationToken ct = default);
+
+    /// One unit locked `FOR UPDATE` (completion, lapse).
+    Task<SponsoredUnit?> LockAsync(Guid unitId, CancellationToken ct = default);
 }

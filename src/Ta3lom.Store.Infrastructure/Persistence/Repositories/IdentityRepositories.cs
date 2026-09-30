@@ -12,6 +12,16 @@ internal sealed class CustomerRepository(StoreDbContext db) : GenericRepository<
 {
     public Task<Customer?> FindByMobileAsync(string mobileE164, CancellationToken ct = default) =>
         Set.FirstOrDefaultAsync(c => c.Mobile == mobileE164, ct);
+
+    public async Task<Guid> FindOrCreateByMobileAsync(string mobileE164, DateTimeOffset now, CancellationToken ct = default)
+    {
+        await Db.Database.ExecuteSqlAsync($"""
+            INSERT INTO store.customer (id, mobile, locale, anonymous_default, marketing_opt_in, status, created_at, updated_at)
+            VALUES ({Guid.CreateVersion7()}, {mobileE164}, 'ar', false, false, 'active', {now}, {now})
+            ON CONFLICT (mobile) DO NOTHING
+            """, ct);
+        return (await Db.Database.SqlQuery<Guid>($"SELECT id AS \"Value\" FROM store.customer WHERE mobile = {mobileE164}").ToListAsync(ct)).Single();
+    }
 }
 
 internal sealed class OtpChallengeRepository(StoreDbContext db) : GenericRepository<OtpChallenge>(db), IOtpChallengeRepository

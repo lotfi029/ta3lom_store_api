@@ -14,4 +14,7 @@ public interface IWebLinks
 
     /// `{web}/{locale}/learn/{slug}?t={token}` — the internal course player (InternalAccessLmsGateway).
     string Learn(string locale, string courseSlug, string token);
+
+    /// `{web}/{locale}/store/account/courses` — "My courses" after the OTP sign-in (RUL-52 invite).
+    string MyCourses(string locale);
 }
