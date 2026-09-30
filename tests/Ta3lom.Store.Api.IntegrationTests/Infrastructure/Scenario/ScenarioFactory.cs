@@ -82,9 +82,11 @@ public class ScenarioFactory : StoreApiFactory
     public Task<IReadOnlyList<DevMailMessage>> MailAsync(int count = 50) =>
         Services.GetRequiredService<IDevMailInbox>().LatestAsync(count, TestContext.Current.CancellationToken);
 
-    /// Runs the outbox until no message is due (a failing handler is retried later, like production).
+    /// Runs the outbox until no message is due (a failing handler is retried later, like production). Messages written while
+    /// the FakeClock was ahead carry a future `next_attempt_at`; never-attempted ones are made due first.
     public async Task DrainOutboxAsync()
     {
+        await ExecuteSqlAsync("UPDATE store.outbox_message SET next_attempt_at = now() WHERE processed_at IS NULL AND attempts = 0 AND next_attempt_at > now()");
         var dispatcher = Services.GetServices<IHostedService>().OfType<OutboxDispatcher>().Single();
         for (var i = 0; i < 50 && await dispatcher.RunOnceAsync(TestContext.Current.CancellationToken) > 0; i++)
         {

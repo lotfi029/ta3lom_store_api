@@ -1,5 +1,5 @@
 # Build progress
-Next: T-3 — pooling tests (FsCheck invariants, 100+150+120 on a 350 seat, parallel contributions)
+Next: T-5 — every remaining plan-14 "Tests" line with [Rule] (open boxes in the per-session checklists), ImplementedRules.txt
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -78,8 +78,8 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 |---|---|---|---|
 | T-1 test infrastructure | done | T-1 | `ScenarioFactory` (own migrated + seeded DB per class, FakeClock, sinks, outbox/jobs on demand, minted customer/staff tokens, `SettleAsync`), `Shop` builders; 2 self-tests |
 | T-2 settlement | done | T-2 | `SettlementTests` (7) + `SettlementPathTests` (IL scan: only `OrderSettlement` calls `Order.MarkPaid`); RUL-13, 20, 29, 30, 35, 39 in ImplementedRules.txt |
-| T-3 pooling | todo | | |
-| T-4 allocation | todo | | |
+| T-3 pooling | done | T-3/T-4 | FsCheck property (100 random scenarios: balance = Σ remaining, units × seat = Σ converted = Σ funding, zakat propagation), documented example, sweep keeps zakat; parallel contributions (API) |
+| T-4 allocation | done | T-3/T-4 | RUL-47 (a)–(e) on `AllocationPolicy`; API: all-or-nothing 422, admin 403 (SoD), parallel officers distinct units, FIFO, invite + customer row (RUL-52), lapse → front of queue + SMS |
 | T-5 RUL tests + ImplementedRules.txt | todo | | |
 | T-6 policy matrix | todo | | |
 | T-7 endpoint integration | todo | | |
@@ -136,7 +136,7 @@ Tests (test phase)
 Done when (local smoke)
 - [x] `create-admin` works (dev DB)
 - [x] A `viewer` gets 403 on every write (staff admin routes; later sessions' writes join the matrix in T-6)
-- [ ] An `admin` without `allocation_officer` gets 403 on the allocate route → verified when #112 exists (S-25)
+- [x] An `admin` without `allocation_officer` gets 403 on the allocate route → verified when #112 exists (S-25)
 
 ### S-08 — Public catalogue API
 
@@ -349,9 +349,9 @@ Build
 - [x] `settlement.effect_missing` guard removed (plan 14 §13.4)
 
 Tests (test phase)
-- [ ] FsCheck: `balance = Σ remaining`, `units × seat price = Σ converted`
-- [ ] 100 + 150 + 120 on a 350 seat → 1 unit, 20 remaining, split 100/150/100
-- [ ] parallel contributions to the same pool → no lost update
+- [x] FsCheck: `balance = Σ remaining`, `units × seat price = Σ converted`
+- [x] 100 + 150 + 120 on a 350 seat → 1 unit, 20 remaining, split 100/150/100
+- [x] parallel contributions to the same pool → no lost update
 
 Done when (local smoke)
 - [x] Documented example reproduced; 6 concurrent contributions consistent; integrity checks 0 rows
@@ -385,10 +385,10 @@ Build
 - [x] Outbox handlers: BeneficiaryInvite, UnitLapsed, AllocationAlert, AllocationEscalation, SponsorUnitAllocated, SponsorUnitCompleted (+ LmsRevoke from S-19)
 
 Tests (test phase)
-- [ ] One test per RUL-47 (a)–(e); the batch rolls back entirely on one failure
-- [ ] Two officers allocating the same product in parallel never get the same unit
-- [ ] A zakat-funded unit is rejected for a non-zakat beneficiary; a seat without a mobile → `allocation.mobile_required`
-- [ ] Lapse → re-queue at the front; invite SMS in the sink
+- [x] One test per RUL-47 (a)–(e); the batch rolls back entirely on one failure
+- [x] Two officers allocating the same product in parallel never get the same unit
+- [x] A zakat-funded unit is rejected for a non-zakat beneficiary; a seat without a mobile → `allocation.mobile_required`
+- [x] Lapse → re-queue at the front; invite SMS in the sink
 
 Done when (local smoke)
 - [x] All of the above verified with curl and the dev jobs; integrity checks 0 rows
