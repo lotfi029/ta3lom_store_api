@@ -1,5 +1,5 @@
 # Build progress
-Next: P0-3 — Arabic PDF spike (then S-17)
+Next: S-17 — Outbox, notifications and documents
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -30,7 +30,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | S-13 cart | done | S-13 | 10–15 | ExpireGuestCarts | ✅ tools/smoke/S-13.http | 262 tests green; S-04 merge hook filled (RUL-17); dedication owned JSON |
 | S-15 checkout | done | S-15 | 40–42 | — | ✅ tools/smoke/S-15.http | 286 tests green; last-copy race: one 201, one 409 |
 | S-16 settlement core | done | S-16 | 87 + dev trigger | ExpireUnpaidOrders; DonateLineEffect + ledger | ✅ tools/smoke/S-16.http | 290 tests green; integrity checks 0 rows; doc 15 updated |
-| P0-3 Arabic PDF spike | todo | | — | — | | |
+| P0-3 Arabic PDF spike | done | P0-3 | — | — | spikes/P0-3 → 2 PDFs | GO: shaping, table, QR ok; LRI/PDI isolates for phones/English; store/spikes/P0-3-arabic-pdf.md |
 | S-17 outbox, documents | todo | | 88 | OutboxDispatcher; OrderPaid, RenderDocuments, FinanceAlert, DedicationCard (stub) | | |
 | S-19 enrolment + LMS | todo | | 29 | CourseEnrolmentEffect; LmsEnrol | | |
 | P0-4 watermark spike | todo | | — | — | | |

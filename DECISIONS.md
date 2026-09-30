@@ -82,6 +82,7 @@ the owner should confirm.
 | 2026-09-30 | S-16 | Dev job trigger | 11 §10.1 | `GET /dev/jobs` and `POST /dev/jobs/{name}/run` (Quartz `TriggerJob`) for smoke checks and the test phase; `/dev/*` only outside Production | Jobs otherwise wait for their cron | |
 | 2026-09-30 | S-16 | Expiry | 03 RUL-29/30, 09 §6 | One transaction per due order: row lock, release print reservations, restore lines into the customer's active cart (created if needed; a product already in the cart or a full cart skips the line; dedications restored, `custom` → free text), `expired`, `OrderExpired{cartRestored}`. `payment initiated → voided` is the payment service's (no payment rows here) | Order side only (plan 14 S-16) | |
 | 2026-09-30 | S-16 | Admin order detail | 11 §9.9 | `OrderReader` builds `OrderDetail`/`AdminOrderDetail` now (used by #87, later #86 and `/v1/me/orders`); `events` is empty (payment_event belongs to the payment service); notification recipients masked | One read model for S-16/S-21/S-31 | |
+| 2026-09-30 | P0-3 | PDF stack | plan 14 §5, Cloud-build-plan §2.4 | QuestPDF 2026.9.1 (Community licence set in code) + QRCoder 1.8.0; IBM Plex Sans Arabic primary, Noto Naskh Arabic fallback (OFL, `Infrastructure/Resources/Fonts`, TTFs from Google Fonts, licence texts from the fontsource npm packages since GitHub raw is blocked here); mixed-direction values wrapped in LRI/PDI; money always invariant | Spike GO (`store/spikes/P0-3-arabic-pdf.md`) | REVIEW (licence) |
 
 ## Bugs found by tests
 
