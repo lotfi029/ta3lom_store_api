@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Ta3lom.Store.Application.Abstractions.Messaging;
+using Ta3lom.Store.Application.Abstractions.Time;
 using Ta3lom.Store.Application.DTOs.Dev;
 using Ta3lom.Store.Application.Features.Dev.Commands.ConfirmPayment;
 using Ta3lom.Store.Application.Features.Dev.Queries.GetDevSms;
@@ -17,6 +18,12 @@ internal sealed class DevEndpoints : IDevEndpoint
         app.MapGet("/mail", async (IDevMailInbox inbox, CancellationToken ct, int count = 20) => TypedResults.Ok(await inbox.LatestAsync(count, ct)));
         app.MapGet("/jobs", (IJobRunner jobs) => TypedResults.Ok(jobs.Jobs));
         app.MapPost("/jobs/{name}/run", RunJobAsync);
+        app.MapPost("/lms/progress", ([FromBody] DevLmsProgressRequest body, IDevLmsProgressBoard board, IClock clock) =>
+        {
+            var now = clock.UtcNow;
+            board.Report(body.EnrolmentId, new LmsProgress(body.ProgressPct, body.ProgressPct > 0 ? now : null, body.Completed ? now : null, body.CertificateNo));
+            return TypedResults.Accepted((string?)null);
+        });
     }
 
     private static async Task<IResult> RunJobAsync(string name, [FromServices] IJobRunner jobs, CancellationToken ct) =>

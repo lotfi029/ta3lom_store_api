@@ -108,6 +108,9 @@ the owner should confirm.
 | 2026-09-30 | S-21 | Admin search `q` | 11 §9.9 | `q` that normalises as a Saudi mobile matches `orders.contact_mobile` (E.164); anything else is a reference prefix (`LIKE`, `%` stripped); unknown `status`/`kind` → 400 | "reference or mobile" | |
 | 2026-09-30 | S-21 | Order events | 11 §9.9 | `events` lists `payment_event` rows, which only the payment service writes: empty for dev-settled orders | doc 15 | |
 | 2026-09-30 | S-21 | Endpoint numbering | 11 §12 | #96 is the packing slip, #97 ship, #98 deliver, #99 return (11 §12 index); code comments and smoke labels follow the index | index is canonical | |
+| 2026-09-30 | S-40 | Internal LMS progress | 14 S-40, Q-05, OP-3 | The internal adapter has no LMS behind it, so it reports only what `/dev/lms/progress` set (Development/Staging); in Production it reports nothing until an LMS is chosen. No certificate is produced by the store (OP-3 open) | Q-05 undecided | REVIEW |
+| 2026-09-30 | S-40 | Which enrolments sync | 09 §6 | `active` enrolments with an `lms_enrolment_ref`, plus `completed` ones still missing a certificate number; `pending_sync`, `revoked` and never-synced manual enrolments are skipped | nothing to pull for them | |
+| 2026-09-30 | S-40 | Progress semantics | 03 RUL-42/50 | Progress never decreases; `started_at`/`completed_at`/`certificate_no` are set once; completion forces 100 %. A failed LMS call is logged and retried next hour (no outbox row: the job itself is the retry) | idempotent job | |
 
 ## Bugs found by tests
 

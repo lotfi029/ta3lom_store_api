@@ -22,4 +22,12 @@ public sealed record LmsResult(bool Ok, string? Reference, string? Error);
 
 public sealed record LmsLaunch(string Url, DateTimeOffset ExpiresAt);
 
-public sealed record LmsProgress(short ProgressPct, DateTimeOffset? CompletedAt);
+/// What the LMS reports for one enrolment (S-40): percentage, first start, completion and the certificate number (OP-3).
+public sealed record LmsProgress(short ProgressPct, DateTimeOffset? StartedAt, DateTimeOffset? CompletedAt, string? CertificateNo);
+
+/// Development/Staging only: lets `/dev/lms/progress` play the LMS for the internal adapter, so `LmsProgressSync` has
+/// something to pull (plan 14 §4.3 dev tooling).
+public interface IDevLmsProgressBoard
+{
+    void Report(Guid enrolmentId, LmsProgress progress);
+}

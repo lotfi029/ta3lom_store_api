@@ -1800,6 +1800,7 @@ Production and are excluded from the OpenAPI document. They are test tooling, no
 | POST | `/dev/orders/{ref}/confirm-payment` | Simulated payment confirmation through `IOrderSettlement` (`{ amount?, confirmationId? }`) → `{ reference, outcome: paid\|already_paid\|payment_review\|not_found, status }`; records one captured `dev` payment per order like the payment service would | S-16 |
 | GET | `/dev/jobs` | Registered Quartz jobs and their cron (Riyadh) | S-16 |
 | POST | `/dev/jobs/{name}/run` | Runs a job now (`202`; `404` for an unknown name), e.g. `ExpireUnpaidOrdersJob` | S-16 |
+| POST | `/dev/lms/progress` | Plays the LMS for the internal adapter: `{ enrolmentId, progressPct, completed, certificateNo? }` is what the next `LmsProgressSyncJob` run pulls (`202`) | S-40 |
 
 ---
 

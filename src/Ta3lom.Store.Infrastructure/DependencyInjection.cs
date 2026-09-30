@@ -57,6 +57,7 @@ public static class DependencyInjection
             q.AddStoreJob<PruneOtpJob>(PruneOtpJob.Cron);
             q.AddStoreJob<ExpireGuestCartsJob>(ExpireGuestCartsJob.Cron);
             q.AddStoreJob<ExpireUnpaidOrdersJob>(ExpireUnpaidOrdersJob.Cron);
+            q.AddStoreJob<LmsProgressSyncJob>(LmsProgressSyncJob.Cron);
         });
         services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
         services.AddSingleton<IJobRunner, QuartzJobRunner>();
@@ -166,7 +167,9 @@ public static class DependencyInjection
         services.AddSingleton<IPdfWatermarker, PdfSharpWatermarker>();
         services.AddSingleton<IDownloadLinks, DownloadLinks>();
         services.AddOptions<Services.Lms.LmsOptions>().BindConfiguration(Services.Lms.LmsOptions.Section);
-        services.AddSingleton<ILmsGateway, Services.Lms.InternalAccessLmsGateway>();
+        services.AddSingleton<Services.Lms.InternalAccessLmsGateway>();
+        services.AddSingleton<ILmsGateway>(sp => sp.GetRequiredService<Services.Lms.InternalAccessLmsGateway>());
+        services.AddSingleton<IDevLmsProgressBoard>(sp => sp.GetRequiredService<Services.Lms.InternalAccessLmsGateway>());
 
         services.AddSingleton<StoreSettingsProvider>();
         services.AddSingleton<IStoreSettings>(sp => sp.GetRequiredService<StoreSettingsProvider>());

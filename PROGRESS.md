@@ -1,5 +1,5 @@
 # Build progress
-Next: S-40 — LmsProgressSync job
+Next: S-41 — LowStockAlert job
 
 Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (plan 14 coverage); decisions in
 [DECISIONS.md](DECISIONS.md). Branch `claude/funny-wright-yum3nm`, one draft PR "Store backend — full build + tests".
@@ -36,7 +36,7 @@ Run rules: `store/sessions/Cloud-build-plan.md` §2, §4b (test phase), §4c (pl
 | P0-4 watermark spike | done | P0-4 | — | — | spikes/P0-4 → 301-page book stamped | GO: QuestPDF stamp as PdfSharp form XObject ~0.2 s/300 pages; PdfSharp text cannot shape Arabic; store/spikes/P0-4-watermark.md |
 | S-20 digital downloads | done | S-20 | 32, 46, 94 | DigitalBookEffect | ✅ tools/smoke/S-20.http | 301-page book: 0.75 s first, 0.02 s cached; limit/reset/revoke verified |
 | S-21 shipments, stock, admin orders | done | S-21 | 78–80, 85, 86, 95–99 | PrintBookEffect; ShipmentShipped/Delivered | ✅ tools/smoke/S-21.http | integrity checks 0 rows; RUL-40 returned-line fix |
-| S-40 LMS progress sync | todo | | — | LmsProgressSync; SponsorUnitCompleted | | |
+| S-40 LMS progress sync | done | S-40 | — (dev: /dev/lms/progress) | LmsProgressSync; SponsorUnitCompleted via hook (S-25) | ✅ tools/smoke/S-40.http | idempotent over two runs |
 | S-41 low stock alert | todo | | — | LowStockAlert | | |
 | S-23 units and pooling | todo | | — | SponsorUnitsEffect, PoolContributionEffect | | integrity check |
 | S-24 beneficiary register | todo | | 100–108 | — | | |
@@ -314,3 +314,17 @@ Tests (test phase)
 Done when (local smoke)
 - [x] A print order goes preparing → shipped → delivered with SMS, and the order reaches `fulfilled` (T3-26-001015)
 - [x] Integrity checks 0 rows
+
+### S-40 — `LmsProgressSync` job
+
+Build
+- [x] Hourly job (`0 15 * * * ?`) pulling progress and completion from `ILmsGateway` → `progress_pct`, `started_at`, `completed_at`, `certificate_no`
+- [x] Sponsored enrolments: completion calls `ISponsoredUnitCompletion` in the same transaction (no-op until S-25 → unit `completed`, `sponsored_unit_event`, outbox `SponsorUnitCompleted`; owner fix 1)
+- [x] LMS called outside transactions; one short transaction per changed enrolment; progress never decreases
+- [x] Dev: `/dev/lms/progress` feeds the internal adapter
+
+Tests (test phase)
+- [ ] idempotent over two runs; completion propagates to the unit exactly once
+
+Done when (local smoke)
+- [x] Progress and completion reach the enrolment; a second run changes nothing

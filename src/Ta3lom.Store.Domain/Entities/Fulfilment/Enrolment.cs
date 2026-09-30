@@ -72,16 +72,32 @@ public sealed class Enrolment : AggregateRoot
     /// First launch starts the course (RUL-50 lapse uses `started_at`).
     public void RecordLaunch(DateTimeOffset now) => StartedAt ??= now;
 
-    /// RUL-42/50: progress from the LMS; 100 % or a completion flag completes the course.
-    public void UpdateProgress(short progressPct, DateTimeOffset? completedAt)
+    /// RUL-42/50 (S-40): progress from the LMS. Idempotent: the percentage never goes down, `started_at`, `completed_at` and
+    /// `certificate_no` are set once. Returns true only on the call that completes the course.
+    public bool ApplyProgress(short progressPct, DateTimeOffset? startedAt, DateTimeOffset? completedAt, string? certificateNo)
     {
-        ProgressPct = Math.Clamp(progressPct, (short)0, (short)100);
-        if (completedAt is not null && Status == EnrolmentStatus.Active)
+        if (Status is not (EnrolmentStatus.Active or EnrolmentStatus.Completed))
         {
-            Status = EnrolmentStatus.Completed;
-            CompletedAt = completedAt;
-            ProgressPct = 100;
+            return false;
         }
+
+        ProgressPct = Math.Max(ProgressPct, Math.Clamp(progressPct, (short)0, (short)100));
+        StartedAt ??= startedAt;
+        if (!string.IsNullOrWhiteSpace(certificateNo))
+        {
+            CertificateNo ??= certificateNo.Trim();
+        }
+
+        if (completedAt is null || Status == EnrolmentStatus.Completed)
+        {
+            return false;
+        }
+
+        Status = EnrolmentStatus.Completed;
+        CompletedAt = completedAt;
+        StartedAt ??= completedAt;
+        ProgressPct = 100;
+        return true;
     }
 
     /// RUL-50 (lapse), RUL-58 (refund): access withdrawn; the `LmsRevoke` message tells the LMS.
