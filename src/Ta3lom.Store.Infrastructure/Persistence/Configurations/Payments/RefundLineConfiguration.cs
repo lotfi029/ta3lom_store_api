@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Payments;
+using Ta3lom.Store.Domain.Entities.Payments;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Payments;
 
@@ -18,7 +18,7 @@ internal sealed class RefundLineConfiguration : IEntityTypeConfiguration<RefundL
         e.Property(x => x.OrderLineId).HasColumnType("uuid").IsRequired().ValueGeneratedNever();
         e.Property(x => x.Amount).HasColumnType("numeric(12,2)").IsRequired().ValueGeneratedNever();
         e.Property(x => x.Units).HasColumnType("integer").IsRequired(false).ValueGeneratedNever();
-        e.HasOne<Ta3lom.Store.Domain.Ordering.OrderLine>().WithMany().HasForeignKey(x => x.OrderLineId).HasConstraintName("refund_line_order_line_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Ordering.OrderLine>().WithMany().HasForeignKey(x => x.OrderLineId).HasConstraintName("refund_line_order_line_id_fkey").OnDelete(DeleteBehavior.NoAction);
         e.HasOne<Refund>().WithMany().HasForeignKey(x => x.RefundId).HasConstraintName("refund_line_refund_id_fkey").OnDelete(DeleteBehavior.Cascade);
     }
 }

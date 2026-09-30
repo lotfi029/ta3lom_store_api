@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Carts;
+using Ta3lom.Store.Domain.Entities.Carts;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Carts;
 
@@ -35,8 +35,8 @@ internal sealed class CartLineConfiguration : IEntityTypeConfiguration<CartLine>
         e.Property(x => x.Dedication).HasColumnType("jsonb").IsRequired(false).ValueGeneratedNever();
         e.Property(x => x.AddedAt).HasColumnType("timestamp with time zone").IsRequired().HasDefaultValueSql("now()").ValueGeneratedNever();
         e.HasIndex(x => x.CartId).HasDatabaseName("ix_cart_line_cart");
-        e.HasOne<Ta3lom.Store.Domain.Catalog.BookFormat>().WithMany().HasForeignKey(x => x.BookFormatId).HasConstraintName("cart_line_book_format_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Catalog.BookFormat>().WithMany().HasForeignKey(x => x.BookFormatId).HasConstraintName("cart_line_book_format_id_fkey").OnDelete(DeleteBehavior.NoAction);
         e.HasOne<Cart>().WithMany().HasForeignKey(x => x.CartId).HasConstraintName("cart_line_cart_id_fkey").OnDelete(DeleteBehavior.Cascade);
-        e.HasOne<Ta3lom.Store.Domain.Catalog.Product>().WithMany().HasForeignKey(x => x.ProductId).HasConstraintName("cart_line_product_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Catalog.Product>().WithMany().HasForeignKey(x => x.ProductId).HasConstraintName("cart_line_product_id_fkey").OnDelete(DeleteBehavior.NoAction);
     }
 }

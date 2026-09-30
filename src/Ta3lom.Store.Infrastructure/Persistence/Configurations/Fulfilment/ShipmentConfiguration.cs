@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Fulfilment;
+using Ta3lom.Store.Domain.Entities.Fulfilment;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Fulfilment;
 
@@ -24,6 +24,6 @@ internal sealed class ShipmentConfiguration : IEntityTypeConfiguration<Shipment>
         e.Property(x => x.DeliveredAt).HasColumnType("timestamp with time zone").IsRequired(false).ValueGeneratedNever();
         e.Property(x => x.UpdatedBy).HasColumnType("text").IsRequired(false).ValueGeneratedNever();
         e.HasIndex(x => x.OrderId).IsUnique().HasDatabaseName("shipment_order_id_key");
-        e.HasOne<Ta3lom.Store.Domain.Ordering.Order>().WithMany().HasForeignKey(x => x.OrderId).HasConstraintName("shipment_order_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Ordering.Order>().WithMany().HasForeignKey(x => x.OrderId).HasConstraintName("shipment_order_id_fkey").OnDelete(DeleteBehavior.NoAction);
     }
 }

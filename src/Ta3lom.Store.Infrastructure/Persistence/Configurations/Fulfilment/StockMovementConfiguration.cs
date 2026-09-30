@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Fulfilment;
+using Ta3lom.Store.Domain.Entities.Fulfilment;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Fulfilment;
 
@@ -25,6 +25,6 @@ internal sealed class StockMovementConfiguration : IEntityTypeConfiguration<Stoc
         e.Property(x => x.At).HasColumnType("timestamp with time zone").IsRequired().HasDefaultValueSql("now()").ValueGeneratedNever();
         e.Property(x => x.Actor).HasColumnType("text").IsRequired().ValueGeneratedNever();
         e.HasIndex(x => new { x.BookFormatId, x.At }).IsDescending(false, true).HasDatabaseName("ix_stock_movement_format");
-        e.HasOne<Ta3lom.Store.Domain.Catalog.BookFormat>().WithMany().HasForeignKey(x => x.BookFormatId).HasConstraintName("stock_movement_book_format_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Catalog.BookFormat>().WithMany().HasForeignKey(x => x.BookFormatId).HasConstraintName("stock_movement_book_format_id_fkey").OnDelete(DeleteBehavior.NoAction);
     }
 }

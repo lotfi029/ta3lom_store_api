@@ -36,6 +36,13 @@ the DDL wins.
 
 ## 1. Repository layout
 
+> **r3 (S-02b, 30 Sep 2026):** the code now follows the owner's DMS architecture — `SharedKernel ← Domain ←
+> Application ← Infrastructure ← Api`, kind-first folders, `Features/<Module>/{Commands,Queries}`, DTOs in
+> `Application/DTOs` (the Contracts project is gone), repositories + `IUnitOfWork` in `Domain/IRepositories`,
+> `IApplicationDbContext` for read queries, Mapster, `IEndpoint` modules. The mapping and the store rules that
+> override DMS (K-a … K-l) are in [sessions/Architecture-alignment-DMS.md](sessions/Architecture-alignment-DMS.md);
+> where §1–§3 below disagree with it, the alignment document wins.
+
 ```
 ta3lom-store-api/
 ├── CLAUDE.md                          # §12 — rules for humans and agents working in the repo

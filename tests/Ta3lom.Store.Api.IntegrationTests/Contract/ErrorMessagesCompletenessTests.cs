@@ -1,8 +1,8 @@
 using System.Globalization;
 using System.Reflection;
 using System.Resources;
-using Ta3lom.Store.Api.Http;
-using Ta3lom.Store.Application.Abstractions;
+using Ta3lom.Store.Api.Infrastructure;
+using Ta3lom.Store.Domain.Errors;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Contract;
 

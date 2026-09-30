@@ -3,39 +3,67 @@ using Ta3lom.Store.ArchitectureTests.Support;
 
 namespace Ta3lom.Store.ArchitectureTests;
 
-/// Clean Architecture dependency rule (09 §2 r2, CLAUDE.md). A violation fails the build's test step.
+/// DMS dependency rule with the store's (K) exceptions (Architecture-alignment-DMS §3–§4, CLAUDE.md):
+/// SharedKernel ← Domain ← Application ← Infrastructure ← Api. A violation fails the build's test step.
 public sealed class LayerTests
 {
     [Fact]
+    public void SharedKernel_depends_on_nothing_of_ours() =>
+        Types.InAssembly(Assemblies.SharedKernel).ShouldNot()
+            .HaveDependencyOnAny("Microsoft", "Npgsql", "FluentValidation", "Ta3lom.Store.Domain", "Ta3lom.Store.Application",
+                "Ta3lom.Store.Infrastructure", "Ta3lom.Store.Api")
+            .GetResult().FailingTypeNames.ShouldBeNull();
+
+    /// K-b: no EF in Domain. K-f: only the DI abstractions, and only for AddDomain().
+    [Fact]
     public void Domain_has_no_outward_dependencies() =>
-        Types.InAssembly(Assemblies.Domain).ShouldNot()
+        Types.InAssembly(Assemblies.Domain).That().DoNotHaveName("DependencyInjection").ShouldNot()
             .HaveDependencyOnAny("Microsoft.EntityFrameworkCore", "Microsoft.AspNetCore", "Microsoft.Extensions",
-                "Npgsql", "FluentValidation", "Ta3lom.Store.Application", "Ta3lom.Store.Infrastructure",
-                "Ta3lom.Store.Contracts", "Ta3lom.Store.Api")
+                "Npgsql", "FluentValidation", "Mapster", "Ta3lom.Store.Application", "Ta3lom.Store.Infrastructure", "Ta3lom.Store.Api")
             .GetResult().FailingTypeNames.ShouldBeNull();
 
     [Fact]
-    public void Application_references_Domain_only() =>
-        Types.InAssembly(Assemblies.Application).ShouldNot()
-            .HaveDependencyOnAny("Microsoft.EntityFrameworkCore", "Npgsql", "Microsoft.AspNetCore",
-                "Ta3lom.Store.Contracts", "Ta3lom.Store.Infrastructure", "Ta3lom.Store.Api")
-            .GetResult().FailingTypeNames.ShouldBeNull();
+    public void Domain_registration_uses_only_the_DI_abstractions() =>
+        Assemblies.Domain.GetReferencedAssemblies().Select(a => a.Name!)
+            .Where(n => n.StartsWith("Microsoft.", StringComparison.Ordinal))
+            .ShouldBeSubsetOf(["Microsoft.Extensions.DependencyInjection.Abstractions"]);
 
+    /// K-c: EF Core abstractions for IApplicationDbContext reads only; never Npgsql, Relational or ASP.NET Core.
     [Fact]
-    public void Contracts_are_sealed_and_depend_on_nothing_of_ours()
+    public void Application_references_Domain_and_EF_abstractions_only()
     {
-        Types.InAssembly(Assemblies.Contracts).Should().BeSealed()
+        Types.InAssembly(Assemblies.Application).ShouldNot()
+            .HaveDependencyOnAny("Npgsql", "Microsoft.AspNetCore", "Ta3lom.Store.Infrastructure", "Ta3lom.Store.Api")
             .GetResult().FailingTypeNames.ShouldBeNull();
-        Types.InAssembly(Assemblies.Contracts).ShouldNot()
-            .HaveDependencyOnAny("Ta3lom.Store.Domain", "Ta3lom.Store.Application", "Ta3lom.Store.Infrastructure", "Ta3lom.Store.Api")
+        Assemblies.Application.GetReferencedAssemblies().Select(a => a.Name!)
+            .ShouldNotContain(n => n.StartsWith("Npgsql", StringComparison.Ordinal) || n == "Microsoft.EntityFrameworkCore.Relational");
+    }
+
+    /// K-g: DTOs moved from the Contracts project into Application/DTOs; they stay sealed and never expose entities.
+    [Fact]
+    public void Application_DTOs_are_sealed_and_do_not_expose_entities()
+    {
+        var dtos = Types.InAssembly(Assemblies.Application).That().ResideInNamespaceStartingWith("Ta3lom.Store.Application.DTOs");
+        dtos.Should().BeSealed().GetResult().FailingTypeNames.ShouldBeNull();
+        Types.InAssembly(Assemblies.Application).That().ResideInNamespaceStartingWith("Ta3lom.Store.Application.DTOs").ShouldNot()
+            .HaveDependencyOnAny("Ta3lom.Store.Domain.Entities")
             .GetResult().FailingTypeNames.ShouldBeNull();
     }
+
+    /// K-g: request/response records live in Application/DTOs, not in the Api.
+    [Fact]
+    public void Api_defines_no_DTOs() =>
+        Assemblies.Api.GetTypes()
+            .Where(t => t.Namespace?.StartsWith("Ta3lom.Store.Api", StringComparison.Ordinal) == true
+                        && (t.Name.EndsWith("Request", StringComparison.Ordinal) || t.Name.EndsWith("Response", StringComparison.Ordinal)))
+            .Select(t => t.FullName)
+            .ShouldBeEmpty();
 
     /// Infrastructure may use ASP.NET Core Data Protection (a standalone library, 09 §5.13) but nothing of the web stack.
     [Fact]
     public void Infrastructure_does_not_reference_Api_or_the_web_stack() =>
         Types.InAssembly(Assemblies.Infrastructure).ShouldNot()
-            .HaveDependencyOnAny("Ta3lom.Store.Api", "Ta3lom.Store.Contracts", "Microsoft.AspNetCore.Http", "Microsoft.AspNetCore.Mvc",
+            .HaveDependencyOnAny("Ta3lom.Store.Api", "Microsoft.AspNetCore.Http", "Microsoft.AspNetCore.Mvc",
                 "Microsoft.AspNetCore.Routing", "Microsoft.AspNetCore.Builder", "Microsoft.AspNetCore.Hosting", "Microsoft.AspNetCore.Authorization")
             .GetResult().FailingTypeNames.ShouldBeNull();
 
@@ -46,10 +74,10 @@ public sealed class LayerTests
             .GetResult().FailingTypeNames.ShouldBeNull();
 
     [Theory]
-    [InlineData("Domain", new string[0])]
-    [InlineData("Contracts", new string[0])]
-    [InlineData("Application", new[] { "Ta3lom.Store.Domain" })]
-    [InlineData("Infrastructure", new[] { "Ta3lom.Store.Application", "Ta3lom.Store.Domain" })]
+    [InlineData("SharedKernel", new string[0])]
+    [InlineData("Domain", new[] { "Ta3lom.Store.SharedKernel" })]
+    [InlineData("Application", new[] { "Ta3lom.Store.Domain", "Ta3lom.Store.SharedKernel" })]
+    [InlineData("Infrastructure", new[] { "Ta3lom.Store.Application", "Ta3lom.Store.Domain", "Ta3lom.Store.SharedKernel" })]
     public void Compiled_assembly_references_point_inward_only(string layer, string[] allowed)
     {
         var assembly = Assemblies.Production.Single(a => a.GetName().Name == $"Ta3lom.Store.{layer}");
@@ -61,7 +89,7 @@ public sealed class LayerTests
 
     [Fact]
     public void No_money_as_floating_point() =>
-        MoneyMemberScanner.FindFloatingPointMoney(Assemblies.Domain, Assemblies.Application, Assemblies.Contracts, Assemblies.Api)
+        MoneyMemberScanner.FindFloatingPointMoney(Assemblies.SharedKernel, Assemblies.Domain, Assemblies.Application, Assemblies.Api)
             .ShouldBeEmpty();
 
     [Fact]

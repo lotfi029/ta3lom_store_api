@@ -1,5 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- BCL only (09 §2). No EF Core, no Microsoft.Extensions.*, no Contracts. -->
+  <!-- DMS Domain: SharedKernel + BCL + DI abstractions (AddDomain only, K-f). No EF Core (K-b). -->
+  <ItemGroup>
+    <ProjectReference Include="../Ta3lom.Store.SharedKernel/Ta3lom.Store.SharedKernel.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
   <ItemGroup>
     <AdditionalFiles Include="$(MSBuildThisFileDirectory)../../BannedSymbols.Money.txt" Link="BannedSymbols.Money.txt" />
   </ItemGroup>

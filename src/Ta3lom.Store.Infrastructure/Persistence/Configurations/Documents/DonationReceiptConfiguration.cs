@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Documents;
+using Ta3lom.Store.Domain.Entities.Documents;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Documents;
 
@@ -26,8 +26,8 @@ internal sealed class DonationReceiptConfiguration : IEntityTypeConfiguration<Do
         e.Property(x => x.PdfAssetId).HasColumnType("uuid").IsRequired(false).ValueGeneratedNever();
         e.HasIndex(x => x.Number).IsUnique().HasDatabaseName("donation_receipt_number_key");
         e.HasIndex(x => x.OrderId).HasDatabaseName("ix_receipt_order");
-        e.HasOne<Ta3lom.Store.Domain.Ordering.Order>().WithMany().HasForeignKey(x => x.OrderId).HasConstraintName("donation_receipt_order_id_fkey").OnDelete(DeleteBehavior.NoAction);
-        e.HasOne<Ta3lom.Store.Domain.Media.MediaAsset>().WithMany().HasForeignKey(x => x.PdfAssetId).HasConstraintName("donation_receipt_pdf_asset_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Ordering.Order>().WithMany().HasForeignKey(x => x.OrderId).HasConstraintName("donation_receipt_order_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Media.MediaAsset>().WithMany().HasForeignKey(x => x.PdfAssetId).HasConstraintName("donation_receipt_pdf_asset_id_fkey").OnDelete(DeleteBehavior.NoAction);
         e.HasOne<DonationReceipt>().WithMany().HasForeignKey(x => x.ReferencesReceiptId).HasConstraintName("donation_receipt_references_receipt_id_fkey").OnDelete(DeleteBehavior.NoAction);
     }
 }

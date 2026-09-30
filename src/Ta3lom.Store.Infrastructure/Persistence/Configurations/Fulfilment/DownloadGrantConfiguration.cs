@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Fulfilment;
+using Ta3lom.Store.Domain.Entities.Fulfilment;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Fulfilment;
 
@@ -23,8 +23,8 @@ internal sealed class DownloadGrantConfiguration : IEntityTypeConfiguration<Down
         e.Property(x => x.RevokedAt).HasColumnType("timestamp with time zone").IsRequired(false).ValueGeneratedNever();
         e.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone").IsRequired().HasDefaultValueSql("now()").ValueGeneratedNever();
         e.HasIndex(x => x.OrderLineId).IsUnique().HasDatabaseName("download_grant_order_line_id_key");
-        e.HasOne<Ta3lom.Store.Domain.Catalog.BookFormat>().WithMany().HasForeignKey(x => x.BookFormatId).HasConstraintName("download_grant_book_format_id_fkey").OnDelete(DeleteBehavior.NoAction);
-        e.HasOne<Ta3lom.Store.Domain.Identity.Customer>().WithMany().HasForeignKey(x => x.CustomerId).HasConstraintName("download_grant_customer_id_fkey").OnDelete(DeleteBehavior.NoAction);
-        e.HasOne<Ta3lom.Store.Domain.Ordering.OrderLine>().WithMany().HasForeignKey(x => x.OrderLineId).HasConstraintName("download_grant_order_line_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Catalog.BookFormat>().WithMany().HasForeignKey(x => x.BookFormatId).HasConstraintName("download_grant_book_format_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Identity.Customer>().WithMany().HasForeignKey(x => x.CustomerId).HasConstraintName("download_grant_customer_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Ordering.OrderLine>().WithMany().HasForeignKey(x => x.OrderLineId).HasConstraintName("download_grant_order_line_id_fkey").OnDelete(DeleteBehavior.NoAction);
     }
 }

@@ -1,4 +1,4 @@
-using Ta3lom.Store.Domain.Common;
+using Ta3lom.Store.SharedKernel;
 
 namespace Ta3lom.Store.Domain.Tests.Common;
 

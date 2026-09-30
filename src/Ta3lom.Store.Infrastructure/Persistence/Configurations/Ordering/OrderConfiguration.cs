@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Ordering;
+using Ta3lom.Store.Domain.Entities.Ordering;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Ordering;
 
@@ -46,6 +46,6 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         e.HasIndex(x => x.PaymentDueAt).HasFilter("(status = ANY (ARRAY['pending_payment'::text, 'payment_failed'::text]))").HasDatabaseName("ix_order_due");
         e.HasIndex(x => new { x.Status, x.PlacedAt }).HasDatabaseName("ix_order_status");
         e.HasIndex(x => x.Reference).IsUnique().HasDatabaseName("orders_reference_key");
-        e.HasOne<Ta3lom.Store.Domain.Identity.Customer>().WithMany().HasForeignKey(x => x.CustomerId).HasConstraintName("orders_customer_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Identity.Customer>().WithMany().HasForeignKey(x => x.CustomerId).HasConstraintName("orders_customer_id_fkey").OnDelete(DeleteBehavior.NoAction);
     }
 }

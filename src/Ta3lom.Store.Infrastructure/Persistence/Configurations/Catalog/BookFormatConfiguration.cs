@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Catalog;
+using Ta3lom.Store.Domain.Entities.Catalog;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Catalog;
 
@@ -37,7 +37,7 @@ internal sealed class BookFormatConfiguration : IEntityTypeConfiguration<BookFor
         e.Property<uint>("xmin").HasColumnName("xmin").HasColumnType("xid").ValueGeneratedOnAddOrUpdate().IsConcurrencyToken();
         e.HasIndex(x => new { x.ProductId, x.Kind }).IsUnique().HasDatabaseName("book_format_product_id_kind_key");
         e.HasIndex(x => x.Sku).IsUnique().HasDatabaseName("book_format_sku_key");
-        e.HasOne<Ta3lom.Store.Domain.Media.MediaAsset>().WithMany().HasForeignKey(x => x.FileAssetId).HasConstraintName("book_format_file_asset_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Media.MediaAsset>().WithMany().HasForeignKey(x => x.FileAssetId).HasConstraintName("book_format_file_asset_id_fkey").OnDelete(DeleteBehavior.NoAction);
         e.HasOne<Product>().WithMany().HasForeignKey(x => x.ProductId).HasConstraintName("book_format_product_id_fkey").OnDelete(DeleteBehavior.Cascade);
     }
 }

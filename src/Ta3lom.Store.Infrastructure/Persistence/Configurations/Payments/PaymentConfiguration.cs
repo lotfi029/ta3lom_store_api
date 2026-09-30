@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Payments;
+using Ta3lom.Store.Domain.Entities.Payments;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Payments;
 
@@ -30,6 +30,6 @@ internal sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         e.HasIndex(x => x.OrderId).HasDatabaseName("ix_payment_order");
         e.HasIndex(x => new { x.Status, x.CreatedAt }).HasFilter("(status = 'initiated'::text)").HasDatabaseName("ix_payment_reconcile");
         e.HasIndex(x => new { x.Provider, x.ProviderPaymentId }).IsUnique().HasDatabaseName("payment_provider_provider_payment_id_key");
-        e.HasOne<Ta3lom.Store.Domain.Ordering.Order>().WithMany().HasForeignKey(x => x.OrderId).HasConstraintName("payment_order_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Ordering.Order>().WithMany().HasForeignKey(x => x.OrderId).HasConstraintName("payment_order_id_fkey").OnDelete(DeleteBehavior.NoAction);
     }
 }

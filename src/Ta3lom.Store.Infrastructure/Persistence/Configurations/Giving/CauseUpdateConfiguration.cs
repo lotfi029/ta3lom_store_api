@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Giving;
+using Ta3lom.Store.Domain.Entities.Giving;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Giving;
 
@@ -29,7 +29,7 @@ internal sealed class CauseUpdateConfiguration : IEntityTypeConfiguration<CauseU
         e.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone").IsRequired().HasDefaultValueSql("now()").ValueGeneratedNever();
         e.Property(x => x.CreatedBy).HasColumnType("text").IsRequired().ValueGeneratedNever();
         e.HasIndex(x => new { x.ProductId, x.OccurredOn }).IsDescending(false, true).HasDatabaseName("ix_cause_update_product");
-        e.HasOne<Ta3lom.Store.Domain.Media.MediaAsset>().WithMany().HasForeignKey(x => x.AssetId).HasConstraintName("cause_update_asset_id_fkey").OnDelete(DeleteBehavior.NoAction);
-        e.HasOne<Ta3lom.Store.Domain.Catalog.Product>().WithMany().HasForeignKey(x => x.ProductId).HasConstraintName("cause_update_product_id_fkey").OnDelete(DeleteBehavior.Cascade);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Media.MediaAsset>().WithMany().HasForeignKey(x => x.AssetId).HasConstraintName("cause_update_asset_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Catalog.Product>().WithMany().HasForeignKey(x => x.ProductId).HasConstraintName("cause_update_product_id_fkey").OnDelete(DeleteBehavior.Cascade);
     }
 }

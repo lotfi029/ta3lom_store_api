@@ -9,13 +9,16 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Quartz;
-using Ta3lom.Store.Application.Abstractions;
-using Ta3lom.Store.Infrastructure.Health;
+using Ta3lom.Store.Application.Abstractions.Data;
+using Ta3lom.Store.Application.Abstractions.Time;
+using Ta3lom.Store.Domain.IRepositories;
 using Ta3lom.Store.Infrastructure.Persistence;
 using Ta3lom.Store.Infrastructure.Persistence.Interceptors;
-using Ta3lom.Store.Infrastructure.Persistence.Seed;
-using Ta3lom.Store.Infrastructure.Security;
-using Ta3lom.Store.Infrastructure.Time;
+using Ta3lom.Store.Infrastructure.Persistence.Repositories;
+using Ta3lom.Store.Infrastructure.Persistence.Seeders;
+using Ta3lom.Store.Infrastructure.Services.Health;
+using Ta3lom.Store.Infrastructure.Services.Security;
+using Ta3lom.Store.Infrastructure.Services.Time;
 
 namespace Ta3lom.Store.Infrastructure;
 
@@ -54,7 +57,9 @@ public static class DependencyInjection
             StoreDbContextOptions.Configure(options, sp.GetRequiredService<IOptions<DatabaseOptions>>().Value.ConnectionString);
             options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
         });
-        services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<StoreDbContext>());
+        services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<StoreDbContext>());
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 
         services.AddScoped<SeedRunner>();
         services.AddHostedService<SeedHostedService>();

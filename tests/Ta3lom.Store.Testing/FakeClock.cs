@@ -1,4 +1,4 @@
-using Ta3lom.Store.Application.Abstractions;
+using Ta3lom.Store.Application.Abstractions.Time;
 
 namespace Ta3lom.Store.Testing;
 

@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Payments;
+using Ta3lom.Store.Domain.Entities.Payments;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Payments;
 
@@ -25,7 +25,7 @@ internal sealed class RefundConfiguration : IEntityTypeConfiguration<Refund>
         e.Property(x => x.RequestedBy).HasColumnType("text").IsRequired().ValueGeneratedNever();
         e.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone").IsRequired().HasDefaultValueSql("now()").ValueGeneratedNever();
         e.Property(x => x.CompletedAt).HasColumnType("timestamp with time zone").IsRequired(false).ValueGeneratedNever();
-        e.HasOne<Ta3lom.Store.Domain.Ordering.Order>().WithMany().HasForeignKey(x => x.OrderId).HasConstraintName("refund_order_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Ordering.Order>().WithMany().HasForeignKey(x => x.OrderId).HasConstraintName("refund_order_id_fkey").OnDelete(DeleteBehavior.NoAction);
         e.HasOne<Payment>().WithMany().HasForeignKey(x => x.PaymentId).HasConstraintName("refund_payment_id_fkey").OnDelete(DeleteBehavior.NoAction);
     }
 }

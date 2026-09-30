@@ -1,10 +1,12 @@
 <Project>
-  <!-- Versions live only here (central package management). Ask before adding a dependency. -->
+  <!-- Versions live only here (central package management). Run mode: Cloud-build-plan §2.4 lists the pre-approved packages. -->
   <ItemGroup>
     <!-- Application -->
     <PackageVersion Include="FluentValidation" Version="12.1.1" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageVersion Include="Scrutor" Version="7.0.0" />
+    <PackageVersion Include="Mapster" Version="10.0.13" />
+    <PackageVersion Include="Mapster.DependencyInjection" Version="10.0.13" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.12" />
     <!-- Api -->

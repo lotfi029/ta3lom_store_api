@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Carts;
+using Ta3lom.Store.Domain.Entities.Carts;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Carts;
 
@@ -21,6 +21,6 @@ internal sealed class CartConfiguration : IEntityTypeConfiguration<Cart>
         e.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone").IsRequired().HasDefaultValueSql("now()").ValueGeneratedNever();
         e.Property(x => x.UpdatedAt).HasColumnType("timestamp with time zone").IsRequired().HasDefaultValueSql("now()").ValueGeneratedNever();
         e.HasIndex(x => x.CustomerId).IsUnique().HasFilter("((status = 'active'::text) AND (customer_id IS NOT NULL))").HasDatabaseName("ux_cart_customer_active");
-        e.HasOne<Ta3lom.Store.Domain.Identity.Customer>().WithMany().HasForeignKey(x => x.CustomerId).HasConstraintName("cart_customer_id_fkey").OnDelete(DeleteBehavior.Cascade);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Identity.Customer>().WithMany().HasForeignKey(x => x.CustomerId).HasConstraintName("cart_customer_id_fkey").OnDelete(DeleteBehavior.Cascade);
     }
 }

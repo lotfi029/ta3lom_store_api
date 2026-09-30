@@ -9,7 +9,7 @@ public sealed class DomainModelTests
 {
     private static readonly Type[] Entities = [.. Assemblies.Domain.GetTypes()
         .Where(t => t is { IsClass: true, IsAbstract: false, IsPublic: true }
-                    && t.Namespace != "Ta3lom.Store.Domain.Common"
+                    && t.Namespace?.StartsWith("Ta3lom.Store.Domain.Entities.", StringComparison.Ordinal) == true
                     && t.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, Type.EmptyTypes) is not null)];
 
     [Fact]

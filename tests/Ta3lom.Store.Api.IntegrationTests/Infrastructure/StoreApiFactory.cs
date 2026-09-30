@@ -61,7 +61,7 @@ public class StoreApiFactory : WebApplicationFactory<Program>
 public class ProbeApiFactory : StoreApiFactory
 {
     protected override void ConfigureTestServices(IServiceCollection services) =>
-        services.AddSingleton<Ta3lom.Store.Api.Endpoints.IV1EndpointContributor, ProbeContributor>();
+        services.AddSingleton<Ta3lom.Store.Api.Endpoints.IEndpoint, ProbeEndpoints>();
 }
 
 public sealed class RateLimitedApiFactory : ProbeApiFactory

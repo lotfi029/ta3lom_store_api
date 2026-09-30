@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Documents;
+using Ta3lom.Store.Domain.Entities.Documents;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Documents;
 
@@ -36,8 +36,8 @@ internal sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         e.Property(x => x.ZatcaStatus).HasColumnType("text").IsRequired(false).ValueGeneratedNever();
         e.HasIndex(x => x.Number).IsUnique().HasDatabaseName("invoice_number_key");
         e.HasIndex(x => x.OrderId).HasDatabaseName("ix_invoice_order");
-        e.HasOne<Ta3lom.Store.Domain.Ordering.Order>().WithMany().HasForeignKey(x => x.OrderId).HasConstraintName("invoice_order_id_fkey").OnDelete(DeleteBehavior.NoAction);
-        e.HasOne<Ta3lom.Store.Domain.Media.MediaAsset>().WithMany().HasForeignKey(x => x.PdfAssetId).HasConstraintName("invoice_pdf_asset_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Ordering.Order>().WithMany().HasForeignKey(x => x.OrderId).HasConstraintName("invoice_order_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Media.MediaAsset>().WithMany().HasForeignKey(x => x.PdfAssetId).HasConstraintName("invoice_pdf_asset_id_fkey").OnDelete(DeleteBehavior.NoAction);
         e.HasOne<Invoice>().WithMany().HasForeignKey(x => x.ReferencesInvoiceId).HasConstraintName("invoice_references_invoice_id_fkey").OnDelete(DeleteBehavior.NoAction);
     }
 }

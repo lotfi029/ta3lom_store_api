@@ -2,8 +2,8 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog.Core;
 using Serilog.Events;
+using Ta3lom.Store.Api.Extensions;
 using Ta3lom.Store.Api.IntegrationTests.Infrastructure;
-using Ta3lom.Store.Api.Logging;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Logging;
 
@@ -31,8 +31,8 @@ public sealed class LogRedactionTests(LogRedactionTests.Factory factory) : IClas
         foreach (var secret in new[]
                  {
                      BearerToken, "raw-refresh-cookie-value", "header-token-value", "new-refresh-cookie-value",
-                     ProbeContributor.SecretPassword, ProbeContributor.SecretClientSecret,
-                     ProbeContributor.SecretRefreshToken, ProbeContributor.SecretApiToken,
+                     ProbeEndpoints.SecretPassword, ProbeEndpoints.SecretClientSecret,
+                     ProbeEndpoints.SecretRefreshToken, ProbeEndpoints.SecretApiToken,
                  })
         {
             everything.ShouldNotContain(secret);

@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
-using Ta3lom.Store.Application.Abstractions;
 using Ta3lom.Store.ArchitectureTests.Support;
+using Ta3lom.Store.Domain.Errors;
 
 namespace Ta3lom.Store.ArchitectureTests;
 

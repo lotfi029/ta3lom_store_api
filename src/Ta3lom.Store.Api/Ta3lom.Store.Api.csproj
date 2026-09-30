@@ -6,7 +6,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Ta3lom.Store.Application/Ta3lom.Store.Application.csproj" />
-    <ProjectReference Include="../Ta3lom.Store.Contracts/Ta3lom.Store.Contracts.csproj" />
     <ProjectReference Include="../Ta3lom.Store.Infrastructure/Ta3lom.Store.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>

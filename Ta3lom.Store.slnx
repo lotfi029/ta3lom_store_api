@@ -2,9 +2,9 @@
   <Folder Name="/src/">
     <Project Path="src/Ta3lom.Store.Api/Ta3lom.Store.Api.csproj" />
     <Project Path="src/Ta3lom.Store.Application/Ta3lom.Store.Application.csproj" />
-    <Project Path="src/Ta3lom.Store.Contracts/Ta3lom.Store.Contracts.csproj" />
     <Project Path="src/Ta3lom.Store.Domain/Ta3lom.Store.Domain.csproj" />
     <Project Path="src/Ta3lom.Store.Infrastructure/Ta3lom.Store.Infrastructure.csproj" />
+    <Project Path="src/Ta3lom.Store.SharedKernel/Ta3lom.Store.SharedKernel.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Ta3lom.Store.Api.IntegrationTests/Ta3lom.Store.Api.IntegrationTests.csproj" />

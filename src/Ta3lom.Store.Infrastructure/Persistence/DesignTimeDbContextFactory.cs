@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using Ta3lom.Store.Infrastructure.Security;
+using Ta3lom.Store.Infrastructure.Services.Security;
 
 namespace Ta3lom.Store.Infrastructure.Persistence;
 

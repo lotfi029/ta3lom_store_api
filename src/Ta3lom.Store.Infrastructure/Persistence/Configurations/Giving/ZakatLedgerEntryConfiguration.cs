@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Ta3lom.Store.Domain.Giving;
+using Ta3lom.Store.Domain.Entities.Giving;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Giving;
 
@@ -24,7 +24,7 @@ internal sealed class ZakatLedgerEntryConfiguration : IEntityTypeConfiguration<Z
         e.Property(x => x.At).HasColumnType("timestamp with time zone").IsRequired().HasDefaultValueSql("now()").ValueGeneratedNever();
         e.Property(x => x.Actor).HasColumnType("text").IsRequired().ValueGeneratedNever();
         e.HasIndex(x => new { x.ProductId, x.At }).HasDatabaseName("ix_zakat_product");
-        e.HasOne<Ta3lom.Store.Domain.Ordering.OrderLine>().WithMany().HasForeignKey(x => x.OrderLineId).HasConstraintName("zakat_ledger_order_line_id_fkey").OnDelete(DeleteBehavior.NoAction);
-        e.HasOne<Ta3lom.Store.Domain.Catalog.Product>().WithMany().HasForeignKey(x => x.ProductId).HasConstraintName("zakat_ledger_product_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Ordering.OrderLine>().WithMany().HasForeignKey(x => x.OrderLineId).HasConstraintName("zakat_ledger_order_line_id_fkey").OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<Ta3lom.Store.Domain.Entities.Catalog.Product>().WithMany().HasForeignKey(x => x.ProductId).HasConstraintName("zakat_ledger_product_id_fkey").OnDelete(DeleteBehavior.NoAction);
     }
 }

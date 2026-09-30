@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Ta3lom.Store.Api.IntegrationTests.Infrastructure.Database;
-using Ta3lom.Store.Domain.Catalog;
-using Ta3lom.Store.Domain.Giving;
-using Ta3lom.Store.Domain.Ordering;
+using Ta3lom.Store.Domain.Entities.Catalog;
+using Ta3lom.Store.Domain.Entities.Giving;
+using Ta3lom.Store.Domain.Entities.Ordering;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Persistence;
 
