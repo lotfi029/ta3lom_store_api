@@ -204,6 +204,19 @@ public sealed class AdminCatalogTests(ScenarioFactory factory) : IClassFixture<S
             });
         zero.Response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 
+        var first = Guid.Parse(published.GetProperty("options").EnumerateArray().First().Str("id"));
+        var twice = await admin.SendAsync(HttpMethod.Put, $"/v1/admin/projects/{published.Str("id")}/options",
+            new
+            {
+                options = new[]
+                {
+                    new { id = (Guid?)first, labelAr = "أولى", labelEn = (string?)null, amount = "4.00", sort = 0, isActive = true },
+                    new { id = (Guid?)first, labelAr = "ثانية", labelEn = (string?)null, amount = "5.00", sort = 1, isActive = true },
+                },
+                version = published.GetProperty("version").GetUInt32(),
+            });
+        twice.Response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);                                              // A-4
+
         var kept = published.GetProperty("options").EnumerateArray().First();
         var replaced = await admin.SendAsync(HttpMethod.Put, $"/v1/admin/projects/{published.Str("id")}/options",
             new

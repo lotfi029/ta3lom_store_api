@@ -12,7 +12,7 @@ internal sealed class NotificationConfiguration : IEntityTypeConfiguration<Notif
         e.ToTable("notification", t =>
         {
             t.HasCheckConstraint("ck_notification_channel", "channel IN ('sms', 'email')");
-            t.HasCheckConstraint("ck_notification_status", "status IN ('sent', 'failed')");
+            t.HasCheckConstraint("ck_notification_status", "status IN ('sent', 'failed', 'sending', 'unknown')");
         });
         e.HasKey(x => x.Id).HasName("pk_notification");
         e.Property(x => x.Id).ValueGeneratedNever();

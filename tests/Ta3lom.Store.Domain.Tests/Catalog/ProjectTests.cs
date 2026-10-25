@@ -195,6 +195,31 @@ public sealed class ProjectTests
     }
 
     [Fact]
+    public void An_option_claimed_by_id_is_not_reused_by_label_for_another_input()
+    {
+        var project = Make.Published(_category, true, null, 25m);
+        var option = project.Options[0];
+
+        project.ReplaceOptions([new ProjectOptionInput(null, option.LabelAr, null, new Money(100m), 1, true), new ProjectOptionInput(option.Id, "أسبوع", null, new Money(500m), 2, true)],
+            new HashSet<Guid>(), Make.Now).IsSuccess.ShouldBeTrue();
+
+        project.Options.Count.ShouldBe(2);
+        project.Options.Single(o => o.Id == option.Id).LabelAr.ShouldBe("أسبوع");
+        project.Options.Single(o => o.Id != option.Id).Amount.ShouldBe(new Money(100m));
+    }
+
+    [Fact]
+    public void Option_ids_in_one_replacement_are_unique()
+    {
+        var project = Make.Published(_category, true, null, 25m);
+        var option = project.Options[0];
+
+        Should.Throw<DomainException>(() => project.ReplaceOptions(
+            [new ProjectOptionInput(option.Id, "يوم", null, new Money(1m), 1, true), new ProjectOptionInput(option.Id, "شهر", null, new Money(2m), 2, true)],
+            new HashSet<Guid>(), Make.Now));
+    }
+
+    [Fact]
     public void Option_labels_are_unique_and_amounts_positive()
     {
         var project = Make.Draft(_category);

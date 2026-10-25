@@ -29,6 +29,14 @@ internal sealed class ChangePasswordCommandHandler(
             return GeneralErrors.Unauthenticated;
         }
 
+        // A-3 (D-12): while locked the current password is not judged (no guessing through a lock with a stolen token).
+        await staff.LockForUpdateAsync(user, ct);
+        if (user.IsLocked(clock.UtcNow))
+        {
+            audit.Record(AuditActions.StaffPasswordChangeFailed, "staff_user", user.Id.ToString(), user.Email, new { reason = "locked" });
+            return StaffErrors.AccountLocked(user.LockedUntil!.Value);
+        }
+
         if (!hasher.Verify(user.PassHash, command.CurrentPassword))
         {
             await failures.RecordAsync(user, AuditActions.StaffPasswordChangeFailed, "current_password", ct);

@@ -40,7 +40,7 @@ internal sealed partial class UnifonicSmsSender(HttpClient http, IOptions<SmsOpt
                 ? SmsSendResult.Ok(payload.Data?.MessageId)
                 : SmsSendResult.Failed(payload?.ErrorCode ?? "provider error");
         }
-        catch (HttpRequestException ex)
+        catch (Exception ex) when (ex is HttpRequestException || (ex is TaskCanceledException && !ct.IsCancellationRequested))   // A-1: a timeout
         {
             var masked = SaudiMobile.Mask(mobileE164);
             LogFailed(logger, masked, 0);

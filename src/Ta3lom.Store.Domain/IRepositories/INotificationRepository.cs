@@ -4,8 +4,11 @@ namespace Ta3lom.Store.Domain.IRepositories;
 
 public interface INotificationRepository : IGenericRepository<Notification>
 {
-    /// At-most-once per `dedupe_key`: inserts the row as `failed` (not delivered yet) and returns it, re-claims a row that
-    /// failed before, and returns null when the message was already sent.
-    Task<Notification?> TryClaimAsync(string dedupeKey, MessageChannel channel, string recipientHash, string templateKey,
+    /// At-most-once per `dedupe_key`: inserts the row as `sending` (claimed), re-claims a row the provider refused before
+    /// (`failed`), and otherwise returns the existing row unclaimed (`sent`, `unknown`, or `sending` = outcome unknown).
+    Task<NotificationClaim> TryClaimAsync(string dedupeKey, MessageChannel channel, string recipientHash, string templateKey,
         DateTimeOffset now, CancellationToken ct = default);
 }
+
+/// The notification row (tracked) and whether this attempt owns the send.
+public sealed record NotificationClaim(Notification Row, bool Claimed);

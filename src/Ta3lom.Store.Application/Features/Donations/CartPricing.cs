@@ -139,31 +139,30 @@ internal sealed class CartAccess(ICartRepository carts, ICustomerRepository cust
         return await customers.GetByIdAsync(customerId, ct) is { IsActive: true } ? Result.Success() : AuthErrors.AccountBlocked;
     }
 
-    /// The locked cart, or a new one (added, not saved) when <paramref name="create"/> is set; `IsNew` tells the endpoint to
-    /// write the guest cookie.
-    public async Task<(Cart? Cart, bool IsNew)> LockAsync(CartOwner owner, bool create, CancellationToken ct)
+    /// The locked cart, or a new one (added, not saved) when <paramref name="create"/> is set.
+    public async Task<Cart?> LockAsync(CartOwner owner, bool create, CancellationToken ct)
     {
         var now = clock.UtcNow;
         if (owner.CustomerId is { } customerId)
         {
             return create
-                ? (await carts.GetOrCreateForCustomerForUpdateAsync(customerId, now, ct), false)
-                : (await carts.GetForCustomerForUpdateAsync(customerId, ct), false);
+                ? await carts.GetOrCreateForCustomerForUpdateAsync(customerId, now, ct)
+                : await carts.GetForCustomerForUpdateAsync(customerId, ct);
         }
 
         var guest = owner.GuestCartId is { } id ? await carts.GetForUpdateAsync(id, ct) : null;
         if (guest is { IsGuest: true } && guest.ExpiresAt > now)
         {
-            return (guest, false);
+            return guest;
         }
 
         if (!create)
         {
-            return (null, false);
+            return null;
         }
 
         var cart = Cart.CreateGuest(now);
         carts.Add(cart);
-        return (cart, true);
+        return cart;
     }
 }

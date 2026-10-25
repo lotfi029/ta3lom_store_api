@@ -22,4 +22,7 @@ public interface IOrderRepository : IGenericRepository<Order>
 
     /// Every order of the donor (tracked), for anonymisation (D-14).
     Task<IReadOnlyList<Order>> ForCustomerAsync(Guid customerId, CancellationToken ct = default);
+
+    /// The order a checkout of this donor with this `Idempotency-Key` placed, if any (A-5).
+    Task<Order?> FindByIdempotencyKeyAsync(Guid customerId, string idempotencyKey, CancellationToken ct = default);
 }

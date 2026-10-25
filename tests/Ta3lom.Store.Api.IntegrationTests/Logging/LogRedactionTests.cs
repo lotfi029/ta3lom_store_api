@@ -21,6 +21,8 @@ public sealed class LogRedactionTests(LogRedactionTests.Factory factory) : IClas
         request.Headers.Add("Cookie", CookieValue);
         request.Headers.Add("X-Refresh-Token", "header-token-value");
         request.Headers.Add("User-Agent", "redaction-test");
+        request.Headers.Add("X-Forwarded-For", "203.0.113.199");                                                   // L-2: client IPs
+        request.Headers.Add("X-Real-IP", "203.0.113.198");
 
         var response = await factory.CreateClient().SendAsync(request, TestContext.Current.CancellationToken);
         response.EnsureSuccessStatusCode();
@@ -32,7 +34,7 @@ public sealed class LogRedactionTests(LogRedactionTests.Factory factory) : IClas
                  {
                      BearerToken, "raw-refresh-cookie-value", "header-token-value", "new-refresh-cookie-value",
                      ProbeEndpoints.SecretPassword, ProbeEndpoints.SecretClientSecret,
-                     ProbeEndpoints.SecretRefreshToken, ProbeEndpoints.SecretApiToken,
+                     ProbeEndpoints.SecretRefreshToken, ProbeEndpoints.SecretApiToken, "203.0.113.199", "203.0.113.198",
                  })
         {
             everything.ShouldNotContain(secret);

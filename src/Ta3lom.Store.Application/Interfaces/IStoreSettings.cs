@@ -7,5 +7,8 @@ public interface IStoreSettings
 {
     Task<StoreSettings> GetAsync(CancellationToken ct = default);
 
+    /// Read from the database now, bypassing (and not filling) the cache: for checks that must see committed values.
+    Task<StoreSettings> GetFreshAsync(CancellationToken ct = default);
+
     void Invalidate();
 }

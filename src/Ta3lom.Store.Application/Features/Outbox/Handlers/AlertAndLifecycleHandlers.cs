@@ -15,5 +15,6 @@ internal sealed class StaffAlertHandler(NotificationDispatch dispatch, IEmailSen
                 body = string.Create(CultureInfo.InvariantCulture,
                     $"kind: {message.Kind}\nreference: {message.Reference ?? "-"}\ndetail: {message.Detail}\nat: {envelope.OccurredAt:O}"),
             },
-            ct);
+            ct,
+            alertOnUnknown: message.Kind != NotificationDispatch.UnknownOutcomeKind);
 }

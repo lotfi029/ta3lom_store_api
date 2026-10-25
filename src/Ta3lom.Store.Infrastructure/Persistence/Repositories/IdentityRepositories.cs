@@ -20,6 +20,9 @@ internal sealed class OtpChallengeRepository(StoreDbContext db) : GenericReposit
     public Task LockIpAsync(string ipHash, CancellationToken ct = default) =>
         Db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtextextended({"otp-ip:" + ipHash}, 0))", ct);
 
+    public Task LockDayAsync(DateTimeOffset riyadhDayStart, CancellationToken ct = default) =>
+        Db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtextextended({"otp-day:" + riyadhDayStart.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture)}, 0))", ct);
+
     public async Task<IReadOnlyList<DateTimeOffset>> IssuedForMobileSinceAsync(string mobileE164, DateTimeOffset since, CancellationToken ct = default) =>
         await Set.AsNoTracking().Where(o => o.Mobile == mobileE164 && o.CreatedAt >= since)
             .OrderBy(o => o.CreatedAt).Select(o => o.CreatedAt).ToListAsync(ct);
@@ -44,10 +47,19 @@ internal sealed class OtpChallengeRepository(StoreDbContext db) : GenericReposit
     }
 }
 
+/// A-6: a rotation and a revoke-all of the same subject serialise on one transaction-scoped advisory lock, so revoke-all
+/// waits for a rotation in flight and its UPDATE then sees the successor (READ COMMITTED gives each statement a new snapshot).
 internal sealed class RefreshTokenRepository(StoreDbContext db) : GenericRepository<RefreshToken>(db), IRefreshTokenRepository
 {
     public async Task<RefreshToken?> FindByHashForUpdateAsync(string tokenHash, CancellationToken ct = default)
     {
+        var subject = await Set.AsNoTracking().Where(t => t.TokenHash == tokenHash).Select(t => new { t.SubjectType, t.SubjectId }).FirstOrDefaultAsync(ct);
+        if (subject is null)
+        {
+            return null;
+        }
+
+        await LockSubjectAsync(subject.SubjectType, subject.SubjectId, ct);
         var rows = await Set.FromSql($"SELECT * FROM store.refresh_token WHERE token_hash = {tokenHash} FOR UPDATE").ToListAsync(ct);
         return rows.SingleOrDefault();
     }
@@ -59,23 +71,47 @@ internal sealed class RefreshTokenRepository(StoreDbContext db) : GenericReposit
         Set.Where(t => t.FamilyId == familyId && t.RevokedAt == null)
             .ExecuteUpdateAsync(u => u.SetProperty(t => t.RevokedAt, now), ct);
 
-    public Task<int> RevokeAllForSubjectAsync(TokenSubjectType subjectType, Guid subjectId, DateTimeOffset now, CancellationToken ct = default) =>
-        Set.Where(t => t.SubjectType == subjectType && t.SubjectId == subjectId && t.RevokedAt == null)
-            .ExecuteUpdateAsync(u => u.SetProperty(t => t.RevokedAt, now), ct);
+    public async Task<int> RevokeAllForSubjectAsync(TokenSubjectType subjectType, Guid subjectId, DateTimeOffset now, CancellationToken ct = default)
+    {
+        if (Db.Database.CurrentTransaction is not null)
+        {
+            return await RevokeLockedAsync();
+        }
+
+        return await Db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+        {
+            await using var tx = await Db.Database.BeginTransactionAsync(ct);
+            var revoked = await RevokeLockedAsync();
+            await tx.CommitAsync(ct);
+            return revoked;
+        });
+
+        async Task<int> RevokeLockedAsync()
+        {
+            await LockSubjectAsync(subjectType, subjectId, ct);
+            return await Set.Where(t => t.SubjectType == subjectType && t.SubjectId == subjectId && t.RevokedAt == null)
+                .ExecuteUpdateAsync(u => u.SetProperty(t => t.RevokedAt, now), ct);
+        }
+    }
+
+    private Task<int> LockSubjectAsync(TokenSubjectType subjectType, Guid subjectId, CancellationToken ct) =>
+        Db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtextextended({"tokens:" + subjectType.ToWire() + ":" + subjectId.ToString("N")}, 0))", ct);
 }
 
 internal sealed class NotificationRepository(StoreDbContext db) : GenericRepository<Notification>(db), INotificationRepository
 {
-    public async Task<Notification?> TryClaimAsync(string dedupeKey, MessageChannel channel, string recipientHash, string templateKey,
+    public async Task<NotificationClaim> TryClaimAsync(string dedupeKey, MessageChannel channel, string recipientHash, string templateKey,
         DateTimeOffset now, CancellationToken ct = default)
     {
         var ids = await Db.Database.SqlQuery<Guid>($"""
             INSERT INTO store.notification (id, channel, recipient_hash, template_key, dedupe_key, status, created_at)
-            VALUES ({Guid.CreateVersion7()}, {channel.ToWire()}, {recipientHash}, {templateKey}, {dedupeKey}, 'failed', {now})
-            ON CONFLICT (dedupe_key) DO UPDATE SET created_at = EXCLUDED.created_at WHERE notification.status = 'failed'
+            VALUES ({Guid.CreateVersion7()}, {channel.ToWire()}, {recipientHash}, {templateKey}, {dedupeKey}, 'sending', {now})
+            ON CONFLICT (dedupe_key) DO UPDATE SET status = 'sending', created_at = EXCLUDED.created_at WHERE notification.status = 'failed'
             RETURNING id AS "Value"
             """).ToListAsync(ct);
-        return ids.Count == 0 ? null : await Set.SingleAsync(n => n.Id == ids[0], ct);
+        return ids.Count == 0
+            ? new NotificationClaim(await Set.SingleAsync(n => n.DedupeKey == dedupeKey, ct), Claimed: false)
+            : new NotificationClaim(await Set.SingleAsync(n => n.Id == ids[0], ct), Claimed: true);
     }
 }
 

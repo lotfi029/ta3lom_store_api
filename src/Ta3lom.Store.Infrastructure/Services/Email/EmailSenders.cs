@@ -39,6 +39,34 @@ public sealed class EmailOptions
     public string SinkFolder { get; set; } = "../../artifacts/mail";
 }
 
+/// A-8: Production sends staff mail over SMTP — `Mode = smtp` with host, user and password, or the host does not start.
+internal sealed class EmailOptionsValidator(IHostEnvironment environment) : IValidateOptions<EmailOptions>
+{
+    public ValidateOptionsResult Validate(string? name, EmailOptions options)
+    {
+        if (!environment.IsProduction())
+        {
+            return ValidateOptionsResult.Success;
+        }
+
+        List<string> problems = [];
+        if (!string.Equals(options.Mode, "smtp", StringComparison.OrdinalIgnoreCase))
+        {
+            problems.Add("Store:Email:Mode must be smtp in Production");
+        }
+
+        foreach (var (key, value) in new[] { ("Store:Email:Host", options.Host), ("Store:Email:User", options.User), ("Store:Email:Password", options.Password) })
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                problems.Add($"{key} is required in Production");
+            }
+        }
+
+        return problems.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(problems);
+    }
+}
+
 internal static class MimeBuilder
 {
     public static MimeMessage Build(EmailOptions o, EmailMessage m)
@@ -112,13 +140,26 @@ internal sealed class SmtpEmailSender(IOptions<EmailOptions> options) : IEmailSe
             }
 
             var response = await client.SendAsync(MimeBuilder.Build(o, message), ct);
-            await client.DisconnectAsync(quit: true, ct);
+            await QuitQuietlyAsync(client, ct);
             return DeliveryResult.Ok(response);
         }
         catch (Exception ex) when (ex is SmtpCommandException or SmtpProtocolException or AuthenticationException or SocketException or IOException
                                        or ServiceNotConnectedException)
         {
             return DeliveryResult.Failed(ex.Message);
+        }
+    }
+
+    /// A-2: once the server accepted the message it is sent; a failing QUIT must not turn it into a retry (a second e-mail).
+    private static async Task QuitQuietlyAsync(SmtpClient client, CancellationToken ct)
+    {
+        try
+        {
+            await client.DisconnectAsync(quit: true, ct);
+        }
+        catch (Exception ex) when (ex is SmtpCommandException or SmtpProtocolException or SocketException or IOException or ServiceNotConnectedException)
+        {
+            // the message is already delivered
         }
     }
 }

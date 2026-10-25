@@ -11,13 +11,13 @@ public sealed class MigrationTests
 {
     private static readonly string[] Tables =
     [
-        "audit_log", "cart", "cart_line", "category", "customer", "idempotency_key", "media_asset", "message_template", "notification",
+        "audit_log", "cart", "cart_line", "category", "customer", "idempotency_key", "job_run", "media_asset", "message_template", "notification",
         "order_line", "orders", "otp_challenge", "outbox_message", "project", "project_option", "project_slug_history", "refresh_token",
         "setting", "staff_user",
     ];
 
     [Fact]
-    public async Task The_migration_applies_on_postgres_18_and_creates_the_19_tables()
+    public async Task The_migration_applies_on_postgres_18_and_creates_the_20_tables()
     {
         var cs = await StoreSchema.CreateMigratedAsync("mig");
 

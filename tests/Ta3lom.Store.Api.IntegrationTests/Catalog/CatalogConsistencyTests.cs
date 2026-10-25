@@ -85,4 +85,29 @@ public sealed class CatalogConsistencyTests(ScenarioFactory factory) : IClassFix
         refused.Response.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
         refused.Body.Str("code").ShouldBe(ErrorCodes.SettingInvalidValue);
     }
+
+    [Fact]
+    public async Task Parallel_setting_updates_cannot_together_break_the_money_rules()
+    {
+        var admin = await factory.StaffAsync(Roles.Admin);
+
+        async Task<HttpStatusCode> PutAsync(string key, object value) =>
+            (await admin.SendAsync(HttpMethod.Put, $"/v1/admin/settings/{key}", new { value })).Response.StatusCode;
+
+        for (var round = 0; round < 5; round++)
+        {
+            (await PutAsync("min_gift_amount", "10.00")).ShouldBe(HttpStatusCode.OK);
+            (await PutAsync("cart_max_total", "100000.00")).ShouldBe(HttpStatusCode.OK);
+            (await PutAsync("max_line_amount", "50000.00")).ShouldBe(HttpStatusCode.OK);
+
+            // Each alone is fine; together the minimum gift would exceed the line maximum (L-7).
+            var both = await Task.WhenAll(PutAsync("min_gift_amount", "40.00"), PutAsync("max_line_amount", "20.00"));
+
+            both.Count(s => s == HttpStatusCode.UnprocessableEntity).ShouldBe(1, $"round {round}");
+        }
+
+        (await PutAsync("min_gift_amount", "10.00")).ShouldBe(HttpStatusCode.OK);                                 // back to the seeded values
+        (await PutAsync("cart_max_total", "100000.00")).ShouldBe(HttpStatusCode.OK);
+        (await PutAsync("max_line_amount", "100000.00")).ShouldBe(HttpStatusCode.OK);
+    }
 }

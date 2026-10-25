@@ -43,6 +43,21 @@ public sealed class CustomerAuthTests(ScenarioFactory factory) : IClassFixture<S
     }
 
     [Fact]
+    [Rule("D-10")]
+    public async Task IPv6_addresses_of_one_64_prefix_share_the_per_IP_limit()
+    {
+        var statuses = new List<HttpStatusCode>();
+        for (var i = 1; i <= 11; i++)
+        {
+            statuses.Add((await RequestAsync(factory.Browser($"2001:db8:77:1::{i:x}"), ScenarioFactory.NewMobile())).StatusCode);
+        }
+
+        statuses.Take(10).ShouldAllBe(s => s == HttpStatusCode.Accepted);
+        statuses[10].ShouldBe(HttpStatusCode.TooManyRequests);
+        (await RequestAsync(factory.Browser("2001:db8:77:2::1"), ScenarioFactory.NewMobile())).StatusCode.ShouldBe(HttpStatusCode.Accepted);   // another /64
+    }
+
+    [Fact]
     [Rule("D-14")]
     public async Task The_first_sign_in_creates_the_donor_with_the_PDPL_consent_and_a_refresh_cookie()
     {

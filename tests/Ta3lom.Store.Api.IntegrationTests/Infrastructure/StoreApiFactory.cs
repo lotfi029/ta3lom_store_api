@@ -91,11 +91,15 @@ public class ProductionApiFactory : StoreApiFactory
 {
     protected override string EnvironmentName => "Production";
 
-    /// Production also requires the site-rebuild settings (a throw-away token; the outbox is off, nothing is dispatched).
+    /// Production also requires the site-rebuild, SMS and SMTP settings (throw-away values; the outbox is off, nothing is sent).
     protected override IReadOnlyDictionary<string, string?> Settings => new Dictionary<string, string?>(base.Settings)
     {
         ["Store:SiteRebuild:Repository"] = "example/web",
         ["Store:SiteRebuild:Token"] = "test-token-not-real",
+        ["Store:Sms:AppSid"] = "test-app-sid-not-real",
+        ["Store:Sms:SenderId"] = "ta3lom",
+        ["Store:Email:User"] = "store@ta3lom.sa",
+        ["Store:Email:Password"] = "test-password-not-real",
         ["Store:Outbox:Enabled"] = "false",
     };
 }

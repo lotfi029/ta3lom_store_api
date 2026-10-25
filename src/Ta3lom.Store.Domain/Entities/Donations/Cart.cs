@@ -60,13 +60,13 @@ public sealed class Cart : AggregateRoot
             return CartErrors.QuantityLimit(CartLimits.MaxQuantity);
         }
 
-        var added = option.Amount * quantity;
         if (existing is null && _lines.Count >= limits.MaxLines)
         {
             return CartErrors.TooManyLines(limits.MaxLines);
         }
 
-        if (Total + added > limits.MaxTotal)
+        // L-11: the line is re-priced at the option's current amount, so the check uses that, not its stored amount.
+        if (Total - (existing?.Amount ?? Money.Zero) + (option.Amount * newQuantity) > limits.MaxTotal)
         {
             return CartErrors.TotalExceeded(limits.MaxTotal);
         }
@@ -189,7 +189,8 @@ public sealed class Cart : AggregateRoot
             var existing = line.OptionId is { } optionId ? _lines.FirstOrDefault(l => l.OptionId == optionId) : null;
             var fitsLines = existing is not null || _lines.Count < limits.MaxLines;
             var quantity = (existing?.Quantity ?? 0) + line.Quantity;
-            if (!fitsLines || quantity > CartLimits.MaxQuantity || Total + line.Amount > limits.MaxTotal)
+            var added = existing is not null ? existing.UnitAmount * line.Quantity : line.Amount;    // L-11: combined at the donor line's price
+            if (!fitsLines || quantity > CartLimits.MaxQuantity || Total + added > limits.MaxTotal)
             {
                 outcomes.Add(new CartMergeOutcome(CartMergeOutcome.Dropped, line.Id));
                 continue;

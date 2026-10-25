@@ -1,4 +1,5 @@
 using System.Net;
+using Npgsql;
 using Ta3lom.Store.Api.IntegrationTests.Infrastructure;
 using Ta3lom.Store.Api.IntegrationTests.Infrastructure.Scenario;
 using Ta3lom.Store.Domain.Errors;
@@ -20,6 +21,7 @@ public sealed class CartTests(ScenarioFactory factory) : IClassFixture<ScenarioF
         first.Response.StatusCode.ShouldBe(HttpStatusCode.OK);
         first.Response.Headers.GetValues("Set-Cookie").ShouldContain(v => v.StartsWith("t3s_cart=", StringComparison.Ordinal) && v.Contains("httponly"));
         var again = await guest.SendJsonAsync(HttpMethod.Post, "/v1/cart/lines", new { projectId = c.ProjectId, optionId = c.OptionId, quantity = 3 });
+        again.Response.Headers.GetValues("Set-Cookie").ShouldContain(v => v.StartsWith("t3s_cart=", StringComparison.Ordinal) && v.Contains("max-age=2592000"));   // L-8: renewed
         await guest.SendJsonAsync(HttpMethod.Post, "/v1/cart/lines", new { projectId = c.ProjectId, amount = "50.00" });
         await guest.SendJsonAsync(HttpMethod.Post, "/v1/cart/lines", new { projectId = c.ProjectId, amount = "50.00" });
         var cart = (await guest.SendJsonAsync(HttpMethod.Post, "/v1/cart/lines", new { categoryId = c.CategoryId, amount = "15.50" })).Body;
@@ -215,6 +217,27 @@ public sealed class CartTests(ScenarioFactory factory) : IClassFixture<ScenarioF
     }
 
     [Fact]
+    [Rule("D-04")]
+    public async Task A_guest_line_that_would_break_the_total_limit_is_dropped_at_sign_in_and_reported()
+    {
+        var c = await DonationCatalog.CreateAsync(factory);
+        var mobile = ScenarioFactory.NewMobile();
+        var browser = factory.Browser();
+        await factory.SignInAsync(browser, mobile);
+        await browser.SendJsonAsync(HttpMethod.Post, "/v1/cart/lines", new { categoryId = c.CategoryId, amount = "99000.00" });
+        await browser.SendJsonAsync(HttpMethod.Post, "/v1/auth/logout");
+
+        var guest = factory.Browser();
+        await guest.SendJsonAsync(HttpMethod.Post, "/v1/cart/lines", new { categoryId = c.CategoryId, amount = "5000.00" });
+        var session = await factory.SignInAsync(guest, mobile);
+
+        session.GetProperty("cartNotices").EnumerateArray().Select(n => n.Str("code")).ShouldBe(["cart.merge_dropped"]);
+        var cart = (await guest.SendJsonAsync(HttpMethod.Get, "/v1/cart")).Body;
+        cart.GetProperty("lineCount").GetInt32().ShouldBe(1);
+        cart.Str("totalAmount").ShouldBe("99000.00");
+    }
+
+    [Fact]
     [Rule("D-13")]
     public async Task A_blocked_donor_cannot_change_the_cart()
     {
@@ -226,5 +249,36 @@ public sealed class CartTests(ScenarioFactory factory) : IClassFixture<ScenarioF
 
         add.Response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
         add.Body.Str("code").ShouldBe(ErrorCodes.AccountBlocked);
+    }
+
+    [Fact]
+    [Rule("D-14")]
+    public async Task A_cart_write_racing_the_account_deletion_leaves_no_cart_behind()
+    {
+        var c = await DonationCatalog.CreateAsync(factory);
+        var donor = await factory.CustomerAsync();
+        (await donor.PostAsync("/v1/cart/lines", new { projectId = c.ProjectId, optionId = c.OptionId, quantity = 1 })).Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var ct = TestContext.Current.CancellationToken;
+
+        // DELETE /v1/me in flight: the donor's cart is locked and deleted and the donor anonymised, not committed yet.
+        await using var deletion = new NpgsqlConnection(factory.DatabaseConnectionString);
+        await deletion.OpenAsync(ct);
+        await using var tx = await deletion.BeginTransactionAsync(ct);
+        await using (var command = new NpgsqlCommand($"""
+            SELECT id FROM store.cart WHERE customer_id = '{donor.Id}' FOR UPDATE;
+            UPDATE store.customer SET status = 'anonymised', mobile = NULL, full_name = NULL, email = NULL WHERE id = '{donor.Id}';
+            DELETE FROM store.cart WHERE customer_id = '{donor.Id}';
+            """, deletion, tx))
+        {
+            await command.ExecuteNonQueryAsync(ct);
+        }
+
+        var write = donor.PostAsync("/v1/cart/lines", new { projectId = c.ProjectId, optionId = c.OptionId, quantity = 1 });
+        await Task.Delay(500, ct);
+        await tx.CommitAsync(ct);
+        var response = await write;
+
+        response.Response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.cart WHERE customer_id = '{donor.Id}'")).ShouldBe(0);
     }
 }

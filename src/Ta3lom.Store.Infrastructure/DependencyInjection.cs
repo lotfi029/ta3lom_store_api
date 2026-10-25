@@ -60,6 +60,7 @@ public static class DependencyInjection
             q.AddStoreJob<IntegrityChecksJob>(IntegrityChecksJob.Cron);
         });
         services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
+        services.AddScoped<JobRuns>();
         services.AddSingleton<IJobRunner, QuartzJobRunner>();
         return services;
     }
@@ -89,7 +90,9 @@ public static class DependencyInjection
         services.AddScoped<DevelopmentCatalogSeeder>();
         services.AddHostedService<SeedHostedService>();
 
-        services.AddHealthChecks().AddCheck<PostgresHealthCheck>(PostgresHealthCheck.Name, tags: [HealthTags.Ready]);
+        services.AddHealthChecks()
+            .AddCheck<PostgresHealthCheck>(PostgresHealthCheck.Name, tags: [HealthTags.Ready])
+            .AddCheck<OutboxHealthCheck>(OutboxHealthCheck.Name, tags: [HealthTags.Ready]);
     }
 
     private static void AddRepositories(IServiceCollection services)
@@ -103,6 +106,7 @@ public static class DependencyInjection
         services.AddScoped<ICartRepository, CartRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IProjectRepository, ProjectRepository>();
+        services.AddScoped<ISettingRepository, SettingRepository>();
         services.AddScoped<ICatalogSearch, Services.Catalog.CatalogSearch>();
         services.AddScoped<IOperationsStatus, OperationsStatus>();
         services.AddScoped<IOperationsMaintenance, OperationsMaintenance>();
@@ -140,7 +144,8 @@ public static class DependencyInjection
     /// SMS (sink unless `Store:Sms:Provider = unifonic`), e-mail (sink unless `Store:Email:Mode = smtp`), templates, outbox, settings.
     private static void AddMessaging(IServiceCollection services)
     {
-        services.AddOptions<SmsOptions>().BindConfiguration(SmsOptions.Section);
+        services.AddOptions<SmsOptions>().BindConfiguration(SmsOptions.Section).ValidateOnStart();
+        services.AddSingleton<IValidateOptions<SmsOptions>, SmsOptionsValidator>();
         services.AddSingleton<SinkSmsSender>();
         services.AddSingleton<IDevSmsInbox>(sp => sp.GetRequiredService<SinkSmsSender>());
         services.AddHttpClient<UnifonicSmsSender>(c => c.Timeout = TimeSpan.FromSeconds(10));
@@ -150,7 +155,8 @@ public static class DependencyInjection
                 : sp.GetRequiredService<SinkSmsSender>());
         services.AddScoped<ITemplateRenderer, ScribanTemplateRenderer>();
 
-        services.AddOptions<EmailOptions>().BindConfiguration(EmailOptions.Section);
+        services.AddOptions<EmailOptions>().BindConfiguration(EmailOptions.Section).ValidateOnStart();
+        services.AddSingleton<IValidateOptions<EmailOptions>, EmailOptionsValidator>();
         services.AddSingleton<SinkEmailSender>();
         services.AddSingleton<IDevMailInbox>(sp => sp.GetRequiredService<SinkEmailSender>());
         services.AddSingleton<SmtpEmailSender>();

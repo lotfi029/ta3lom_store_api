@@ -9,8 +9,9 @@ namespace Ta3lom.Store.Application.Features.Donations;
 /// `POST /v1/checkout` (BR-A08, D-09, D-13), idempotent per donor and `Idempotency-Key` (endpoint filter). In one
 /// transaction under the cart lock: the donor must be active, every line is re-priced from the database (any problem →
 /// 422 `checkout.lines_invalid`), the order and its line snapshots are created in `pending_payment` with the reference
-/// `T3-YY-NNNNNN` (YY = the Riyadh year), the cart is emptied and `OrderPlaced` is queued in the outbox.
-public sealed record CheckoutCommand(Guid CustomerId, CheckoutRequest Request) : ICommand<CheckoutResponse>;
+/// `T3-YY-NNNNNN` (YY = the Riyadh year), the cart is emptied and `OrderPlaced` is queued in the outbox. The order keeps the
+/// `Idempotency-Key`; a retry whose stored response was lost (A-5) gets the order that key placed.
+public sealed record CheckoutCommand(Guid CustomerId, CheckoutRequest Request, string? IdempotencyKey = null) : ICommand<CheckoutResponse>;
 
 internal sealed class CheckoutCommandHandler(ICustomerRepository customers, ICartRepository carts, IOrderRepository orders, CartPricer pricer,
     IStoreSettings settings, IOrderStatusTokens statusTokens, IUnitOfWork uow, IClock clock) : ICommandHandler<CheckoutCommand, CheckoutResponse>
@@ -26,6 +27,12 @@ internal sealed class CheckoutCommandHandler(ICustomerRepository customers, ICar
             return AuthErrors.AccountBlocked;
         }
 
+        var cart = await carts.GetForCustomerForUpdateAsync(customer.Id, ct);                // the lock serialises checkouts of the donor
+        if (command.IdempotencyKey is { } key && await orders.FindByIdempotencyKeyAsync(customer.Id, key, ct) is { } placed)
+        {
+            return new CheckoutResponse(placed.Reference, placed.Status.ToWire(), placed.TotalAmount.ToWire(), statusTokens.Create(placed.Reference).Token, null);
+        }
+
         var name = Blank(command.Request.FullName) ?? customer.FullName;
         var email = Blank(command.Request.Email) ?? customer.Email;
         if (name is null || email is null)
@@ -33,7 +40,6 @@ internal sealed class CheckoutCommandHandler(ICustomerRepository customers, ICar
             return OrderErrors.ContactRequired;
         }
 
-        var cart = await carts.GetForCustomerForUpdateAsync(customer.Id, ct);
         if (cart is null || cart.Lines.Count == 0)
         {
             return OrderErrors.CartEmpty;
@@ -52,7 +58,7 @@ internal sealed class CheckoutCommandHandler(ICustomerRepository customers, ICar
         var reference = Order.FormatReference(clock.RiyadhToday.Year, await orders.NextReferenceSequenceAsync(ct));
         var (token, hash) = statusTokens.Create(reference);
         var order = Order.Place(reference, customer.Id, new DonorContact(name, email, customer.Mobile!, locale),
-            [.. priced.Lines.Select(l => l.ToDraft())], hash, now.AddMinutes(s.PaymentWindowMinutes), now);
+            [.. priced.Lines.Select(l => l.ToDraft())], hash, now.AddMinutes(s.PaymentWindowMinutes), now, command.IdempotencyKey);
         orders.Add(order);
         cart.Clear(now);
         return new CheckoutResponse(order.Reference, order.Status.ToWire(), order.TotalAmount.ToWire(), token, null);
@@ -68,6 +74,7 @@ internal sealed class CheckoutCommandValidator : AbstractValidator<CheckoutComma
         RuleFor(c => c.Request.FullName).MaximumLength(120);
         RuleFor(c => c.Request.Email).EmailAddress().MaximumLength(254).When(c => !string.IsNullOrWhiteSpace(c.Request.Email));
         RuleFor(c => c.Request.Locale).Must(l => l is null or "ar" or "en").WithMessage("locale must be ar or en.");
+        RuleFor(c => c.IdempotencyKey).MaximumLength(64);
     }
 }
 

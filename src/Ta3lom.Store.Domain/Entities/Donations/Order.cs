@@ -42,6 +42,9 @@ public sealed class Order : AggregateRoot
     /// SHA-256 of the status token handed to the browser (the guest status page).
     public string StatusTokenHash { get; private set; } = null!;
 
+    /// The `Idempotency-Key` of the checkout that placed it (unique per donor): a retry after a crash finds this order (A-5).
+    public string? IdempotencyKey { get; private set; }
+
     public DateTimeOffset PaymentDueAt { get; private set; }
 
     public DateTimeOffset CreatedAt { get; private set; }
@@ -63,7 +66,7 @@ public sealed class Order : AggregateRoot
         string.Create(CultureInfo.InvariantCulture, $"T3-{riyadhYear % 100:D2}-{sequence:D6}");
 
     public static Order Place(string reference, Guid customerId, DonorContact donor, IReadOnlyList<OrderLineDraft> lines,
-        string statusTokenHash, DateTimeOffset paymentDueAt, DateTimeOffset now)
+        string statusTokenHash, DateTimeOffset paymentDueAt, DateTimeOffset now, string? idempotencyKey = null)
     {
         ArgumentNullException.ThrowIfNull(donor);
         ArgumentNullException.ThrowIfNull(lines);
@@ -79,6 +82,7 @@ public sealed class Order : AggregateRoot
             Locale = donor.Locale is "en" ? "en" : "ar",
             StatusTokenHash = Guard.NotEmpty(statusTokenHash),
             PaymentDueAt = paymentDueAt,
+            IdempotencyKey = idempotencyKey,
         };
         short lineNo = 1;
         foreach (var draft in lines)

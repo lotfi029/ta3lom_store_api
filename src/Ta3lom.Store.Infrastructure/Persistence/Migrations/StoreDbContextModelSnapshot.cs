@@ -530,6 +530,11 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("donor_name");
 
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("text")
+                        .HasColumnName("idempotency_key");
+
                     b.Property<int>("LineCount")
                         .HasColumnType("integer")
                         .HasColumnName("line_count");
@@ -587,6 +592,11 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                     b.HasIndex("CustomerId", "CreatedAt")
                         .IsDescending(false, true)
                         .HasDatabaseName("ix_orders_customer");
+
+                    b.HasIndex("CustomerId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("ux_orders_idempotency")
+                        .HasFilter("idempotency_key IS NOT NULL");
 
                     b.HasIndex("Status", "PaymentDueAt")
                         .HasDatabaseName("ix_orders_status");
@@ -1158,7 +1168,7 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_notification_channel", "channel IN ('sms', 'email')");
 
-                            t.HasCheckConstraint("ck_notification_status", "status IN ('sent', 'failed')");
+                            t.HasCheckConstraint("ck_notification_status", "status IN ('sent', 'failed', 'sending', 'unknown')");
                         });
                 });
 
@@ -1318,6 +1328,26 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_idempotency_status", "status IN ('in_progress', 'completed')");
                         });
+                });
+
+            modelBuilder.Entity("Ta3lom.Store.Infrastructure.Persistence.Records.JobRunRecord", b =>
+                {
+                    b.Property<string>("Job")
+                        .HasColumnType("text")
+                        .HasColumnName("job");
+
+                    b.Property<DateTimeOffset>("FireTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fire_time");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.HasKey("Job", "FireTime")
+                        .HasName("pk_job_run");
+
+                    b.ToTable("job_run", "store");
                 });
 
             modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Catalog.Category", b =>

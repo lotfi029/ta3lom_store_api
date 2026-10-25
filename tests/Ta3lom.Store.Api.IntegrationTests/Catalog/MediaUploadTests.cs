@@ -31,6 +31,10 @@ public sealed class MediaUploadTests(ScenarioFactory factory) : IClassFixture<Sc
         var alt = await admin.SendAsync(HttpMethod.Patch, $"/v1/admin/media/{body.Str("id")}", new { altAr = "غلاف", altEn = "Cover" });
         alt.Response.StatusCode.ShouldBe(HttpStatusCode.OK);
         alt.Body.Str("altEn").ShouldBe("Cover");
+        (await admin.SendAsync(HttpMethod.Patch, $"/v1/admin/media/{body.Str("id")}", new { altAr = new string('غ', 301), altEn = "Cover" }))
+            .Response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);                                                // L-6: same cap as the upload
+        (await admin.SendAsync(HttpMethod.Patch, $"/v1/admin/media/{body.Str("id")}", new { altAr = "غلاف", altEn = new string('x', 301) }))
+            .Response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         (await admin.GetAsync("/v1/admin/media?kind=image")).Body.GetProperty("items").EnumerateArray().Select(m => m.Str("id")).ShouldContain(body.Str("id"));
     }
 
