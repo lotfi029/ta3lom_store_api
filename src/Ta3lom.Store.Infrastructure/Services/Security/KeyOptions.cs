@@ -94,6 +94,20 @@ public static class DevOnlyKeys
         return All.Any(dev => CryptographicOperations.FixedTimeEquals(bytes, Convert.FromBase64String(dev)));
     }
 
+    /// R12-4: two base64 values that decode to the same bytes are the same key (whitespace and line breaks are ignored by
+    /// the decoder), compared in fixed time.
+    public static bool SameKey(string? a, string? b)
+    {
+        try
+        {
+            return CryptographicOperations.FixedTimeEquals(Convert.FromBase64String(a ?? string.Empty), Convert.FromBase64String(b ?? string.Empty));
+        }
+        catch (FormatException)
+        {
+            return string.Equals(a, b, StringComparison.Ordinal);
+        }
+    }
+
     /// Null when the key is acceptable for <paramref name="environment"/>, else the reason.
     public static string? Problem(string name, string? value, IHostEnvironment environment)
     {
@@ -135,7 +149,7 @@ internal sealed class KeyOptionsSetup(IHostEnvironment environment)
     public ValidateOptionsResult Validate(string? name, JwtOptions options) => Result(
         DevOnlyKeys.Problem("Store:Jwt:CustomerSigningKeyBase64", options.CustomerSigningKeyBase64, environment),
         DevOnlyKeys.Problem("Store:Jwt:StaffSigningKeyBase64", options.StaffSigningKeyBase64, environment),
-        options.CustomerSigningKeyBase64 == options.StaffSigningKeyBase64 && !environment.IsDevelopment()
+        DevOnlyKeys.SameKey(options.CustomerSigningKeyBase64, options.StaffSigningKeyBase64) && !environment.IsDevelopment()
             ? "Store:Jwt customer and staff keys must differ" : null);
 
     public ValidateOptionsResult Validate(string? name, OtpOptions options) =>

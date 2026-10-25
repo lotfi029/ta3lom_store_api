@@ -139,12 +139,14 @@ internal sealed class CartAccess(ICartRepository carts, ICustomerRepository cust
         return await customers.GetByIdAsync(customerId, ct) is { IsActive: true } ? Result.Success() : AuthErrors.AccountBlocked;
     }
 
-    /// The locked cart, or a new one (added, not saved) when <paramref name="create"/> is set.
+    /// The locked cart, or a new one (added, not saved) when <paramref name="create"/> is set. A donor's row is locked first
+    /// (R12-3: customer → cart, the order of every use case that touches a donor's cart).
     public async Task<Cart?> LockAsync(CartOwner owner, bool create, CancellationToken ct)
     {
         var now = clock.UtcNow;
         if (owner.CustomerId is { } customerId)
         {
+            await customers.LockForUpdateAsync(customerId, ct);
             return create
                 ? await carts.GetOrCreateForCustomerForUpdateAsync(customerId, now, ct)
                 : await carts.GetForCustomerForUpdateAsync(customerId, ct);

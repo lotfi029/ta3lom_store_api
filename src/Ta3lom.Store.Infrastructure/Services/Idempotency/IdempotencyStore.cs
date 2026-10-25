@@ -8,8 +8,9 @@ namespace Ta3lom.Store.Infrastructure.Services.Idempotency;
 
 /// The `idempotency_key` table. Each statement runs on its own (outside the request's unit of work), so a claim is visible
 /// to a parallel request at once. A row past `expires_at` no longer counts and is replaced, and so does an `in_progress`
-/// claim older than <see cref="SessionPolicy.IdempotencyStaleClaim"/> (A-5: left by a crash; the use case itself recognises
-/// work that did commit, e.g. checkout finds the order placed with the key).
+/// claim older than <see cref="SessionPolicy.IdempotencyStaleClaim"/> for the same request body (A-5: left by a crash; the use
+/// case itself recognises work that did commit, e.g. checkout finds the order placed with the key). Another body never takes
+/// a claim over (R12-2): it reads as a reused key (422).
 internal sealed class IdempotencyStore(StoreDbContext db, IClock clock) : IIdempotencyStore
 {
     /// L-2: when the insert loses to a row that is released before it can be read, the claim is tried once more; a row
@@ -23,7 +24,8 @@ internal sealed class IdempotencyStore(StoreDbContext db, IClock clock) : IIdemp
             var stale = now - SessionPolicy.IdempotencyStaleClaim;
             await db.Database.ExecuteSqlAsync($"""
                 DELETE FROM store.idempotency_key
-                 WHERE scope = {scope} AND key = {key} AND (expires_at <= {now} OR (status = 'in_progress' AND created_at <= {stale}))
+                 WHERE scope = {scope} AND key = {key}
+                   AND (expires_at <= {now} OR (status = 'in_progress' AND created_at <= {stale} AND request_hash = {requestHash}))
                 """, ct);
             var claimed = await db.Database.ExecuteSqlAsync($"""
                 INSERT INTO store.idempotency_key (scope, key, request_hash, status, created_at, expires_at)

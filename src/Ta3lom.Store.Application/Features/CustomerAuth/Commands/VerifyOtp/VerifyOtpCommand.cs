@@ -68,6 +68,7 @@ internal sealed class VerifyOtpCommandHandler(
 
         customer.RecordLogin(now);
         await uow.SaveChangesAsync(ct);                          // the donor row exists before the cart merge points at it
+        await customers.LockForUpdateAsync(customer.Id, ct);     // R12-3: customer → cart before the merge touches either cart
         var notices = await cartMerge.MergeGuestCartAsync(command.GuestCartId, customer.Id, ct);
         var (raw, hash) = codec.Create();
         var refresh = RefreshToken.StartFamily(TokenSubjectType.Customer, customer.Id, hash,

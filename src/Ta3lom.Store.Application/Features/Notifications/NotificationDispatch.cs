@@ -19,9 +19,10 @@ internal sealed class NotificationDispatch(
 {
     public const string UnknownOutcomeKind = "notification_unknown";
 
-    /// `alertOnUnknown` is false for the unknown-outcome alert itself, so a lost alert does not alert again.
+    /// `alertOnUnknown` is false for the unknown-outcome alert itself, so a lost alert does not alert again; `subject` names
+    /// what the message was about (R12-5: e.g. the original alert's kind and reference) in that alert.
     public async Task SendOnceAsync(OutboxEnvelope envelope, MessageChannel channel, string recipient, string templateKey, string locale,
-        object model, CancellationToken ct, bool alertOnUnknown = true)
+        object model, CancellationToken ct, bool alertOnUnknown = true, string? subject = null)
     {
         ArgumentNullException.ThrowIfNull(envelope);
         string recipientHash;
@@ -56,7 +57,7 @@ internal sealed class NotificationDispatch(
                 if (alertOnUnknown)
                 {
                     outbox.Enqueue(new StaffAlert(UnknownOutcomeKind, null, string.Create(CultureInfo.InvariantCulture,
-                        $"{templateKey} ({channel.ToWire()}) of outbox message {envelope.Id}: delivery outcome unknown, not sent again")));
+                        $"{templateKey} ({channel.ToWire()}) of outbox message {envelope.Id}{(subject is null ? string.Empty : $" [{subject}]")}: delivery outcome unknown, not sent again")));
                 }
 
                 await uow.SaveChangesAsync(ct);

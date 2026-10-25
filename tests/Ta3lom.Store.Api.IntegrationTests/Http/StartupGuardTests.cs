@@ -40,6 +40,17 @@ public sealed class StartupGuardTests
 
         failure.ToString().ShouldContain(key);
     }
+
+    /// R12-4: the same key bytes written differently (here with a trailing newline) are still the same key.
+    [Fact]
+    public void The_customer_and_staff_keys_must_differ_as_bytes()
+    {
+        using var factory = new GuardedProductionFactory("Store:Jwt:StaffSigningKeyBase64", StoreApiFactory.TestKey(1) + "\n");
+
+        var failure = Should.Throw<Exception>(() => factory.CreateClient());
+
+        failure.ToString().ShouldContain("customer and staff keys must differ");
+    }
 }
 
 /// L-9: outside Development the key ring path must be set and writable.

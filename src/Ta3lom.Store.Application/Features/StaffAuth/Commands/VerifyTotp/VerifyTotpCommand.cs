@@ -1,4 +1,6 @@
 using FluentValidation;
+using Microsoft.EntityFrameworkCore;
+using Ta3lom.Store.Application.Abstractions.Data;
 using Ta3lom.Store.Domain.Events;
 
 namespace Ta3lom.Store.Application.Features.StaffAuth.Commands.VerifyTotp;
@@ -15,10 +17,13 @@ internal sealed class VerifyTotpCommandHandler(
     StaffSessions sessions,
     StaffFailures failures,
     IOutbox outbox,
+    IApplicationDbContext db,
     IAuditTrail audit,
     IUnitOfWork uow,
     IClock clock) : ICommandHandler<VerifyTotpCommand, StaffSession>
 {
+    public const string KeyLostKind = "totp_key_lost";
+
     /// The whole step runs on the locked row (A-1): parallel codes serialise, so failures add up and a time step is used once.
     public Task<Result<StaffSession>> HandleAsync(VerifyTotpCommand command, CancellationToken ct = default) =>
         uow.ExecuteInTransactionAsync(token => VerifyAsync(command, token), commitOnFailure: true, ct);
@@ -48,7 +53,12 @@ internal sealed class VerifyTotpCommandHandler(
         if (check.KeyUnavailable)
         {
             // L-9: not the member's fault: no failure is counted, the enrolment stays, staff are alerted; an admin resets it.
-            outbox.Enqueue(new StaffAlert("totp_key_lost", user.Id.ToString(), "The TOTP secret of a staff member cannot be decrypted (Data Protection key ring lost). Reset the authenticator."));
+            // R11-1: one alert per member per 24 h (the locked row serialises the attempts).
+            if (!await KeyLossAlertedAsync(user.Id, now, ct))
+            {
+                outbox.Enqueue(new StaffAlert(KeyLostKind, user.Id.ToString(), "The TOTP secret of a staff member cannot be decrypted (Data Protection key ring lost). Reset the authenticator."));
+            }
+
             return StaffErrors.TotpUnavailable;
         }
 
@@ -68,6 +78,15 @@ internal sealed class VerifyTotpCommandHandler(
         var session = sessions.Start(user, command.UserAgent, now);
         audit.Record(AuditActions.StaffLoginSucceeded, "staff_user", user.Id.ToString(), user.Email);
         return session;
+    }
+
+    private async Task<bool> KeyLossAlertedAsync(Guid staffId, DateTimeOffset now, CancellationToken ct)
+    {
+        var since = now - TimeSpan.FromHours(24);
+        var reference = staffId.ToString();
+        var payloads = await db.OutboxMessages.AsNoTracking()
+            .Where(m => m.Type == nameof(StaffAlert) && m.OccurredAt >= since).Select(m => m.Payload).ToListAsync(ct);   // jsonb: filtered here
+        return payloads.Exists(p => p.Contains(KeyLostKind, StringComparison.Ordinal) && p.Contains(reference, StringComparison.Ordinal));
     }
 }
 

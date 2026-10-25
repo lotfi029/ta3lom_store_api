@@ -40,7 +40,7 @@ internal sealed class ListProjectsQueryHandler(CatalogReader reader, ICatalogSea
         {
             "newest" => cards.OrderByDescending(c => c.PublishedAt).ThenBy(c => c.Id),
             "title" => cards.OrderBy(c => c.TitleAr).ThenBy(c => c.Id),
-            _ => cards.OrderBy(c => c.Sort).ThenBy(c => c.CreatedAt).ThenBy(c => c.Id),
+            _ => cards.OrderBy(c => c.Sort).ThenByDescending(c => c.PublishedAt).ThenBy(c => c.Id),          // R11-3
         };
         var pageRows = await cards.Skip(page.Skip).Take(page.Take).ToListAsync(ct);
         return new PagedResult<ProjectCard>([.. pageRows.Select(r => reader.ToCard(r, minGift))], total, page.SafePage, page.Take);

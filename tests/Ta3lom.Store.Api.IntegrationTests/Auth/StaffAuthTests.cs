@@ -285,14 +285,22 @@ public sealed class StaffAuthTests(ScenarioFactory factory) : IClassFixture<Scen
         await EnrolAsync(mfa);
         await factory.ExecuteSqlAsync($"UPDATE store.staff_user SET totp_secret_enc = '\\x00010203'::bytea WHERE id = '{id}'");
 
-        var verify = await VerifyAsync(mfa, "123456");
+        var attempts = new List<HttpResponseMessage>();
+        for (var i = 0; i < 3; i++)
+        {
+            attempts.Add(await VerifyAsync(mfa, "123456"));
+        }
 
-        verify.StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
-        (await verify.ReadProblemAsync()).Str("code").ShouldBe(ErrorCodes.TotpUnavailable);
+        foreach (var verify in attempts)
+        {
+            verify.StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
+            (await verify.ReadProblemAsync()).Str("code").ShouldBe(ErrorCodes.TotpUnavailable);
+        }
+
         (await factory.ScalarAsync<int>($"SELECT failed_count FROM store.staff_user WHERE id = '{id}'")).ShouldBe(0);
         (await factory.ScalarAsync<string>($"SELECT encode(totp_secret_enc, 'hex') FROM store.staff_user WHERE id = '{id}'")).ShouldBe("00010203");
         (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.outbox_message WHERE type = 'StaffAlert' AND payload->>'kind' = 'totp_key_lost' AND payload->>'reference' = '{id}'"))
-            .ShouldBe(1);
+            .ShouldBe(1);                                                                                         // R11-1: once per 24 h
 
         var admin = await factory.StaffAsync(Roles.Admin);
         (await admin.PostAsync($"/v1/admin/staff/{id}/reset-totp")).Response.StatusCode.ShouldBe(HttpStatusCode.NoContent);

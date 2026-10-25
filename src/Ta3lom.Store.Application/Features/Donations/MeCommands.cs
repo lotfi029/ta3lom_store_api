@@ -72,6 +72,7 @@ internal sealed class DeleteMeCommandHandler(ICustomerRepository customers, IOrd
 
     private async Task<Result> DeleteAsync(Guid customerId, CancellationToken ct)
     {
+        await customers.LockForUpdateAsync(customerId, ct);                  // R12-3: customer → cart, like every cart write
         var customer = await customers.GetByIdAsync(customerId, ct);
         if (customer is not { IsActive: true })
         {

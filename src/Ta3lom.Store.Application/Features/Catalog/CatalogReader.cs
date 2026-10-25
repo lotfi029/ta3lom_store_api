@@ -39,8 +39,6 @@ internal sealed class CatalogReader(IApplicationDbContext db, IFileUrls urls)
 
         public DateTimeOffset? PublishedAt { get; init; }
 
-        public DateTimeOffset CreatedAt { get; init; }
-
         public List<Money> OptionAmounts { get; init; } = [];
     }
 
@@ -67,7 +65,6 @@ internal sealed class CatalogReader(IApplicationDbContext db, IFileUrls urls)
             MinAmount = p.MinAmount,
             Sort = p.Sort,
             PublishedAt = p.PublishedAt,
-            CreatedAt = p.CreatedAt,
             OptionAmounts = p.Options.Where(o => o.IsActive).Select(o => o.Amount).ToList(),
         };
 
