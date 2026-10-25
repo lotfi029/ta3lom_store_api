@@ -84,6 +84,58 @@ public sealed class CartTests(ScenarioFactory factory) : IClassFixture<ScenarioF
     }
 
     [Fact]
+    public async Task Arabic_digits_are_accepted_and_malformed_amounts_are_400_never_500()
+    {
+        var c = await DonationCatalog.CreateAsync(factory);
+        var guest = factory.Browser();
+
+        var arabic = await guest.SendJsonAsync(HttpMethod.Post, "/v1/cart/lines", new { projectId = c.ProjectId, amount = "٥٠" });
+        arabic.Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        arabic.Body.GetProperty("lines")[0].Str("amount").ShouldBe("50.00");
+        var lineId = arabic.Body.GetProperty("lines")[0].Str("id");
+        (await guest.SendJsonAsync(HttpMethod.Patch, $"/v1/cart/lines/{lineId}", new { amount = "١٢٫٥" })).Body.Str("totalAmount").ShouldBe("12.50");
+
+        foreach (var bad in new[] { "5x", "٥x", "1,000", "١٬٠٠٠" })
+        {
+            var refused = await guest.SendJsonAsync(HttpMethod.Post, "/v1/cart/lines", new { categoryId = c.CategoryId, amount = bad });
+            refused.Response.StatusCode.ShouldBe(HttpStatusCode.BadRequest, bad);
+            refused.Body.Str("code").ShouldBe(ErrorCodes.ValidationFailed);
+            (await guest.SendJsonAsync(HttpMethod.Patch, $"/v1/cart/lines/{lineId}", new { amount = bad })).Response.StatusCode.ShouldBe(HttpStatusCode.BadRequest, bad);
+        }
+    }
+
+    [Fact]
+    public async Task Parallel_first_writes_of_a_donor_end_up_in_one_cart()
+    {
+        var c = await DonationCatalog.CreateAsync(factory);
+        var donor = await factory.CustomerAsync();
+
+        var responses = await Task.WhenAll(
+            donor.PostAsync("/v1/cart/lines", new { categoryId = c.CategoryId, amount = "20.00" }),
+            donor.PostAsync("/v1/cart/lines", new { projectId = c.ProjectId, amount = "30.00" }));
+
+        responses.Select(r => r.Response.StatusCode).ShouldAllBe(s => s == HttpStatusCode.OK);
+        (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.cart WHERE customer_id = '{donor.Id}'")).ShouldBe(1);
+        (await donor.GetAsync("/v1/cart")).Body.GetProperty("lineCount").GetInt32().ShouldBe(2);
+    }
+
+    [Fact]
+    [Rule("D-04")]
+    public async Task Parallel_adds_of_the_same_option_are_one_line_with_the_quantities_summed()
+    {
+        var c = await DonationCatalog.CreateAsync(factory);
+        var donor = await factory.CustomerAsync();
+        await donor.PostAsync("/v1/cart/lines", new { categoryId = c.CategoryId, amount = "20.00" });
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, 5)
+            .Select(_ => donor.PostAsync("/v1/cart/lines", new { projectId = c.ProjectId, optionId = c.OptionId, quantity = 2 })));
+
+        responses.Select(r => r.Response.StatusCode).ShouldAllBe(s => s == HttpStatusCode.OK);
+        (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.cart_line WHERE option_id = '{c.OptionId}'")).ShouldBe(1);
+        (await factory.ScalarAsync<int>($"SELECT quantity FROM store.cart_line WHERE option_id = '{c.OptionId}'")).ShouldBe(10);
+    }
+
+    [Fact]
     public async Task The_request_body_has_one_of_three_shapes()
     {
         var guest = factory.Browser();

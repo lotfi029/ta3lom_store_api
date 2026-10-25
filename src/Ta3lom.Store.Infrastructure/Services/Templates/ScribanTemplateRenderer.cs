@@ -63,6 +63,12 @@ internal sealed class ScribanTemplateRenderer(StoreDbContext db) : ITemplateRend
         {
             return new TemplateSyntaxError(e.OriginalMessage, e.Span.Start.Line + 1, e.Span.Start.Column + 1);
         }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            // L-16: anything else the trial render throws (division by zero, overflow, a bad argument) is a template error
+            // too, reported at the start of the text.
+            return new TemplateSyntaxError(e.Message, 1, 1);
+        }
     }
 
     public string RenderText(string text, IReadOnlyDictionary<string, object?> model)

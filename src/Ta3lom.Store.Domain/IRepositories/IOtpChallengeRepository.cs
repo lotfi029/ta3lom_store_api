@@ -7,6 +7,10 @@ public interface IOtpChallengeRepository : IGenericRepository<OtpChallenge>
     /// Transaction-scoped advisory lock on the mobile (D-10): parallel requests for one number are counted one after the other.
     Task LockMobileAsync(string mobileE164, CancellationToken ct = default);
 
+    /// Transaction-scoped advisory lock on the client IP hash (L-3): parallel requests for different numbers from one IP
+    /// are counted one after the other. Always taken before the mobile lock (fixed order, no deadlock).
+    Task LockIpAsync(string ipHash, CancellationToken ct = default);
+
     /// Codes issued to <paramref name="mobileE164"/> since <paramref name="since"/>, oldest first (D-10: 3 per 15 min).
     Task<IReadOnlyList<DateTimeOffset>> IssuedForMobileSinceAsync(string mobileE164, DateTimeOffset since, CancellationToken ct = default);
 

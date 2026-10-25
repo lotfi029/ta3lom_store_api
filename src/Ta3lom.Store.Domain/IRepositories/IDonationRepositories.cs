@@ -9,6 +9,10 @@ public interface ICartRepository : IGenericRepository<Cart>
 
     /// The donor's cart (at most one, `ux_cart_customer`), locked like <see cref="GetForUpdateAsync"/>.
     Task<Cart?> GetForCustomerForUpdateAsync(Guid customerId, CancellationToken ct = default);
+
+    /// The donor's cart, created first when there is none (L-4: `INSERT … ON CONFLICT DO NOTHING` on `ux_cart_customer`, so
+    /// two parallel first writes end up on one cart), then locked and loaded.
+    Task<Cart> GetOrCreateForCustomerForUpdateAsync(Guid customerId, DateTimeOffset now, CancellationToken ct = default);
 }
 
 public interface IOrderRepository : IGenericRepository<Order>

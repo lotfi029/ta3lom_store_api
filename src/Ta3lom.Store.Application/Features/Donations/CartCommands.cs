@@ -1,8 +1,8 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Ta3lom.Store.Application.Abstractions.Data;
+using Ta3lom.Store.Application.Abstractions.Wire;
 using Ta3lom.Store.Application.DTOs.Donations;
-using Ta3lom.Store.Application.Features.AdminCatalog;
 using Ta3lom.Store.Application.Features.Settings;
 using Ta3lom.Store.Domain.Entities.Donations;
 
@@ -63,7 +63,7 @@ internal sealed class AddCartLineCommandHandler(CartWriter writer, IApplicationD
         if (r.CategoryId is { } categoryId)
         {
             var category = await db.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == categoryId, ct);
-            return category is null ? CartErrors.TargetUnavailable : cart.AddCategoryAmount(category, Money.Parse(r.Amount!), limits, now);
+            return category is null ? CartErrors.TargetUnavailable : cart.AddCategoryAmount(category, MoneyInput.Parse(r.Amount!), limits, now);
         }
 
         var project = await db.Projects.AsNoTracking().Include(p => p.Options).FirstOrDefaultAsync(p => p.Id == r.ProjectId, ct);
@@ -75,7 +75,7 @@ internal sealed class AddCartLineCommandHandler(CartWriter writer, IApplicationD
 
         return r.OptionId is { } optionId
             ? cart.AddOptionLine(project, projectCategory, optionId, r.Quantity ?? 1, limits, now)
-            : cart.AddProjectAmount(project, projectCategory, Money.Parse(r.Amount!), limits, now);
+            : cart.AddProjectAmount(project, projectCategory, MoneyInput.Parse(r.Amount!), limits, now);
     }
 }
 
@@ -131,7 +131,7 @@ internal sealed class UpdateCartLineCommandHandler(CartWriter writer, IApplicati
             minimum = projectMinimum ?? limits.MinGift;
         }
 
-        return cart.ChangeAmount(line.Id, Money.Parse(command.Request.Amount), minimum, limits, clock.UtcNow);
+        return cart.ChangeAmount(line.Id, MoneyInput.Parse(command.Request.Amount), minimum, limits, clock.UtcNow);
     }
 }
 

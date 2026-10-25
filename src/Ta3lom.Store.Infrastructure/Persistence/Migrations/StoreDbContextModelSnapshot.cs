@@ -341,9 +341,8 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_project_option");
 
-                    b.HasIndex("ProjectId", "LabelAr")
-                        .IsUnique()
-                        .HasDatabaseName("ux_option_label");
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("ix_option_project");
 
                     b.ToTable("project_option", "store", t =>
                         {
@@ -725,7 +724,6 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         .HasColumnName("marketing_opt_in");
 
                     b.Property<string>("Mobile")
-                        .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("mobile");
 
@@ -756,13 +754,16 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Mobile")
                         .IsUnique()
-                        .HasDatabaseName("ux_customer_mobile");
+                        .HasDatabaseName("ux_customer_mobile")
+                        .HasFilter("mobile IS NOT NULL");
 
                     b.ToTable("customer", "store", t =>
                         {
                             t.HasCheckConstraint("ck_customer_locale", "locale IN ('ar', 'en')");
 
                             t.HasCheckConstraint("ck_customer_mobile", "mobile ~ '^\\+9665[0-9]{8}$'");
+
+                            t.HasCheckConstraint("ck_customer_mobile_present", "status = 'anonymised' OR mobile IS NOT NULL");
 
                             t.HasCheckConstraint("ck_customer_status", "status IN ('active', 'blocked', 'anonymised')");
                         });

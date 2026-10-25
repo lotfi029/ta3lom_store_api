@@ -146,15 +146,9 @@ internal sealed class CartAccess(ICartRepository carts, ICustomerRepository cust
         var now = clock.UtcNow;
         if (owner.CustomerId is { } customerId)
         {
-            var mine = await carts.GetForCustomerForUpdateAsync(customerId, ct);
-            if (mine is null && create)
-            {
-                mine = Cart.CreateFor(customerId, now);
-                carts.Add(mine);
-                return (mine, true);
-            }
-
-            return (mine, false);
+            return create
+                ? (await carts.GetOrCreateForCustomerForUpdateAsync(customerId, now, ct), false)
+                : (await carts.GetForCustomerForUpdateAsync(customerId, ct), false);
         }
 
         var guest = owner.GuestCartId is { } id ? await carts.GetForUpdateAsync(id, ct) : null;

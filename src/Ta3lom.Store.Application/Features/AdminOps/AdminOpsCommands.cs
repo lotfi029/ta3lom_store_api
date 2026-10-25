@@ -59,7 +59,8 @@ internal sealed class CancelOrderCommandHandler(IGenericRepository<Order> orders
 {
     public async Task<Result<AdminOrderRow>> HandleAsync(CancelOrderCommand command, CancellationToken ct = default)
     {
-        var order = await orders.FirstOrDefaultAsync(o => o.Reference == command.Reference, ct);
+        var reference = command.Reference.Trim().ToUpperInvariant();                 // L-17: references are stored upper-case
+        var order = await orders.FirstOrDefaultAsync(o => o.Reference == reference, ct);
         if (order is null)
         {
             return OrderErrors.NotFound;

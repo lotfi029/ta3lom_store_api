@@ -13,4 +13,7 @@ public static class RatePolicies
     public const string Me = "me";
     public const string Download = "download";
     public const string Admin = "admin";
+
+    /// D-b: template test sends, per staff member.
+    public const string TemplateTest = "template-test";
 }

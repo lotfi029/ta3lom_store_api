@@ -35,6 +35,50 @@ public sealed class StartupGuardTests
     }
 }
 
+/// L-9: outside Development the key ring path must be set and writable.
+public sealed class KeyRingGuardTests
+{
+    [Fact]
+    public void An_empty_key_ring_path_stops_the_host()
+    {
+        using var factory = new GuardedProductionFactory("Store:DataProtection:KeysPath", "");
+
+        Should.Throw<Exception>(() => factory.CreateClient()).ToString().ShouldContain("Store:DataProtection:KeysPath");
+    }
+
+    [Fact]
+    public void An_unwritable_key_ring_path_stops_the_host()
+    {
+        var file = Path.GetTempFileName();                      // a file cannot hold a directory: not writable as a key ring
+        try
+        {
+            using var factory = new GuardedProductionFactory("Store:DataProtection:KeysPath", Path.Combine(file, "keys"));
+
+            Should.Throw<Exception>(() => factory.CreateClient()).ToString().ShouldContain("is not writable");
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+}
+
+/// A-4: citext and pg_trgm live in `public`; a search path without it breaks case-insensitive e-mail lookups.
+public sealed class SearchPathGuardTests
+{
+    [Theory]
+    [InlineData("Production")]
+    [InlineData("Staging")]
+    public void A_search_path_without_public_stops_the_host(string environment)
+    {
+        using var factory = new GuardedProductionFactory("ConnectionStrings:Store", "Host=localhost;Database=store;Username=u;Password=p;Search Path=store", environment);
+
+        var failure = Should.Throw<Exception>(() => factory.CreateClient());
+
+        failure.ToString().ShouldContain("Search Path");
+    }
+}
+
 /// Deny by default: every mapped route states its access — a policy or AllowAnonymous.
 public sealed class EndpointAccessTests(StoreApiFactory factory) : IClassFixture<StoreApiFactory>
 {

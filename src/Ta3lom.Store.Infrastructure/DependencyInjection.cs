@@ -70,6 +70,7 @@ public static class DependencyInjection
             .Configure<IConfiguration>((o, c) => o.ConnectionString = c.GetConnectionString(ConnectionStringName) ?? string.Empty)
             .Validate(o => !string.IsNullOrWhiteSpace(o.ConnectionString), $"ConnectionStrings:{ConnectionStringName} is required")
             .ValidateOnStart();
+        services.AddSingleton<IValidateOptions<DatabaseOptions>, DatabaseSearchPathValidator>();
 
         services.AddScoped<AuditSaveChangesInterceptor>();
         services.AddScoped<OutboxSaveChangesInterceptor>();
@@ -185,6 +186,8 @@ public static class DependencyInjection
     private static void AddDataProtection(IServiceCollection services)
     {
         services.AddDataProtection().SetApplicationName("ta3lom-store");
+        services.AddOptions<DataProtectionKeysOptions>().BindConfiguration(DataProtectionKeysOptions.Section).ValidateOnStart();
+        services.AddSingleton<IValidateOptions<DataProtectionKeysOptions>, DataProtectionKeysValidator>();
         services.AddOptions<KeyManagementOptions>().Configure<IConfiguration, ILoggerFactory, IHostEnvironment>((o, c, loggers, environment) =>
         {
             var path = c["Store:DataProtection:KeysPath"];
@@ -200,4 +203,81 @@ public static class DependencyInjection
 public sealed class DatabaseOptions
 {
     public string ConnectionString { get; set; } = string.Empty;
+}
+
+/// `Store:DataProtection` — where the key ring lives (TOTP secrets, guest cart cookies).
+public sealed class DataProtectionKeysOptions
+{
+    public const string Section = "Store:DataProtection";
+
+    public string KeysPath { get; set; } = string.Empty;
+}
+
+/// L-9: losing the key ring makes every enrolled authenticator unreadable, so outside Development the host refuses to
+/// start when `Store:DataProtection:KeysPath` is empty or not writable (a probe file is written and deleted).
+internal sealed class DataProtectionKeysValidator(IHostEnvironment environment) : IValidateOptions<DataProtectionKeysOptions>
+{
+    public ValidateOptionsResult Validate(string? name, DataProtectionKeysOptions options)
+    {
+        if (environment.IsDevelopment())
+        {
+            return ValidateOptionsResult.Success;
+        }
+
+        if (string.IsNullOrWhiteSpace(options.KeysPath))
+        {
+            return ValidateOptionsResult.Fail("Store:DataProtection:KeysPath is required outside Development (the key ring must persist)");
+        }
+
+        var directory = Path.GetFullPath(Path.Combine(environment.ContentRootPath, options.KeysPath));
+        try
+        {
+            Directory.CreateDirectory(directory);
+            var probe = Path.Combine(directory, $".write-probe-{Guid.CreateVersion7():N}");
+            File.WriteAllText(probe, "probe");
+            File.Delete(probe);
+            return ValidateOptionsResult.Success;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return ValidateOptionsResult.Fail($"Store:DataProtection:KeysPath '{directory}' is not writable: {ex.Message}");
+        }
+    }
+}
+
+/// A-4: the extensions (citext, pg_trgm) live in `public`. A `Search Path` that leaves `public` out breaks citext
+/// comparisons (staff e-mail) and the trigram search: refused outside Development, a warning in Development. No
+/// `Search Path` at all is fine (the server default includes `public`; the tables are schema-qualified).
+internal sealed partial class DatabaseSearchPathValidator(IHostEnvironment environment, ILogger<DatabaseSearchPathValidator> logger)
+    : IValidateOptions<DatabaseOptions>
+{
+    public ValidateOptionsResult Validate(string? name, DatabaseOptions options)
+    {
+        string? searchPath;
+        try
+        {
+            searchPath = new Npgsql.NpgsqlConnectionStringBuilder(options.ConnectionString).SearchPath;
+        }
+        catch (ArgumentException)
+        {
+            return ValidateOptionsResult.Fail("ConnectionStrings:Store is not a valid PostgreSQL connection string");
+        }
+
+        if (string.IsNullOrWhiteSpace(searchPath)
+            || searchPath.Split(',', StringSplitOptions.TrimEntries).Any(s => string.Equals(s.Trim('"'), "public", StringComparison.OrdinalIgnoreCase)))
+        {
+            return ValidateOptionsResult.Success;
+        }
+
+        if (environment.IsDevelopment())
+        {
+            LogSearchPath(logger, searchPath);
+            return ValidateOptionsResult.Success;
+        }
+
+        return ValidateOptionsResult.Fail($"ConnectionStrings:Store Search Path '{searchPath}' must include public (citext, pg_trgm), e.g. Search Path=store,public");
+    }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "ConnectionStrings:Store Search Path {SearchPath} does not include public (citext, pg_trgm live there)")]
+    private static partial void LogSearchPath(ILogger logger, string searchPath);
 }

@@ -31,6 +31,18 @@ public sealed class CustomerAuthTests(ScenarioFactory factory) : IClassFixture<S
     }
 
     [Fact]
+    [Rule("D-10")]
+    public async Task Parallel_requests_for_different_mobiles_from_one_IP_never_exceed_ten_per_hour()
+    {
+        var browser = factory.Browser("203.0.113.77");
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, 15).Select(_ => RequestAsync(browser, ScenarioFactory.NewMobile())));
+
+        responses.Count(r => r.StatusCode == HttpStatusCode.Accepted).ShouldBe(10);
+        responses.Count(r => r.StatusCode == HttpStatusCode.TooManyRequests).ShouldBe(5);
+    }
+
+    [Fact]
     [Rule("D-14")]
     public async Task The_first_sign_in_creates_the_donor_with_the_PDPL_consent_and_a_refresh_cookie()
     {

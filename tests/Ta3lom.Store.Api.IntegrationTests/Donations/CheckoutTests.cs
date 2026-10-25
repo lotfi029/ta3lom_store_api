@@ -46,7 +46,10 @@ public sealed partial class CheckoutTests(ScenarioFactory factory) : IClassFixtu
         (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.outbox_message WHERE type = 'OrderPlaced' AND payload->>'reference' = '{reference}'")).ShouldBe(1);
 
         await factory.DrainOutboxAsync();
-        (await factory.MailAsync()).ShouldContain(m => m.Subject.Contains(reference, StringComparison.Ordinal));
+        // D-a: until R5-Payments an order is only logged, no staff e-mail; the message is still processed.
+        (await factory.MailAsync()).ShouldNotContain(m => m.Subject.Contains(reference, StringComparison.Ordinal));
+        (await factory.ScalarAsync<bool>($"SELECT processed_at IS NOT NULL FROM store.outbox_message WHERE type = 'OrderPlaced' AND payload->>'reference' = '{reference}'"))
+            .ShouldBeTrue();
     }
 
     [Fact]
@@ -72,6 +75,72 @@ public sealed partial class CheckoutTests(ScenarioFactory factory) : IClassFixtu
         var missing = await donor.PostAsync("/v1/checkout", body);
         missing.Response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         missing.Body.Str("code").ShouldBe(ErrorCodes.IdempotencyKeyRequired);
+    }
+
+    [Fact]
+    public async Task A_refused_checkout_releases_its_key_so_the_same_key_works_after_fixing_the_cart()
+    {
+        var c = await DonationCatalog.CreateAsync(factory);
+        var donor = await factory.CustomerAsync();
+        var key = HttpJson.Key();
+        var body = new { fullName = "D", email = "d@example.com" };
+
+        var empty = await donor.PostAsync("/v1/checkout", body, key);
+        empty.Response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        empty.Body.Str("code").ShouldBe(ErrorCodes.CheckoutCartEmpty);
+        (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.idempotency_key WHERE key = '{key["Idempotency-Key"]}'")).ShouldBe(0);
+
+        await donor.PostAsync("/v1/cart/lines", new { categoryId = c.CategoryId, amount = "20.00" });
+        var placed = await donor.PostAsync("/v1/checkout", body, key);
+
+        placed.Response.StatusCode.ShouldBe(HttpStatusCode.Created);
+    }
+
+    [Fact]
+    public async Task The_stored_replay_holds_no_status_token_and_the_replay_still_returns_a_working_one()
+    {
+        var (_, donor) = await DonorWithCartAsync();
+        var key = HttpJson.Key();
+        var body = new { fullName = "D", email = "d@example.com" };
+
+        var first = await donor.PostAsync("/v1/checkout", body, key);
+        var stored = await factory.ScalarAsync<string>($"SELECT coalesce(response_body->>'statusToken', '') FROM store.idempotency_key WHERE key = '{key["Idempotency-Key"]}'");
+        var replay = await donor.PostAsync("/v1/checkout", body, key);
+
+        stored.ShouldBeEmpty();
+        replay.Response.Headers.GetValues("Idempotent-Replayed").ShouldBe(["true"]);
+        replay.Body.Str("statusToken").ShouldBe(first.Body.Str("statusToken"));
+        var status = await factory.Anonymous().SendJsonAsync(HttpMethod.Get, $"/v1/orders/{replay.Body.Str("reference")}/status?t={replay.Body.Str("statusToken")}");
+        status.Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Parallel_requests_with_one_key_never_fail_with_500()
+    {
+        var (_, donor) = await DonorWithCartAsync();
+        var key = HttpJson.Key();
+        var body = new { fullName = "D", email = "d@example.com" };
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, 10).Select(_ => donor.PostAsync("/v1/checkout", body, key)));
+
+        responses.Select(r => (int)r.Response.StatusCode).ShouldAllBe(s => s == 201 || s == 409);
+        responses.Count(r => r.Response.StatusCode == HttpStatusCode.Created && !r.Response.Headers.Contains("Idempotent-Replayed")).ShouldBe(1);
+        (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.orders WHERE customer_id = '{donor.Id}'")).ShouldBe(1);
+    }
+
+    [Fact]
+    [Rule("D-09")]
+    public async Task Two_parallel_checkouts_of_one_cart_with_different_keys_make_one_order()
+    {
+        var (_, donor) = await DonorWithCartAsync();
+        var body = new { fullName = "D", email = "d@example.com" };
+
+        var responses = await Task.WhenAll(donor.PostAsync("/v1/checkout", body, HttpJson.Key()), donor.PostAsync("/v1/checkout", body, HttpJson.Key()));
+
+        // The cart row lock serialises them: the first places the order and empties the cart, the second finds it empty.
+        responses.Select(r => (int)r.Response.StatusCode).OrderBy(s => s).ShouldBe([201, 409]);
+        responses.Single(r => r.Response.StatusCode == HttpStatusCode.Conflict).Body.Str("code").ShouldBe(ErrorCodes.CheckoutCartEmpty);
+        (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.orders WHERE customer_id = '{donor.Id}'")).ShouldBe(1);
     }
 
     [Fact]

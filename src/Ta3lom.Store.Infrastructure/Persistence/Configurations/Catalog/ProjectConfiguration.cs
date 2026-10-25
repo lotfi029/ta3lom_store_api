@@ -79,7 +79,10 @@ internal sealed class ProjectOptionConfiguration : IEntityTypeConfiguration<Proj
         e.Property(x => x.Amount).IsRequired();
         e.Property(x => x.Sort).HasDefaultValue(0).ValueGeneratedNever();
         e.Property(x => x.IsActive).HasDefaultValue(true).ValueGeneratedNever();
-        e.HasIndex(x => new { x.ProjectId, x.LabelAr }).IsUnique().HasDatabaseName("ux_option_label");
+        // L-13: labels are unique per project through the DEFERRABLE INITIALLY DEFERRED constraint `ux_option_label`
+        // (migration OptionLabelDeferrable, raw SQL), checked at commit so two options can swap labels in one save. It is
+        // not in the EF model on purpose: EF orders updates by the unique indexes it knows and refuses a swap as a cycle.
+        e.HasIndex(x => x.ProjectId).HasDatabaseName("ix_option_project");
     }
 }
 

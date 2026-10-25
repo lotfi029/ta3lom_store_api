@@ -28,12 +28,11 @@ internal sealed class ListProjectsQueryHandler(CatalogReader reader, ICatalogSea
 
         if (!string.IsNullOrWhiteSpace(query.Q))
         {
-            var ranked = await search.SearchAsync(query.Q, ProjectStatus.Published.ToWire(), ct);
-            var rows = await cards.Where(c => ranked.Contains(c.Id)).ToListAsync(ct);
-            var rank = ranked.Select((id, i) => (id, i)).ToDictionary(x => x.id, x => x.i);
-            var ordered = rows.OrderBy(r => rank[r.Id]).ToList();
-            return new PagedResult<ProjectCard>([.. ordered.Skip(page.Skip).Take(page.Take).Select(r => reader.ToCard(r, minGift))],
-                ordered.Count, page.SafePage, page.Take);
+            var found = await search.SearchPageAsync(new CatalogSearchRequest(query.Q, ProjectStatus.Published.ToWire(),
+                string.IsNullOrWhiteSpace(query.Category) ? null : query.Category, null, ActiveCategoryOnly: true, page.Skip, page.Take), ct);
+            var rows = await reader.PublishedCards().Where(c => found.Ids.Contains(c.Id)).ToListAsync(ct);
+            var rank = found.Ids.Select((id, i) => (id, i)).ToDictionary(x => x.id, x => x.i);
+            return new PagedResult<ProjectCard>([.. rows.OrderBy(r => rank[r.Id]).Select(r => reader.ToCard(r, minGift))], found.Total, page.SafePage, page.Take);
         }
 
         var total = await cards.CountAsync(ct);
@@ -41,7 +40,7 @@ internal sealed class ListProjectsQueryHandler(CatalogReader reader, ICatalogSea
         {
             "newest" => cards.OrderByDescending(c => c.PublishedAt).ThenBy(c => c.Id),
             "title" => cards.OrderBy(c => c.TitleAr).ThenBy(c => c.Id),
-            _ => cards.OrderBy(c => c.Sort).ThenByDescending(c => c.PublishedAt).ThenBy(c => c.Id),
+            _ => cards.OrderBy(c => c.Sort).ThenBy(c => c.CreatedAt).ThenBy(c => c.Id),
         };
         var pageRows = await cards.Skip(page.Skip).Take(page.Take).ToListAsync(ct);
         return new PagedResult<ProjectCard>([.. pageRows.Select(r => reader.ToCard(r, minGift))], total, page.SafePage, page.Take);
@@ -92,10 +91,12 @@ internal sealed class GetProjectBySlugQueryHandler(CatalogReader reader, IApplic
             return new ProjectLookup(project, null);
         }
 
+        // L-12: redirect only to a published project of an active category (the page it lands on must exist).
         var current = await (
             from h in db.ProjectSlugHistory.AsNoTracking()
             join p in db.Projects.AsNoTracking() on h.ProjectId equals p.Id
-            where h.OldSlug == query.Slug && p.Status == ProjectStatus.Published
+            join c in db.Categories.AsNoTracking() on p.CategoryId equals c.Id
+            where h.OldSlug == query.Slug && p.Status == ProjectStatus.Published && c.IsActive
             select p.Slug).FirstOrDefaultAsync(ct);
         return current is null ? CatalogErrors.ProjectNotFound : new ProjectLookup(null, new SlugRedirectResponse(current));
     }

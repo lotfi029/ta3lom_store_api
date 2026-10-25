@@ -37,6 +37,7 @@ public static class ErrorCodes
     public const string TotpRequired = "auth.totp_required";
     public const string TotpInvalid = "auth.totp_invalid";
     public const string TotpNotEnrolled = "auth.totp_not_enrolled";
+    public const string TotpUnavailable = "auth.totp_unavailable";
     public const string TotpAlreadyEnrolled = "auth.totp_already_enrolled";
     public const string PasswordChangeRequired = "auth.password_change_required";
     public const string PasswordWeak = "auth.password_weak";
@@ -58,6 +59,7 @@ public static class ErrorCodes
     public const string ProjectSlugTaken = "project.slug_taken";
     public const string ProjectPublishIncomplete = "project.publish_incomplete";
     public const string ProjectInvalidTransition = "project.invalid_transition";
+    public const string ProjectOptionLabelTaken = "project.option_label_taken";
     public const string MediaImageRequired = "media.image_required";
 
     // Donation cart (D-01 … D-05)

@@ -10,30 +10,42 @@ namespace Ta3lom.Store.Infrastructure.Services.Idempotency;
 /// to a parallel request at once. A row past `expires_at` no longer counts and is replaced.
 internal sealed class IdempotencyStore(StoreDbContext db, IClock clock) : IIdempotencyStore
 {
+    /// L-2: when the insert loses to a row that is released before it can be read, the claim is tried once more; a row
+    /// that is still gone after that reads as in progress (409), never as an error.
     public async Task<IdempotencyClaim> ClaimAsync(string scope, string key, string requestHash, CancellationToken ct = default)
     {
-        var now = clock.UtcNow;
-        var expiresAt = now + SessionPolicy.IdempotencyRetention;
-        await db.Database.ExecuteSqlAsync($"DELETE FROM store.idempotency_key WHERE scope = {scope} AND key = {key} AND expires_at <= {now}", ct);
-        var claimed = await db.Database.ExecuteSqlAsync($"""
-            INSERT INTO store.idempotency_key (scope, key, request_hash, status, created_at, expires_at)
-            VALUES ({scope}, {key}, {requestHash}, 'in_progress', {now}, {expiresAt})
-            ON CONFLICT (scope, key) DO NOTHING
-            """, ct);
-        if (claimed == 1)
+        for (var attempt = 0; attempt < 2; attempt++)
         {
-            return new IdempotencyClaim(IdempotencyClaimStatus.Claimed);
+            var now = clock.UtcNow;
+            var expiresAt = now + SessionPolicy.IdempotencyRetention;
+            await db.Database.ExecuteSqlAsync($"DELETE FROM store.idempotency_key WHERE scope = {scope} AND key = {key} AND expires_at <= {now}", ct);
+            var claimed = await db.Database.ExecuteSqlAsync($"""
+                INSERT INTO store.idempotency_key (scope, key, request_hash, status, created_at, expires_at)
+                VALUES ({scope}, {key}, {requestHash}, 'in_progress', {now}, {expiresAt})
+                ON CONFLICT (scope, key) DO NOTHING
+                """, ct);
+            if (claimed == 1)
+            {
+                return new IdempotencyClaim(IdempotencyClaimStatus.Claimed);
+            }
+
+            var row = await db.Set<Persistence.Records.IdempotencyRecord>().AsNoTracking().SingleOrDefaultAsync(r => r.Scope == scope && r.Key == key, ct);
+            if (row is null)
+            {
+                continue;
+            }
+
+            if (row.RequestHash != requestHash)
+            {
+                return new IdempotencyClaim(IdempotencyClaimStatus.Mismatch);
+            }
+
+            return row.Status == "completed"
+                ? new IdempotencyClaim(IdempotencyClaimStatus.Replay, row.ResponseStatus, row.ResponseBody)
+                : new IdempotencyClaim(IdempotencyClaimStatus.InProgress);
         }
 
-        var row = await db.Set<Persistence.Records.IdempotencyRecord>().AsNoTracking().SingleAsync(r => r.Scope == scope && r.Key == key, ct);
-        if (row.RequestHash != requestHash)
-        {
-            return new IdempotencyClaim(IdempotencyClaimStatus.Mismatch);
-        }
-
-        return row.Status == "completed"
-            ? new IdempotencyClaim(IdempotencyClaimStatus.Replay, row.ResponseStatus, row.ResponseBody)
-            : new IdempotencyClaim(IdempotencyClaimStatus.InProgress);
+        return new IdempotencyClaim(IdempotencyClaimStatus.InProgress);
     }
 
     public Task CompleteAsync(string scope, string key, int statusCode, string responseJson, CancellationToken ct = default) =>

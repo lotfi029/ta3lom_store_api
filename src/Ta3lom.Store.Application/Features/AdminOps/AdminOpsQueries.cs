@@ -186,7 +186,8 @@ internal sealed class GetAdminOrderQueryHandler(IApplicationDbContext db) : IQue
 {
     public async Task<Result<AdminOrderDetail>> HandleAsync(GetAdminOrderQuery query, CancellationToken ct = default)
     {
-        var o = await db.Orders.AsNoTracking().Include(x => x.Lines).FirstOrDefaultAsync(x => x.Reference == query.Reference, ct);
+        var reference = query.Reference.Trim().ToUpperInvariant();                   // L-17: references are stored upper-case
+        var o = await db.Orders.AsNoTracking().Include(x => x.Lines).FirstOrDefaultAsync(x => x.Reference == reference, ct);
         return o is null
             ? OrderErrors.NotFound
             : new AdminOrderDetail(o.Reference, o.Status.ToWire(), o.TotalAmount.ToWire(), o.CustomerId, o.DonorName, o.DonorEmail, o.DonorMobile, o.Locale,

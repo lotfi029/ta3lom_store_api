@@ -25,12 +25,7 @@ internal sealed class CartMergeHook(ICartRepository carts, IStoreSettings settin
             return [];
         }
 
-        var donor = await carts.GetForCustomerForUpdateAsync(customerId, ct);
-        if (donor is null)
-        {
-            donor = Cart.CreateFor(customerId, now);
-            carts.Add(donor);
-        }
+        var donor = await carts.GetOrCreateForCustomerForUpdateAsync(customerId, now, ct);
 
         var outcomes = donor.MergeFrom(guest, CartPricer.Limits(await settings.GetAsync(ct)), now);
         carts.Remove(guest);

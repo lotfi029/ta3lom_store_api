@@ -41,7 +41,7 @@ public sealed record OrderStatusResponse(string Reference, string Status, string
 // ── Donor account ────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// `GET /v1/me` (BR-A10).
-public sealed record MeResponse(Guid Id, string Mobile, string? FullName, string? Email, string Locale, bool MarketingOptIn, string Status,
+public sealed record MeResponse(Guid Id, string? Mobile, string? FullName, string? Email, string Locale, bool MarketingOptIn, string Status,
     DateTimeOffset? PdplConsentAt, DateTimeOffset CreatedAt);
 
 /// `PATCH /v1/me`: null leaves a field as it is; an empty string clears the name or e-mail.

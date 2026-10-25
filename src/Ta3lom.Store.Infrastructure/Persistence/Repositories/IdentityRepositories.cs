@@ -17,6 +17,9 @@ internal sealed class OtpChallengeRepository(StoreDbContext db) : GenericReposit
     public Task LockMobileAsync(string mobileE164, CancellationToken ct = default) =>
         Db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtextextended({"otp:" + mobileE164}, 0))", ct);
 
+    public Task LockIpAsync(string ipHash, CancellationToken ct = default) =>
+        Db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtextextended({"otp-ip:" + ipHash}, 0))", ct);
+
     public async Task<IReadOnlyList<DateTimeOffset>> IssuedForMobileSinceAsync(string mobileE164, DateTimeOffset since, CancellationToken ct = default) =>
         await Set.AsNoTracking().Where(o => o.Mobile == mobileE164 && o.CreatedAt >= since)
             .OrderBy(o => o.CreatedAt).Select(o => o.CreatedAt).ToListAsync(ct);
@@ -81,6 +84,13 @@ internal sealed class StaffUserRepository(StoreDbContext db) : GenericRepository
     /// `staff_user.email` is citext: the comparison in SQL is case-insensitive.
     public Task<StaffUser?> FindByEmailAsync(string email, CancellationToken ct = default) =>
         Set.FirstOrDefaultAsync(s => s.Email == email, ct);
+
+    public async Task LockForUpdateAsync(StaffUser user, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        await Db.Database.SqlQuery<Guid>($"""SELECT id AS "Value" FROM store.staff_user WHERE id = {user.Id} FOR UPDATE""").ToListAsync(ct);
+        await Db.Entry(user).ReloadAsync(ct);
+    }
 
     public async Task<IReadOnlyList<Guid>> LockActiveAdminIdsAsync(CancellationToken ct = default) =>
         await Db.Database.SqlQuery<Guid>($"""

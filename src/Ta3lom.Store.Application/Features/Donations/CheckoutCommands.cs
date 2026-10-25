@@ -51,7 +51,7 @@ internal sealed class CheckoutCommandHandler(ICustomerRepository customers, ICar
         customer.UpdateProfile(name, email, locale, null, now);
         var reference = Order.FormatReference(clock.RiyadhToday.Year, await orders.NextReferenceSequenceAsync(ct));
         var (token, hash) = statusTokens.Create(reference);
-        var order = Order.Place(reference, customer.Id, new DonorContact(name, email, customer.Mobile, locale),
+        var order = Order.Place(reference, customer.Id, new DonorContact(name, email, customer.Mobile!, locale),
             [.. priced.Lines.Select(l => l.ToDraft())], hash, now.AddMinutes(s.PaymentWindowMinutes), now);
         orders.Add(order);
         cart.Clear(now);

@@ -46,7 +46,7 @@ refuses to start when a key is missing, shorter than 32 bytes or equal to its DE
 | Variable | Notes |
 |---|---|
 | `ASPNETCORE_ENVIRONMENT` | `Production`, `Staging` or `Development` |
-| `ConnectionStrings__Store` | `Host=…;Database=ta3lom_store;Username=store_app;Password=…;Search Path=store` |
+| `ConnectionStrings__Store` | `Host=…;Database=ta3lom_store;Username=store_app;Password=…;Search Path=store,public` (the extensions live in `public`; start-up refuses a search path without it outside Development) |
 | `Store__PublicBaseUrl`, `Store__WebBaseUrl` | API host and web store host (`https://store.ta3lom.sa`) |
 | `Store__Cors__Origins__0…` | Allowed web origins (default: store and store-staging) |
 | `Store__DataProtection__KeysPath` | Persistent key ring (TOTP secrets, guest cart cookie) |

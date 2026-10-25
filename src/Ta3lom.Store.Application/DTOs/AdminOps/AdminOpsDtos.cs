@@ -8,11 +8,11 @@ public sealed record DashboardResponse(int PublishedProjects, int ActiveCategori
 public sealed record DashboardProject(Guid ProjectId, string Slug, string TitleAr, int PendingOrders, string PendingAmount);
 
 /// `GET /v1/admin/customers`.
-public sealed record AdminCustomerRow(Guid Id, string Mobile, string? FullName, string? Email, string Status, int OrderCount, DateTimeOffset CreatedAt,
+public sealed record AdminCustomerRow(Guid Id, string? Mobile, string? FullName, string? Email, string Status, int OrderCount, DateTimeOffset CreatedAt,
     DateTimeOffset? LastLoginAt);
 
 /// `GET /v1/admin/customers/{id}`: the donor with their latest orders.
-public sealed record AdminCustomerDetail(Guid Id, string Mobile, string? FullName, string? Email, string Locale, bool MarketingOptIn, string Status,
+public sealed record AdminCustomerDetail(Guid Id, string? Mobile, string? FullName, string? Email, string Locale, bool MarketingOptIn, string Status,
     DateTimeOffset? PdplConsentAt, DateTimeOffset CreatedAt, DateTimeOffset? LastLoginAt, IReadOnlyList<AdminOrderRow> RecentOrders, uint Version);
 
 /// `GET /v1/admin/orders`.

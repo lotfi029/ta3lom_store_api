@@ -121,6 +121,54 @@ public sealed class AdminOpsTests(ScenarioFactory factory) : IClassFixture<Scena
         (await manager.PostAsync("/v1/admin/templates/test", new { channel = "sms", body = "x" })).Response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
+    [Theory]
+    [InlineData("{{ 10 % 0 }}")]
+    [InlineData("{{ 'x' | string.repeat -1 }}")]
+    [InlineData("{{ 'abc' | regex.match '(' }}")]
+    [InlineData("{{ func f; ret f; end; f }}")]
+    [InlineData("{{ include 'x' }}")]
+    [InlineData("{{ for i in 1..100000000 }}{{ end }}")]
+    public async Task Any_template_that_fails_to_render_is_422_never_500(string body)
+    {
+        var manager = await factory.StaffAsync(Roles.StoreManager);
+
+        var put = await manager.SendAsync(HttpMethod.Put, "/v1/admin/templates/staff_alert/email/ar", new { subject = "x", body });
+
+        put.Response.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity, body);
+        put.Body.Str("code").ShouldBe(ErrorCodes.TemplateRenderFailed);
+    }
+
+    [Fact]
+    public async Task Order_detail_and_cancel_find_the_reference_in_any_case()
+    {
+        var (_, _, reference) = await OrderAsync();
+        var finance = await factory.StaffAsync(Roles.Finance);
+
+        (await finance.GetAsync($"/v1/admin/orders/{reference.ToLowerInvariant()}")).Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var cancelled = await finance.PostAsync($"/v1/admin/orders/{reference.ToLowerInvariant()}/cancel");
+
+        cancelled.Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        cancelled.Body.Str("reference").ShouldBe(reference);
+    }
+
+    [Fact]
+    public async Task A_staff_member_test_sends_at_most_five_templates_an_hour()
+    {
+        var manager = await factory.StaffAsync(Roles.StoreManager);
+        var other = await factory.StaffAsync(Roles.StoreManager);
+        for (var i = 0; i < 5; i++)
+        {
+            (await manager.PostAsync("/v1/admin/templates/test", new { channel = "email", subject = "s", body = "b" })).Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        }
+
+        var sixth = await manager.PostAsync("/v1/admin/templates/test", new { channel = "email", subject = "s", body = "b" });
+
+        sixth.Response.StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
+        sixth.Body.Str("code").ShouldBe(ErrorCodes.RateLimited);
+        int.Parse(sixth.Response.Headers.GetValues("Retry-After").Single(), System.Globalization.CultureInfo.InvariantCulture).ShouldBeGreaterThan(60);
+        (await other.PostAsync("/v1/admin/templates/test", new { channel = "email", subject = "s", body = "b" })).Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
     [Fact]
     public async Task The_audit_log_is_filtered_and_admin_only()
     {

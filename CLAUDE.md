@@ -71,6 +71,10 @@ sign-in by SMS code, checkout into `pending_payment` orders, donor account, staf
 - Secrets never in the repository or the chat. Non-Development environments refuse missing or DEV ONLY keys.
 - Migrations: one schema history from `InitialSchema`; a merged migration is never edited; no `Database.Migrate()`;
   deployments run the idempotent script. Expand → migrate → contract for schema changes.
+- Migration `Down` is never run in production (roll forward with a new migration). `InitialSchema.Down` drops the
+  `citext`/`pg_trgm` extensions; every newer migration's `Down` leaves the extensions in place.
+- `ux_option_label` is a DEFERRABLE unique constraint owned by raw SQL (migration `OptionLabelDeferrable`), not part of
+  the EF model; keep it when touching `project_option`.
 
 ## Commands
 

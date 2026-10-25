@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Ta3lom.Store.Api.IntegrationTests.Infrastructure.Database;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Persistence;
@@ -42,7 +44,52 @@ public sealed class MigrationTests
 
         using var db = StoreSchema.CreateContext(cs);
         (await SqlRunner.ScalarAsync<long>(cs, "SELECT count(*) FROM store.__ef_migrations_history")).ShouldBe(db.Database.GetMigrations().Count());
-        db.Database.GetMigrations().ShouldHaveSingleItem().ShouldEndWith("_InitialSchema");
+        db.Database.GetMigrations().First().ShouldEndWith("_InitialSchema");
+    }
+
+    /// F4: every migration, in order, on an empty postgres:18 database; afterwards the model matches the database's
+    /// migration history and has no pending changes.
+    [Fact]
+    public async Task All_migrations_apply_on_an_empty_database_and_leave_no_pending_model_changes()
+    {
+        var server = await TestDatabaseServer.GetAsync();
+        var cs = await server.CreateDatabaseAsync("allmig");
+
+        await SqlRunner.ExecuteAsync(cs, StoreSchema.IdempotentMigrationScript());
+
+        using var db = StoreSchema.CreateContext(cs);
+        (await db.Database.GetAppliedMigrationsAsync(TestContext.Current.CancellationToken)).ShouldBe(db.Database.GetMigrations());
+        (await db.Database.GetPendingMigrationsAsync(TestContext.Current.CancellationToken)).ShouldBeEmpty();
+        db.Database.HasPendingModelChanges().ShouldBeFalse();
+    }
+
+    /// L-5: upgrading a database that already holds an anonymised donor (with the old placeholder mobile) clears the
+    /// placeholder; a blocked donor keeps the mobile; an active donor without one is refused.
+    [Fact]
+    public async Task The_anonymised_mobile_migration_clears_placeholders_and_keeps_blocked_mobiles()
+    {
+        var server = await TestDatabaseServer.GetAsync();
+        var cs = await server.CreateDatabaseAsync("anonmig");
+        using (var context = StoreSchema.CreateContext("Host=localhost;Database=unused"))
+        {
+            var initial = context.Database.GetMigrations().First();
+            await SqlRunner.ExecuteAsync(cs, context.GetService<IMigrator>().GenerateScript(toMigration: initial, options: MigrationsSqlGenerationOptions.Idempotent));
+        }
+
+        await SqlRunner.ExecuteAsync(cs, """
+            INSERT INTO store.customer (id, mobile, locale, status, created_at, updated_at)
+            VALUES ('01900000-0000-7000-8000-000000000001', '+966512345678', 'ar', 'anonymised', now(), now()),
+                   ('01900000-0000-7000-8000-000000000002', '+966587654321', 'ar', 'blocked', now(), now());
+            """);
+
+        await SqlRunner.ExecuteAsync(cs, StoreSchema.IdempotentMigrationScript());
+
+        (await SqlRunner.ScalarAsync<bool>(cs, "SELECT mobile IS NULL FROM store.customer WHERE id = '01900000-0000-7000-8000-000000000001'")).ShouldBeTrue();
+        (await SqlRunner.ScalarAsync<string>(cs, "SELECT mobile FROM store.customer WHERE id = '01900000-0000-7000-8000-000000000002'")).ShouldBe("+966587654321");
+        await Should.ThrowAsync<Npgsql.PostgresException>(() => SqlRunner.ExecuteAsync(cs, """
+            INSERT INTO store.customer (id, mobile, locale, status, created_at, updated_at)
+            VALUES ('01900000-0000-7000-8000-000000000003', NULL, 'ar', 'active', now(), now());
+            """));
     }
 
     /// `dotnet ef migrations has-pending-model-changes`: a configuration change without a migration fails here.

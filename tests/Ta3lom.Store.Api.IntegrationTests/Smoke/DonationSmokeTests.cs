@@ -94,7 +94,7 @@ public sealed class DonationSmokeTests(ScenarioFactory factory) : IClassFixture<
 
         await factory.DrainOutboxAsync();
         (await factory.ScalarAsync<long>("SELECT count(*) FROM store.outbox_message WHERE processed_at IS NULL")).ShouldBe(0);
-        (await factory.MailAsync()).Count(m => m.Subject.Contains(reference, StringComparison.Ordinal)).ShouldBe(2);
+        (await factory.MailAsync()).Count(m => m.Subject.Contains(reference, StringComparison.Ordinal)).ShouldBe(0);   // D-a: logged only
         (await factory.IntegrityFailuresAsync()).ShouldBeEmpty();
     }
 }

@@ -6,10 +6,15 @@ public sealed record ResetStaffTotpCommand(Guid Id) : ICommand;
 internal sealed class ResetStaffTotpCommandHandler(
     IStaffUserRepository staff,
     IRefreshTokenRepository refreshTokens,
+    IAuditTrail audit,
     IUnitOfWork uow,
     IClock clock) : ICommandHandler<ResetStaffTotpCommand>
 {
-    public async Task<Result> HandleAsync(ResetStaffTotpCommand command, CancellationToken ct = default)
+    /// L-6: the reset and the session revocation commit together; audited `staff.totp_reset`.
+    public Task<Result> HandleAsync(ResetStaffTotpCommand command, CancellationToken ct = default) =>
+        uow.ExecuteInTransactionAsync(token => ResetAsync(command, token), ct);
+
+    private async Task<Result> ResetAsync(ResetStaffTotpCommand command, CancellationToken ct)
     {
         var user = await staff.GetByIdAsync(command.Id, ct);
         if (user is null)
@@ -18,8 +23,8 @@ internal sealed class ResetStaffTotpCommandHandler(
         }
 
         user.ResetTotp();
-        await uow.SaveChangesAsync(ct);
         await refreshTokens.RevokeAllForSubjectAsync(TokenSubjectType.Staff, user.Id, clock.UtcNow, ct);
+        audit.Record(AuditActions.StaffTotpReset, "staff_user", user.Id.ToString());
         return Result.Success();
     }
 }

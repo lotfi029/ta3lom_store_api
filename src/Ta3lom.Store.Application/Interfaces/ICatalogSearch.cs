@@ -4,6 +4,13 @@ namespace Ta3lom.Store.Application.Interfaces;
 /// normalised Arabic title, so ة/ه, ى/ي, alef forms and tashkeel all match. Raw SQL, so it lives in Infrastructure.
 public interface ICatalogSearch
 {
-    /// Ids of matching projects with the given status (`published` for the public listing), best match first, at most 200.
-    Task<IReadOnlyList<Guid>> SearchAsync(string query, string? status, CancellationToken ct = default);
+    /// One page of matching project ids, best match first, with the total of all matches. Every filter and the paging are
+    /// applied in the same SQL (L-11), so the total and the pages are right whatever the number of matches.
+    Task<CatalogSearchPage> SearchPageAsync(CatalogSearchRequest request, CancellationToken ct = default);
 }
+
+/// `Status` null = any status; `CategorySlug` / `CategoryId` filter one category; `ActiveCategoryOnly` keeps projects of
+/// active categories (the public listing).
+public sealed record CatalogSearchRequest(string Query, string? Status, string? CategorySlug, Guid? CategoryId, bool ActiveCategoryOnly, int Skip, int Take);
+
+public sealed record CatalogSearchPage(IReadOnlyList<Guid> Ids, int Total);

@@ -31,7 +31,7 @@ internal sealed class DonationEndpoints : IEndpoint
         checkout.MapPost("/quote", QuoteAsync).RequireAuthorization(Policies.CustomerOptional).RequireRateLimiting(RatePolicies.Cart)
             .Produces<CartResponse>().ProducesProblem(StatusCodes.Status409Conflict);
         checkout.MapPost("/", CheckoutAsync).RequireAuthorization(Policies.Customer).RequireRateLimiting(RatePolicies.Checkout)
-            .RequireIdempotencyKey("checkout")
+            .RequireIdempotencyKey("checkout", CheckoutReplay.Instance)
             .Produces<CheckoutResponse>(StatusCodes.Status201Created).ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden).ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
@@ -134,4 +134,20 @@ internal sealed class MeEndpoints : IEndpoint
     private static async Task<IResult> DonationAsync(string reference, ClaimsPrincipal user, [FromServices] IQueryHandler<GetMyDonationQuery, DonationDetail> handler,
         CancellationToken ct) =>
         (await handler.HandleAsync(new GetMyDonationQuery(user.SubjectId(), reference), ct)).ToHttp();
+}
+
+/// L-1: the stored checkout replay holds no status token; it is re-derived from the reference (a deterministic HMAC) when
+/// the response is replayed.
+internal sealed class CheckoutReplay : IIdempotentResponseShaper
+{
+    public static readonly CheckoutReplay Instance = new();
+
+    public object ForStorage(object value) => value is CheckoutResponse r ? r with { StatusToken = string.Empty } : value;
+
+    public string ForReplay(string storedJson, System.Text.Json.JsonSerializerOptions json, IServiceProvider services)
+    {
+        var stored = System.Text.Json.JsonSerializer.Deserialize<CheckoutResponse>(storedJson, json)!;
+        var token = services.GetRequiredService<Ta3lom.Store.Application.Interfaces.IOrderStatusTokens>().Create(stored.Reference).Token;
+        return System.Text.Json.JsonSerializer.Serialize(stored with { StatusToken = token }, json);
+    }
 }
