@@ -14,5 +14,7 @@ A-5 → order.idempotency_key + stale claim (2 min) replays the order; A-7 → I
 | A-5 | done | b656db9 | CheckoutTests.A_claim_left_in_progress_after_the_order_committed_replays_that_order, …A_claim_left_in_progress_before_any_order_lets_the_retry_check_out; migration 20261025180041_OrderIdempotencyKey |
 | L-12 | done | b656db9 | CheckoutTests.The_stored_replay_… (replay Location = original) |
 | A-6 | done | 718c291 | RefreshTokenRaceTests.Revoking_all_tokens_during_a_rotation_also_revokes_the_successor |
-| A-7 | done | (next) | CustomerAuthTests.IPv6_addresses_of_one_64_prefix_share_the_per_IP_limit, ClientNetworkTests |
-| L-10 | done | (next) | OtpVolumeTests.Parallel_requests_crossing_half_the_daily_cap_alert_staff_once (was 10 alerts) |
+| A-7 | done | 851614f | CustomerAuthTests.IPv6_addresses_of_one_64_prefix_share_the_per_IP_limit, ClientNetworkTests |
+| L-10 | done | 851614f | OtpVolumeTests.Parallel_requests_crossing_half_the_daily_cap_alert_staff_once (was 10 alerts) |
+| A-8 | done | (next) | StartupGuardTests: Production without Sms AppSid/SenderId, sink SMS, without SMTP password, sink e-mail → host stops |
+| L-1 | done | (next) | StartupGuardTests: DEV ONLY key + "\n", another DEV ONLY key → host stops |

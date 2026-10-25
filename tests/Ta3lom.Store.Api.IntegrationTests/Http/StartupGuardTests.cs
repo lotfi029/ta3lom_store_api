@@ -25,6 +25,13 @@ public sealed class StartupGuardTests
     [InlineData("Store:Tokens:StatusKeyBase64", null, "Staging")]
     [InlineData("Store:Hashing:KeyBase64", DevOnlyKeys.Hashing, "Testing")]
     [InlineData("Store:Hashing:KeyBase64", "c2hvcnQ=", "Production")]
+    [InlineData("Store:Jwt:CustomerSigningKeyBase64", DevOnlyKeys.JwtCustomer + "\n", "Production")]       // L-1: same bytes
+    [InlineData("Store:Tokens:StatusKeyBase64", DevOnlyKeys.Hashing, "Production")]                          // L-1: another DEV ONLY key
+    [InlineData("Store:Sms:AppSid", null, "Production")]                                                     // A-8
+    [InlineData("Store:Sms:SenderId", "", "Production")]
+    [InlineData("Store:Sms:Provider", "sink", "Production")]
+    [InlineData("Store:Email:Password", null, "Production")]
+    [InlineData("Store:Email:Mode", "sink", "Production")]
     public void Missing_short_or_dev_only_keys_stop_the_host(string key, string? value, string environment)
     {
         using var factory = new GuardedProductionFactory(key, value, environment);

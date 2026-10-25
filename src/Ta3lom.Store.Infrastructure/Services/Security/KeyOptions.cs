@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -75,8 +76,26 @@ public static class DevOnlyKeys
         }
     }
 
+    private static readonly string[] All = [JwtCustomer, JwtStaff, OtpPepper, OrderStatus, Hashing];
+
+    /// L-1: compared as key bytes (base64 decoding ignores whitespace) against every DEV ONLY key, not as a string.
+    public static bool IsDevOnly(string? value)
+    {
+        byte[] bytes;
+        try
+        {
+            bytes = Convert.FromBase64String(value ?? string.Empty);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+
+        return All.Any(dev => CryptographicOperations.FixedTimeEquals(bytes, Convert.FromBase64String(dev)));
+    }
+
     /// Null when the key is acceptable for <paramref name="environment"/>, else the reason.
-    public static string? Problem(string name, string? value, string devValue, IHostEnvironment environment)
+    public static string? Problem(string name, string? value, IHostEnvironment environment)
     {
         ArgumentNullException.ThrowIfNull(environment);
         if (!environment.IsDevelopment())
@@ -86,9 +105,9 @@ public static class DevOnlyKeys
                 return $"{name} is required outside Development";
             }
 
-            if (value == devValue)
+            if (IsDevOnly(value))
             {
-                return $"{name} must not be the DEV ONLY value outside Development";
+                return $"{name} must not be a DEV ONLY value outside Development";
             }
         }
 
@@ -114,19 +133,19 @@ internal sealed class KeyOptionsSetup(IHostEnvironment environment)
     public void PostConfigure(string? name, HashingOptions options) => options.KeyBase64 = Fallback(options.KeyBase64, DevOnlyKeys.Hashing);
 
     public ValidateOptionsResult Validate(string? name, JwtOptions options) => Result(
-        DevOnlyKeys.Problem("Store:Jwt:CustomerSigningKeyBase64", options.CustomerSigningKeyBase64, DevOnlyKeys.JwtCustomer, environment),
-        DevOnlyKeys.Problem("Store:Jwt:StaffSigningKeyBase64", options.StaffSigningKeyBase64, DevOnlyKeys.JwtStaff, environment),
+        DevOnlyKeys.Problem("Store:Jwt:CustomerSigningKeyBase64", options.CustomerSigningKeyBase64, environment),
+        DevOnlyKeys.Problem("Store:Jwt:StaffSigningKeyBase64", options.StaffSigningKeyBase64, environment),
         options.CustomerSigningKeyBase64 == options.StaffSigningKeyBase64 && !environment.IsDevelopment()
             ? "Store:Jwt customer and staff keys must differ" : null);
 
     public ValidateOptionsResult Validate(string? name, OtpOptions options) =>
-        Result(DevOnlyKeys.Problem("Store:Otp:PepperBase64", options.PepperBase64, DevOnlyKeys.OtpPepper, environment));
+        Result(DevOnlyKeys.Problem("Store:Otp:PepperBase64", options.PepperBase64, environment));
 
     public ValidateOptionsResult Validate(string? name, TokenKeyOptions options) =>
-        Result(DevOnlyKeys.Problem("Store:Tokens:StatusKeyBase64", options.StatusKeyBase64, DevOnlyKeys.OrderStatus, environment));
+        Result(DevOnlyKeys.Problem("Store:Tokens:StatusKeyBase64", options.StatusKeyBase64, environment));
 
     public ValidateOptionsResult Validate(string? name, HashingOptions options) =>
-        Result(DevOnlyKeys.Problem("Store:Hashing:KeyBase64", options.KeyBase64, DevOnlyKeys.Hashing, environment));
+        Result(DevOnlyKeys.Problem("Store:Hashing:KeyBase64", options.KeyBase64, environment));
 
     private string Fallback(string value, string devValue) =>
         string.IsNullOrWhiteSpace(value) && environment.IsDevelopment() ? devValue : value;

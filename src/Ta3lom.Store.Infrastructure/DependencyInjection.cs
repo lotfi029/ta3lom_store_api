@@ -140,7 +140,8 @@ public static class DependencyInjection
     /// SMS (sink unless `Store:Sms:Provider = unifonic`), e-mail (sink unless `Store:Email:Mode = smtp`), templates, outbox, settings.
     private static void AddMessaging(IServiceCollection services)
     {
-        services.AddOptions<SmsOptions>().BindConfiguration(SmsOptions.Section);
+        services.AddOptions<SmsOptions>().BindConfiguration(SmsOptions.Section).ValidateOnStart();
+        services.AddSingleton<IValidateOptions<SmsOptions>, SmsOptionsValidator>();
         services.AddSingleton<SinkSmsSender>();
         services.AddSingleton<IDevSmsInbox>(sp => sp.GetRequiredService<SinkSmsSender>());
         services.AddHttpClient<UnifonicSmsSender>(c => c.Timeout = TimeSpan.FromSeconds(10));
@@ -150,7 +151,8 @@ public static class DependencyInjection
                 : sp.GetRequiredService<SinkSmsSender>());
         services.AddScoped<ITemplateRenderer, ScribanTemplateRenderer>();
 
-        services.AddOptions<EmailOptions>().BindConfiguration(EmailOptions.Section);
+        services.AddOptions<EmailOptions>().BindConfiguration(EmailOptions.Section).ValidateOnStart();
+        services.AddSingleton<IValidateOptions<EmailOptions>, EmailOptionsValidator>();
         services.AddSingleton<SinkEmailSender>();
         services.AddSingleton<IDevMailInbox>(sp => sp.GetRequiredService<SinkEmailSender>());
         services.AddSingleton<SmtpEmailSender>();

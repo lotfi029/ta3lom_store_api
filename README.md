@@ -55,8 +55,8 @@ refuses to start when a key is missing, shorter than 32 bytes or equal to its DE
 | `Store__Otp__PepperBase64` | OTP hash pepper |
 | `Store__Tokens__StatusKeyBase64` | HMAC key of the order status token |
 | `Store__Hashing__KeyBase64` | HMAC key for IP and recipient hashes |
-| `Store__Sms__Provider`, `Store__Sms__AppSid`, `Store__Sms__SenderId` | `sink` or `unifonic` |
-| `Store__Email__Mode`, `__Host`, `__Port`, `__User`, `__Password`, `__From`, `__StaffAlerts` | `sink` or `smtp` |
+| `Store__Sms__Provider`, `Store__Sms__AppSid`, `Store__Sms__SenderId` | `sink` or `unifonic`; Production requires `unifonic` with AppSid and sender id |
+| `Store__Email__Mode`, `__Host`, `__Port`, `__User`, `__Password`, `__From`, `__StaffAlerts` | `sink` or `smtp`; Production requires `smtp` with host, user and password |
 | `Store__Files__Root`, `Store__Files__PublicBaseUrl` | Uploaded media |
 | `Store__SiteRebuild__Repository`, `Store__SiteRebuild__Token`, `Store__SiteRebuild__EventType` | `repository_dispatch` to the web repo after catalogue changes; required in Production, empty elsewhere = logged no-op |
 | `Store__Telemetry__OtlpEndpoint` | Optional OpenTelemetry exporter |

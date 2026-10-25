@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+
 namespace Ta3lom.Store.Infrastructure.Services.Sms;
 
 /// `Store:Sms`. `Provider = sink` writes to the log and `/dev/sms`; `unifonic` calls the provider.
@@ -13,4 +16,35 @@ public sealed class SmsOptions
     public string AppSid { get; set; } = string.Empty;
 
     public string SenderId { get; set; } = string.Empty;
+}
+
+/// A-8: Production sends real SMS — the provider must be `unifonic` with its AppSid and sender id, or the host does not start
+/// (an OTP would otherwise be accepted and silently never delivered).
+internal sealed class SmsOptionsValidator(IHostEnvironment environment) : IValidateOptions<SmsOptions>
+{
+    public ValidateOptionsResult Validate(string? name, SmsOptions options)
+    {
+        if (!environment.IsProduction())
+        {
+            return ValidateOptionsResult.Success;
+        }
+
+        List<string> problems = [];
+        if (!string.Equals(options.Provider, "unifonic", StringComparison.OrdinalIgnoreCase))
+        {
+            problems.Add("Store:Sms:Provider must be unifonic in Production");
+        }
+
+        if (string.IsNullOrWhiteSpace(options.AppSid))
+        {
+            problems.Add("Store:Sms:AppSid is required in Production");
+        }
+
+        if (string.IsNullOrWhiteSpace(options.SenderId))
+        {
+            problems.Add("Store:Sms:SenderId is required in Production");
+        }
+
+        return problems.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(problems);
+    }
 }

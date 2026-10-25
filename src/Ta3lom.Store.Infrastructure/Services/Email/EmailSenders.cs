@@ -39,6 +39,34 @@ public sealed class EmailOptions
     public string SinkFolder { get; set; } = "../../artifacts/mail";
 }
 
+/// A-8: Production sends staff mail over SMTP — `Mode = smtp` with host, user and password, or the host does not start.
+internal sealed class EmailOptionsValidator(IHostEnvironment environment) : IValidateOptions<EmailOptions>
+{
+    public ValidateOptionsResult Validate(string? name, EmailOptions options)
+    {
+        if (!environment.IsProduction())
+        {
+            return ValidateOptionsResult.Success;
+        }
+
+        List<string> problems = [];
+        if (!string.Equals(options.Mode, "smtp", StringComparison.OrdinalIgnoreCase))
+        {
+            problems.Add("Store:Email:Mode must be smtp in Production");
+        }
+
+        foreach (var (key, value) in new[] { ("Store:Email:Host", options.Host), ("Store:Email:User", options.User), ("Store:Email:Password", options.Password) })
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                problems.Add($"{key} is required in Production");
+            }
+        }
+
+        return problems.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(problems);
+    }
+}
+
 internal static class MimeBuilder
 {
     public static MimeMessage Build(EmailOptions o, EmailMessage m)
