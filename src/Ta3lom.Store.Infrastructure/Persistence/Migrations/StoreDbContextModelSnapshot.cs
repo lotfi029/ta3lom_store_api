@@ -1330,6 +1330,26 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Ta3lom.Store.Infrastructure.Persistence.Records.JobRunRecord", b =>
+                {
+                    b.Property<string>("Job")
+                        .HasColumnType("text")
+                        .HasColumnName("job");
+
+                    b.Property<DateTimeOffset>("FireTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fire_time");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.HasKey("Job", "FireTime")
+                        .HasName("pk_job_run");
+
+                    b.ToTable("job_run", "store");
+                });
+
             modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Catalog.Category", b =>
                 {
                     b.HasOne("Ta3lom.Store.Domain.Entities.Media.MediaAsset", null)

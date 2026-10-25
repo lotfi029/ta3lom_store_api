@@ -16,5 +16,8 @@ A-5 → order.idempotency_key + stale claim (2 min) replays the order; A-7 → I
 | A-6 | done | 718c291 | RefreshTokenRaceTests.Revoking_all_tokens_during_a_rotation_also_revokes_the_successor |
 | A-7 | done | 851614f | CustomerAuthTests.IPv6_addresses_of_one_64_prefix_share_the_per_IP_limit, ClientNetworkTests |
 | L-10 | done | 851614f | OtpVolumeTests.Parallel_requests_crossing_half_the_daily_cap_alert_staff_once (was 10 alerts) |
-| A-8 | done | (next) | StartupGuardTests: Production without Sms AppSid/SenderId, sink SMS, without SMTP password, sink e-mail → host stops |
-| L-1 | done | (next) | StartupGuardTests: DEV ONLY key + "\n", another DEV ONLY key → host stops |
+| A-8 | done | cf4956a | StartupGuardTests: Production without Sms AppSid/SenderId, sink SMS, without SMTP password, sink e-mail → host stops |
+| L-1 | done | cf4956a | StartupGuardTests: DEV ONLY key + "\n", another DEV ONLY key → host stops |
+| L-2 | done | (next) | LogRedactionTests (X-Forwarded-For / X-Real-IP masked) |
+| L-3 | done | (next) | OutboxHealthTests.A_dead_lettered_or_overdue_message_makes_the_outbox_degraded |
+| L-4 | done | (next) | JobRunTests (one scheduled fire runs once across instances; failed Result logged, no throw); migration 20261025182258_JobRunClaims |

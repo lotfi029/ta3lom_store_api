@@ -6,10 +6,10 @@ namespace Ta3lom.Store.Infrastructure.Services.Jobs;
 
 /// `0 30 * * * ?` — hourly at :30: idempotency keys past their 24-hour expiry (D-14).
 [DisallowConcurrentExecution]
-internal sealed class PruneIdempotencyKeysJob(ICommandHandler<PruneIdempotencyKeysCommand, int> handler) : IJob
+internal sealed class PruneIdempotencyKeysJob(ICommandHandler<PruneIdempotencyKeysCommand, int> handler, JobRuns runs) : IJob
 {
     public const string Cron = "0 30 * * * ?";
 
     public async ValueTask Execute(IJobExecutionContext context, CancellationToken cancellationToken) =>
-        await handler.HandleAsync(new PruneIdempotencyKeysCommand(), cancellationToken);
+        await runs.RunAsync(context.JobDetail.Key.Name, context.ScheduledFireTimeUtc, ct => handler.HandleAsync(new PruneIdempotencyKeysCommand(), ct), cancellationToken);
 }

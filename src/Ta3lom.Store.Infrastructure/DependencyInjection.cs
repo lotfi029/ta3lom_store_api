@@ -60,6 +60,7 @@ public static class DependencyInjection
             q.AddStoreJob<IntegrityChecksJob>(IntegrityChecksJob.Cron);
         });
         services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
+        services.AddScoped<JobRuns>();
         services.AddSingleton<IJobRunner, QuartzJobRunner>();
         return services;
     }
@@ -89,7 +90,9 @@ public static class DependencyInjection
         services.AddScoped<DevelopmentCatalogSeeder>();
         services.AddHostedService<SeedHostedService>();
 
-        services.AddHealthChecks().AddCheck<PostgresHealthCheck>(PostgresHealthCheck.Name, tags: [HealthTags.Ready]);
+        services.AddHealthChecks()
+            .AddCheck<PostgresHealthCheck>(PostgresHealthCheck.Name, tags: [HealthTags.Ready])
+            .AddCheck<OutboxHealthCheck>(OutboxHealthCheck.Name, tags: [HealthTags.Ready]);
     }
 
     private static void AddRepositories(IServiceCollection services)

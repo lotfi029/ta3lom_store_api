@@ -4,13 +4,14 @@ using Serilog.Events;
 namespace Ta3lom.Store.Api.Extensions;
 
 /// Replaces sensitive values with "***" before any sink sees them: properties, dictionary keys
-/// and structure members whose name contains authorization, cookie, password, secret or token.
+/// and structure members whose name contains authorization, cookie, password, secret or token, and client-IP headers
+/// (`X-Forwarded-For`, `Forwarded`, `X-Real-IP`, …; L-2: IPs are only ever stored hashed).
 /// Mobile masking and OTP `code` redaction are added with identity.
 public sealed class RedactingEnricher : ILogEventEnricher
 {
     public const string Mask = "***";
 
-    private static readonly string[] SensitiveFragments = ["authorization", "cookie", "password", "secret", "token"];
+    private static readonly string[] SensitiveFragments = ["authorization", "cookie", "password", "secret", "token", "forwarded", "-ip"];
 
     private static readonly ScalarValue Masked = new(Mask);
 

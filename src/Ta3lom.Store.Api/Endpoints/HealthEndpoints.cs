@@ -19,7 +19,7 @@ public static class HealthEndpoints
             ResponseWriter = WriteLiveAsync,
         }).AllowAnonymous();
 
-        // Readiness: checks tagged "ready" (PostgreSQL, outbox, key ring, files, scheduler).
+        // Readiness: checks tagged "ready" (PostgreSQL: Unhealthy → 503; outbox backlog: Degraded → 200).
         // Degraded → 200 so a slow dependency does not take the API out of rotation; Unhealthy → 503.
         app.MapHealthChecks("/health/ready", new HealthCheckOptions
         {
