@@ -4,7 +4,7 @@ using Serilog.Formatting.Compact;
 
 namespace Ta3lom.Store.Api.Extensions;
 
-/// Serilog: compact JSON to stdout, redaction, request logging with headers (redacted) (09 §8.1).
+/// Serilog: compact JSON to stdout, redaction, request logging with headers (redacted).
 public static class LoggingSetup
 {
     public static IServiceCollection AddStoreLogging(this IServiceCollection services)

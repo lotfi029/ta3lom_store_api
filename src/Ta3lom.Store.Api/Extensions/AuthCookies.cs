@@ -1,6 +1,6 @@
 namespace Ta3lom.Store.Api.Extensions;
 
-/// Session cookies (11 §1.2): HttpOnly, Secure, SameSite=Lax, host-only.
+/// Session cookies: HttpOnly, Secure, SameSite=Lax, host-only.
 public static class AuthCookies
 {
     public const string CustomerRefresh = "t3s_rt";

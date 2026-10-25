@@ -8,7 +8,7 @@ public enum ActorKind
     System,
 }
 
-/// Who is acting; feeds audit_log.actor (09 §3.4). Claims-based from S-04/S-05.
+/// Who is acting; feeds audit_log.actor (from the token claims).
 public interface ICurrentActor
 {
     ActorKind Kind { get; }
@@ -18,6 +18,6 @@ public interface ICurrentActor
     /// Staff email or a system job name; null for customers and anonymous callers.
     string? Name { get; }
 
-    /// HMAC of the client IP (audit_log.ip_hash); null outside HTTP requests or until the key exists (S-04).
+    /// HMAC of the client IP (audit_log.ip_hash); null outside HTTP requests or until the key exists.
     string? IpHash { get; }
 }

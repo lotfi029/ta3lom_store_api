@@ -20,7 +20,7 @@ public sealed class OutboxOptions
     public bool Enabled { get; set; } = true;
 }
 
-/// Nudged after a SaveChanges that added outbox rows, so a paid order's SMS goes out within about a second (09 §5.11).
+/// Nudged after a SaveChanges that added outbox rows, so a paid order's SMS goes out within about a second.
 internal sealed class OutboxSignal : IDisposable
 {
     private readonly SemaphoreSlim _signal = new(0, 1);

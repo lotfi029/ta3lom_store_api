@@ -4,7 +4,7 @@ using Ta3lom.Store.Domain.Constants;
 
 namespace Ta3lom.Store.Api.Security;
 
-/// Who is calling (09 §3.4), from the bearer token's claims; the IP is only ever exposed as an HMAC.
+/// Who is calling, from the bearer token's claims; the IP is only ever exposed as an HMAC.
 internal sealed class HttpCurrentActor(IHttpContextAccessor accessor, IPseudonymizer pseudonymizer) : ICurrentActor
 {
     private ClaimsPrincipal? User => accessor.HttpContext?.User;

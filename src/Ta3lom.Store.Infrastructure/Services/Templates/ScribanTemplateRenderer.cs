@@ -8,7 +8,7 @@ using Ta3lom.Store.Infrastructure.Persistence;
 
 namespace Ta3lom.Store.Infrastructure.Services.Templates;
 
-/// Renders `message_template` with Scriban (RUL-63). The requested locale falls back to Arabic; model members
+/// Renders `message_template` with Scriban. The requested locale falls back to Arabic; model members
 /// are exposed with their C# names in snake_case and as-is (`{{ code }}`, `{{ order_ref }}`).
 internal sealed class ScribanTemplateRenderer(StoreDbContext db) : ITemplateRenderer
 {

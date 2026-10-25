@@ -1,6 +1,6 @@
 namespace Ta3lom.Store.SharedKernel;
 
-/// An expected business outcome (DMS `Error`, store rule K-d): `Code` is a stable 11 §1.6 value,
+/// An expected business outcome (DMS `Error`): `Code` is a stable `ErrorCodes` value,
 /// `Status` the HTTP status the Api returns, `Extensions` extra problem members (e.g. `attemptsLeft`).
 /// The localised `title`/`detail` come from the Api's ErrorMessages resources, keyed by `Code`;
 /// `Description` is the English fallback used in logs and tests.
@@ -34,7 +34,7 @@ public record Error(string Code, string Description, int Status, IReadOnlyDictio
 
     public static Error Unavailable(string code, string description) => new(code, description, 503);
 
-    /// 400 `validation.failed` with camelCase field → messages in the `errors` member (11 §1.6).
+    /// 400 `validation.failed` with camelCase field → messages in the `errors` member.
     public static ValidationError Validation(IReadOnlyDictionary<string, string[]> errors) => new(errors);
 
     /// The same error with extra problem members (e.g. `attemptsLeft`, `retryAfterSeconds`).

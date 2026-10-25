@@ -5,7 +5,7 @@ using Ta3lom.Store.Infrastructure.Persistence;
 
 namespace Ta3lom.Store.Infrastructure.Services.Health;
 
-/// `SELECT 1` with a 2 s budget (09 §8.3). Bypasses the retrying execution strategy so an outage is
+/// `SELECT 1` with a 2 s budget. Bypasses the retrying execution strategy so an outage is
 /// reported at once; the exception text never reaches the response.
 internal sealed class PostgresHealthCheck(StoreDbContext db) : IHealthCheck
 {

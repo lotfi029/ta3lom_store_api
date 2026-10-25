@@ -2,10 +2,10 @@ using System.Text.Json;
 
 namespace Ta3lom.Store.Application.Features.Outbox;
 
-/// A claimed `outbox_message` row (09 §5.11).
+/// A claimed `outbox_message` row.
 public sealed record OutboxEnvelope(Guid Id, string Type, string Payload, DateTimeOffset OccurredAt, int Attempts);
 
-/// One handler per message type (audit §2.1), resolved by `MessageType` = the event record name. A handler throws to ask
+/// One handler per message type, resolved by `MessageType` = the event record name. A handler throws to ask
 /// for a retry (backoff up to 24 h); it must be idempotent or at-most-once per recipient.
 public interface IOutboxHandler
 {

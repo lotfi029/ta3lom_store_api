@@ -2,7 +2,7 @@ using Quartz;
 
 namespace Ta3lom.Store.Infrastructure.Services.Jobs;
 
-/// Quartz registration (09 §6): RAM store, `DisallowConcurrentExecution` on every job, cron in Asia/Riyadh.
+/// Quartz registration: RAM store, `DisallowConcurrentExecution` on every job, cron in Asia/Riyadh.
 /// Jobs are thin shells: each resolves one Application command and runs it (Run-plan-review §2 #3).
 public static class JobScheduling
 {

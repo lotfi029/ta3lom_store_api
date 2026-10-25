@@ -5,7 +5,7 @@ using Ta3lom.Store.Application.DTOs.Media;
 
 namespace Ta3lom.Store.Application.Features.Media.Queries.ListMedia;
 
-/// `GET /v1/admin/media` (#76): newest first, optional `kind`.
+/// `GET /v1/admin/media`: newest first, optional `kind`.
 public sealed record ListMediaQuery(string? Kind, int Page = 1, int PageSize = 20) : IQuery<PagedResult<MediaAssetResponse>>;
 
 internal sealed class ListMediaQueryHandler(IApplicationDbContext db, IFileUrls urls) : IQueryHandler<ListMediaQuery, PagedResult<MediaAssetResponse>>

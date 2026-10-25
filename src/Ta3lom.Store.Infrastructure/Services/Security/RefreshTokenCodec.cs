@@ -5,7 +5,7 @@ using Ta3lom.Store.Application.Interfaces;
 
 namespace Ta3lom.Store.Infrastructure.Services.Security;
 
-/// 32 random bytes as base64url in the cookie; SHA-256 lower-case hex in `refresh_token.token_hash` (09 §5.8).
+/// 32 random bytes as base64url in the cookie; SHA-256 lower-case hex in `refresh_token.token_hash`.
 internal sealed class RefreshTokenCodec : IRefreshTokenCodec
 {
     public (string Raw, string Hash) Create()

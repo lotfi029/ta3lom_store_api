@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Ta3lom.Store.Application.Abstractions.Behaviors;
 
-/// Logs the use-case name, outcome and duration. Never the payload (PII, 09 §8.1).
+/// Logs the use-case name, outcome and duration. Never the payload (PII).
 internal static partial class LoggingDecorator
 {
     internal sealed class CommandHandler<TCommand, TResponse>(

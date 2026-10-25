@@ -6,7 +6,7 @@ namespace Ta3lom.Store.Domain.Tests.ValueObjects;
 public sealed class MoneyNamedOperatorTests
 {
     [Fact]
-    [Rule("RUL-31")]
+    [Rule("D-02")]
     public void Add_subtract_and_multiply_match_the_operators()
     {
         var seat = new Money(350m);

@@ -5,7 +5,7 @@ using Ta3lom.Store.Domain.IRepositories;
 namespace Ta3lom.Store.Infrastructure.Persistence.Repositories;
 
 /// DMS generic repository over tracked entities. Specific repositories derive from it and add the
-/// row-lock queries (`FOR UPDATE`, `SKIP LOCKED`, conditional `UPDATE`) that must stay in Infrastructure (K-c).
+/// row-lock queries (`FOR UPDATE`, `SKIP LOCKED`, conditional `UPDATE`) that must stay in Infrastructure.
 internal class GenericRepository<T>(StoreDbContext db) : IGenericRepository<T>
     where T : class
 {

@@ -55,7 +55,7 @@ public static class DependencyInjection
         return services;
     }
 
-    /// One TypeAdapterConfig for the app, filled from every IRegister in this assembly (explicit maps, K-h).
+    /// One TypeAdapterConfig for the app, filled from every IRegister in this assembly (explicit maps).
     public static IServiceCollection AddMapping(this IServiceCollection services)
     {
         var config = new TypeAdapterConfig();

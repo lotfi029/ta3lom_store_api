@@ -25,7 +25,7 @@ public static class DependencyInjection
     /// Presentation services: options, endpoints, ProblemDetails, CORS, rate limits, localisation, OpenAPI, telemetry.
     public static IServiceCollection AddApi(this IServiceCollection services, IConfiguration configuration)
     {
-        // Configuration is validated at start-up (09 §7.3).
+        // Configuration is validated at start-up.
         services.AddOptions<StoreOptions>()
             .BindConfiguration(StoreOptions.Section)
             .ValidateDataAnnotations()

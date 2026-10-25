@@ -7,7 +7,7 @@ using Ta3lom.Store.Api.IntegrationTests.Infrastructure;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Logging;
 
-/// A3: sensitive values never reach a sink (09 §8.1, plan 14 §4.5 log-redaction test).
+/// Sensitive values never reach a sink (the log-redaction gate).
 public sealed class LogRedactionTests(LogRedactionTests.Factory factory) : IClassFixture<LogRedactionTests.Factory>
 {
     private const string BearerToken = "eyJhbGciOi.secret-access-token";

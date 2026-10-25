@@ -2,11 +2,10 @@ using Ta3lom.Store.Domain.ValueObjects;
 
 namespace Ta3lom.Store.Domain.Tests.ValueObjects;
 
-/// Saudi mobile numbers (RUL-60, RUL-21): accepted in four shapes, stored as E.164, shown masked.
+/// Saudi mobile numbers: accepted in four shapes, stored as E.164, shown masked.
 public sealed class SaudiMobileTests
 {
     [Theory]
-    [Rule("RUL-60")]
     [InlineData("0551234567")]
     [InlineData("551234567")]
     [InlineData("966551234567")]
@@ -23,7 +22,6 @@ public sealed class SaudiMobileTests
     }
 
     [Theory]
-    [Rule("RUL-60")]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]

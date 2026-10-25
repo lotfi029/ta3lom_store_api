@@ -5,7 +5,7 @@ using Ta3lom.Store.Application.Interfaces;
 
 namespace Ta3lom.Store.Infrastructure.Services.Security;
 
-/// 09 §5.7: HMAC-SHA256(pepper, "{challengeId:N}:{mobile}:{code}") as lower-case hex (`otp_challenge.code_hash`).
+/// HMAC-SHA256(pepper, "{challengeId:N}:{mobile}:{code}") as lower-case hex (`otp_challenge.code_hash`).
 /// The challenge id is part of the input, so equal codes never produce equal hashes.
 internal sealed class OtpHasher(IOptions<OtpOptions> options) : IOtpHasher
 {

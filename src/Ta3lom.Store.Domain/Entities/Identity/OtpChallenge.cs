@@ -1,6 +1,6 @@
 namespace Ta3lom.Store.Domain.Entities.Identity;
 
-/// Table `otp_challenge` (RUL-60): 6-digit code, only its HMAC is stored; 5 minutes; 5 wrong attempts per code.
+/// Table `otp_challenge`: 6-digit code, only its HMAC is stored; 5 minutes; 5 wrong attempts per code.
 public sealed class OtpChallenge : AggregateRoot
 {
     public OtpChallenge(string mobile, OtpPurpose purpose, string codeHash, DateTimeOffset expiresAt, DateTimeOffset now) : base(Guid.CreateVersion7())
@@ -31,7 +31,7 @@ public sealed class OtpChallenge : AggregateRoot
 
     public const int MaxAttempts = 5;
 
-    /// The id is chosen first because it is part of the HMAC input (09 §5.7).
+    /// The id is chosen first because it is part of the HMAC input.
     public static OtpChallenge Issue(Guid id, string mobile, OtpPurpose purpose, string codeHash, string? ipHash, DateTimeOffset expiresAt, DateTimeOffset now) =>
         new(id, mobile, purpose, codeHash, ipHash, expiresAt, now);
 

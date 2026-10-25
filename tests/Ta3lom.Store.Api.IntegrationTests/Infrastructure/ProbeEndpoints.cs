@@ -9,7 +9,7 @@ using Ta3lom.Store.SharedKernel;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Infrastructure;
 
-/// Test-only /v1 endpoint module (A1, now a DMS IEndpoint registered by the test factory): exercise CORS, rate limiting, Result mapping, exceptions and log redaction.
+/// Test-only /v1 endpoint module (a DMS IEndpoint registered by the test factory): exercise CORS, rate limiting, Result mapping, exceptions and log redaction.
 public sealed partial class ProbeEndpoints : IEndpoint
 {
     public const string SecretPassword = "hunter2-password-value";

@@ -12,7 +12,7 @@ using Ta3lom.Store.Domain.ValueObjects;
 namespace Ta3lom.Store.Infrastructure.Persistence.Interceptors;
 
 /// Writes one `audit_log` row per entity a staff actor adds, changes or deletes, in the same SaveChanges
-/// (09 §3.4, BR-S11). `diff` lists the changed columns; personal data and secrets are written as "***".
+/// `diff` lists the changed columns; personal data and secrets are written as "***".
 internal sealed class AuditSaveChangesInterceptor(ICurrentActor actor, IClock clock) : SaveChangesInterceptor
 {
     public const string Mask = "***";

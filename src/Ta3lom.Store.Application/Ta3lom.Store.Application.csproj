@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- DMS Application: references Domain (+ SharedKernel). EF Core only for IApplicationDbContext read queries (K-c);
+  <!-- DMS Application: references Domain (+ SharedKernel). EF Core only for IApplicationDbContext read queries;
        never Npgsql, EF Relational, ASP.NET Core or adapter SDKs. -->
   <ItemGroup>
     <ProjectReference Include="../Ta3lom.Store.Domain/Ta3lom.Store.Domain.csproj" />

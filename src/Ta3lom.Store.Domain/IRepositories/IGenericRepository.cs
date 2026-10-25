@@ -3,7 +3,7 @@ using System.Linq.Expressions;
 namespace Ta3lom.Store.Domain.IRepositories;
 
 /// DMS generic repository for commands (tracked aggregates). Reads for endpoints go through
-/// IApplicationDbContext projections; row locks live in the specific Infrastructure repositories (K-c).
+/// IApplicationDbContext projections; row locks live in the specific Infrastructure repositories.
 public interface IGenericRepository<T>
     where T : class
 {

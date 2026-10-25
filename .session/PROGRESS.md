@@ -15,7 +15,7 @@ Approved plan: v3 (owner review R-1…R-12 applied).
 | P6 donations | done | green | clean | 422 passed / 0 failed | cart + merge, quote, idempotent checkout, order status, /me |
 | P7 admin ops | done | green | clean | 436 passed / 0 failed | dashboard, donors, orders, templates, audit, policy matrix |
 | P8 hardening | done | green | clean | 446 passed / 0 failed; coverage Domain 94.7 %, Application 85.0 % | fallback policy, Development-only docs, key guards, CI coverage gate, README, CLAUDE.md |
-| P9 gates | pending | | | | |
+| P9 gates | done | green | clean | 449 passed / 0 failed (Architecture 24, Domain 118, Application 9, Integration 298); coverage Domain 94.7 %, Application 85.5 % | smoke test, rule coverage, keep-list, grep, no vulnerable packages |
 
 ## Decisions
 
@@ -132,6 +132,16 @@ Lines marked **REVIEW** are not covered by the specs (or deviate from them) and 
 - P8: README rewritten (UTF-8; the old file was UTF-16), configuration table from the old `deploy/env` list minus the
   removed keys (`Store:Pii`, `Store:Downloads`, `Store:Documents`, `Store:Email:ManagerAlerts`); CLAUDE.md rewritten
   without doc links.
+- P9: `RuleCoverageTests` (architecture tests) scans the test assemblies: each of D-01 … D-14 has a `[Rule]` test and
+  no tag names another rule. The ported money tests now carry D-02; the Saudi-mobile tests lost their old `RUL-60` tag
+  (no D-rule covers the number format).
+- P9: comments referring to the archived documents (`RUL-nn`, `09 §…`, `S-nn`, `K-x`, `#nn`) were removed or reworded;
+  no code changed.
+- P9: the smoke test (`Smoke/DonationSmokeTests`) runs the plan sequence through the API with the OTP read from the
+  in-process SMS sink (R-3) and ends with the integrity checks passing.
+- P9 gates: `dotnet list package --vulnerable --include-transitive` reports none; `git ls-files` holds only the keep-list
+  (plus `.session/`, removed in the last commit); the whole-word grep for the forbidden words in `src/` is empty;
+  `has-pending-model-changes`: none.
 
 ## Owner review (plan v3)
 

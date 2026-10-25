@@ -2,7 +2,7 @@ using Ta3lom.Store.Application.Abstractions.Time;
 
 namespace Ta3lom.Store.Infrastructure.Services.Time;
 
-/// IClock over TimeProvider. Business dates are Asia/Riyadh (09 §3.5); storage is UTC.
+/// IClock over TimeProvider. Business dates are Asia/Riyadh; storage is UTC.
 public sealed class SystemClock(TimeProvider timeProvider) : IClock
 {
     public static TimeZoneInfo Riyadh { get; } = TimeZoneInfo.FindSystemTimeZoneById("Asia/Riyadh");

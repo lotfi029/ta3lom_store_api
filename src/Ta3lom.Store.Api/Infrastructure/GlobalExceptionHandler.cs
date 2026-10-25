@@ -8,7 +8,7 @@ namespace Ta3lom.Store.Api.Infrastructure;
 
 /// DomainException → 409 with its code; a request the framework could not bind (malformed JSON, wrong body shape, oversize
 /// body) → its 4xx status with `validation.failed` (400) or `http.error`; anything else → 500 `server.error`, no stack
-/// trace (09 §5.14). Persistence races that pass the handlers' own checks: a stale `xmin` → 409 `concurrency.conflict`, a
+/// trace. Persistence races that pass the handlers' own checks: a stale `xmin` → 409 `concurrency.conflict`, a
 /// unique violation (23505) → 409 `db.duplicate`, a foreign-key violation (23503) → 422 `db.reference_missing`.
 internal sealed partial class GlobalExceptionHandler(IProblemDetailsService problems, ILogger<GlobalExceptionHandler> logger)
     : IExceptionHandler

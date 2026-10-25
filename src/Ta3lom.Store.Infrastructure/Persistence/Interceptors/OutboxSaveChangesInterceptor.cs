@@ -6,7 +6,7 @@ using Ta3lom.Store.SharedKernel;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Interceptors;
 
-/// 09 §3.4: every domain event raised by a tracked aggregate becomes an `outbox_message` row in the same SaveChanges,
+/// Every domain event raised by a tracked aggregate becomes an `outbox_message` row in the same SaveChanges,
 /// so the message commits (or rolls back) with the business change. Nothing is published in-process.
 internal sealed class OutboxSaveChangesInterceptor(IClock clock, Services.Outbox.OutboxSignal signal) : SaveChangesInterceptor
 {

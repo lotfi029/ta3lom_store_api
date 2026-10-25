@@ -3,7 +3,7 @@ using Ta3lom.Store.Application.Interfaces;
 
 namespace Ta3lom.Store.Infrastructure.Services.Files;
 
-/// `Store:Files` — where files live and how public ones are addressed (S-09 adds LocalFileStorage).
+/// `Store:Files` — where files live and how public ones are addressed.
 public sealed class FileStorageOptions
 {
     public const string Section = "Store:Files";

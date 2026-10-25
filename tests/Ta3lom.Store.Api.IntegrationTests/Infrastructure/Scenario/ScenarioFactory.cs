@@ -54,7 +54,7 @@ public class ScenarioFactory : StoreApiFactory
         ["Store:Email:SinkFolder"] = _mailFolder,
         ["Store:Files:Root"] = Path.Combine(_mailFolder, "files"),
         ["Store:Outbox:Enabled"] = "false",
-        // Every client of a test class shares one address; the limits themselves are covered by RateLimitTests and S-04.
+        // Every client of a test class shares one address; the limits themselves are covered by RateLimitTests.
         ["Store:RateLimits:Public:TokenLimit"] = "100000",
         ["Store:RateLimits:Public:TokensPerPeriod"] = "100000",
         ["Store:RateLimits:OtpRequest:PermitLimit"] = "100000",

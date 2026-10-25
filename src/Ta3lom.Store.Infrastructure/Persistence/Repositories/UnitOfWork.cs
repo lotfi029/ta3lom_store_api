@@ -4,8 +4,8 @@ using Ta3lom.Store.SharedKernel;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Repositories;
 
-/// DMS unit of work with the store's (K-b) shape: the transaction runs inside Npgsql's retrying execution
-/// strategy (database/01 §4.4). On a retry the change tracker is cleared, so the work must (re)load what it
+/// DMS unit of work with the store's shape: the transaction runs inside Npgsql's retrying execution
+/// strategy. On a retry the change tracker is cleared, so the work must (re)load what it
 /// changes inside the delegate and must not call external services.
 internal sealed class UnitOfWork(StoreDbContext db) : IUnitOfWork
 {

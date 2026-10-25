@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Ta3lom.Store.Domain.Enums;
 
-/// Enum ↔ the DDL/API text value: `PendingPayment` ↔ "pending_payment" (database/01 §2, 11 §1).
+/// Enum ↔ the DDL/API text value: `PendingPayment` ↔ "pending_payment".
 /// `[EnumMember(Value = …)]` overrides the name where snake_case cannot produce it ("applepay", "INV").
 /// Used by the EF converter and by the Mapster configs, so the database and the JSON always agree.
 public static class EnumWire

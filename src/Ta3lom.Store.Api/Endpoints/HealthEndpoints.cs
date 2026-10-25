@@ -5,7 +5,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Ta3lom.Store.Api.Endpoints;
 
-/// #134 GET /health/live and #135 GET /health/ready (11 §10, 09 §8.3). Unversioned, no CORS.
+/// #134 GET /health/live and #135 GET /health/ready. Unversioned, no CORS.
 public static class HealthEndpoints
 {
     public const string ReadyTag = Ta3lom.Store.Infrastructure.Services.Health.HealthTags.Ready;
@@ -19,7 +19,7 @@ public static class HealthEndpoints
             ResponseWriter = WriteLiveAsync,
         }).AllowAnonymous();
 
-        // Readiness: checks tagged "ready" (PostgreSQL from S-02, outbox, key ring, files, scheduler).
+        // Readiness: checks tagged "ready" (PostgreSQL, outbox, key ring, files, scheduler).
         // Degraded → 200 so a slow dependency does not take the API out of rotation; Unhealthy → 503.
         app.MapHealthChecks("/health/ready", new HealthCheckOptions
         {

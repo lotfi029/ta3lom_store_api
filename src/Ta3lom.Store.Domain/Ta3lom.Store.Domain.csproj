@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- DMS Domain: SharedKernel + BCL + DI abstractions (AddDomain only, K-f). No EF Core (K-b). -->
+  <!-- DMS Domain: SharedKernel + BCL + DI abstractions (AddDomain only). No EF Core. -->
   <ItemGroup>
     <ProjectReference Include="../Ta3lom.Store.SharedKernel/Ta3lom.Store.SharedKernel.csproj" />
   </ItemGroup>

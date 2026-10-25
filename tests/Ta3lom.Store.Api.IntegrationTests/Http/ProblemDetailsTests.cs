@@ -4,7 +4,7 @@ using Ta3lom.Store.Domain.Errors;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Http;
 
-/// RFC 9457 errors with a stable code (11 §1.6), localised title/detail (11 §1.3), W3C trace id.
+/// RFC 9457 errors with a stable code, localised title/detail, W3C trace id.
 public sealed class ProblemDetailsTests(ProbeApiFactory factory) : IClassFixture<ProbeApiFactory>
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;

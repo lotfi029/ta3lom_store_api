@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace Ta3lom.Store.Domain.ValueObjects;
 
-/// SAR amount, exactly two decimals, never floating point (RUL-31).
+/// SAR amount, exactly two decimals, never floating point.
 /// Rounding is half away from zero, which is what PostgreSQL round(numeric, 2) does —
 /// .NET's default (banker's rounding) would disagree with the database on x.xx5 values.
 public readonly record struct Money : IComparable<Money>

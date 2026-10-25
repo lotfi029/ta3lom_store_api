@@ -3,7 +3,7 @@ using Ta3lom.Store.Api.IntegrationTests.Infrastructure;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Http;
 
-/// API headers (08 §6.3, 06 NFR-S, 11 §1.7); OpenAPI and Scalar exist in Development only.
+/// API headers; OpenAPI and Scalar exist in Development only.
 public sealed class SecurityHeadersTests(StoreApiFactory factory) : IClassFixture<StoreApiFactory>
 {
     private const string Csp = "default-src 'none'; frame-ancestors 'none'";

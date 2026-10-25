@@ -1,6 +1,6 @@
 namespace Ta3lom.Store.Domain.ValueObjects;
 
-/// Saudi mobile numbers (11 §1.3, RUL-60): accepted as `05XXXXXXXX`, `5XXXXXXXX`, `9665XXXXXXXX` or
+/// Saudi mobile numbers: accepted as `05XXXXXXXX`, `5XXXXXXXX`, `9665XXXXXXXX` or
 /// `+9665XXXXXXXX` (spaces and dashes ignored), stored as E.164 `+9665XXXXXXXX`, shown masked `05•••••567`.
 public static class SaudiMobile
 {
