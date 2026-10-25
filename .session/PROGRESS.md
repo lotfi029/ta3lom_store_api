@@ -13,6 +13,7 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
 | L-7 | done | Fix A-1, A-2, L-7 | `StaffAuthTests.Changing_the_password_issues_a_clean_session_and_revokes_the_old_family` (wrong current password counted + audited) |
 | A-3 | done | Fix A-3 | `CartTests.Arabic_digits_are_accepted_and_malformed_amounts_are_400_never_500`, `AdminCatalogTests.Admin_money_fields_accept_Arabic_digits_and_refuse_malformed_ones`, `Application.Tests MoneyInputTests` |
 | A-4 | done | Fix A-4 | `SearchPathGuardTests.A_search_path_without_public_stops_the_host`, `StaffAuthTests.The_email_is_matched_case_insensitively_with_the_store_public_search_path` |
+| A-5 | done | Fix A-5 | `ImageOrientationTests.The_orientation_is_applied_before_the_image_is_stored` (origins 1, 3, 6, 8) |
 | C-1 | done | Fix C-1 | `SiteRebuildTests.A_newer_change_arriving_while_an_older_one_is_handled_still_rebuilds_once`, `…An_older_change_in_retry_backoff_is_absorbed_by_a_newer_due_one`, `…A_burst_of_five_changes_is_one_rebuild` |
 
 ## Decisions
@@ -43,6 +44,10 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
 - A-4: README uses `Search Path=store,public`; `DatabaseSearchPathValidator` refuses a search path without `public`
   outside Development (warning in Development); no search path at all is accepted. The test databases already use
   `store,public`.
+
+- A-5: the processor draws the decoded bitmap upright for its `EncodedOrigin` (all 8 cases, width/height swapped for the
+  90° ones) before resizing; the WebP output carries no EXIF. The test builds the JPEG itself and splices an APP1
+  Orientation tag (no binary fixture).
 
 ## Migrations
 
