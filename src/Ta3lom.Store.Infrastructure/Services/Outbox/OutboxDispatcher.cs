@@ -113,11 +113,16 @@ internal sealed partial class OutboxDispatcher(
             var db = scope.ServiceProvider.GetRequiredService<StoreDbContext>();
             var now = scope.ServiceProvider.GetRequiredService<Application.Abstractions.Time.IClock>().UtcNow;
             var leaseEnd = now + Lease;
+            await DeadLetterExhaustedAsync(db, scope.ServiceProvider.GetRequiredService<IOutbox>(), now, ct);
+
+            // `attempts` grows in the claim itself (L-10), so a crash or a hang past the lease still counts as an attempt;
+            // a row at the cap is never claimed again.
             batch = await db.Database.SqlQuery<OutboxRow>($"""
                 UPDATE store.outbox_message m
                    SET attempts = m.attempts + 1, claimed_until = {leaseEnd}
                  WHERE m.id IN (SELECT id FROM store.outbox_message
                                  WHERE processed_at IS NULL AND NOT dead_lettered AND next_attempt_at <= {now}
+                                   AND attempts < {MaxAttempts}
                                    AND (claimed_until IS NULL OR claimed_until < {now})
                                  ORDER BY next_attempt_at
                                  LIMIT {BatchSize}
@@ -135,6 +140,31 @@ internal sealed partial class OutboxDispatcher(
 
         return batch.Count;
     }
+
+    /// L-10: rows at the attempt cap whose last claim never finished (lease run out: a crash or a hang) are dead-lettered
+    /// here, once each, with one staff alert (none for a staff alert itself).
+    private static async Task DeadLetterExhaustedAsync(StoreDbContext db, IOutbox outbox, DateTimeOffset now, CancellationToken ct)
+    {
+        var exhausted = await db.Database.SqlQuery<ExhaustedRow>($"""
+            UPDATE store.outbox_message
+               SET dead_lettered = true, claimed_until = NULL, last_error = coalesce(last_error, 'lease expired after the last attempt')
+             WHERE processed_at IS NULL AND NOT dead_lettered AND attempts >= {MaxAttempts}
+               AND (claimed_until IS NULL OR claimed_until < {now})
+            RETURNING id, type, attempts
+            """).ToListAsync(ct);
+        foreach (var row in exhausted.Where(r => r.Type != nameof(StaffAlert)))
+        {
+            outbox.Enqueue(new StaffAlert("outbox_dead_letter", null,
+                string.Create(CultureInfo.InvariantCulture, $"{row.Type} {row.Id} after {row.Attempts} attempts: lease expired without completion")));
+        }
+
+        if (exhausted.Count > 0)
+        {
+            await db.SaveChangesAsync(ct);
+        }
+    }
+
+    internal sealed record ExhaustedRow(Guid Id, string Type, int Attempts);
 
     private async Task HandleAsync(OutboxRow row, CancellationToken ct)
     {
