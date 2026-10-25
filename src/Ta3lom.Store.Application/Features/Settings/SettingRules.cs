@@ -1,6 +1,6 @@
-using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Ta3lom.Store.Application.Abstractions.Wire;
 using Ta3lom.Store.Domain.Constants;
 
 namespace Ta3lom.Store.Application.Features.Settings;
@@ -20,8 +20,6 @@ internal static partial class SettingRules
     /// numeric(12,2) and within the D-03 / D-04 ceiling of 100,000.
     private const decimal MoneyCeiling = 100_000.00m;
 
-    [GeneratedRegex(@"^\d{1,9}\.\d{2}$", RegexOptions.CultureInvariant)]
-    private static partial Regex MoneyString();
 
     [GeneratedRegex(@"^\+9665[0-9]{8}$", RegexOptions.CultureInvariant)]
     private static partial Regex SaudiMobileE164();
@@ -74,7 +72,21 @@ internal static partial class SettingRules
         };
     }
 
+    /// A money value through the shared wire parser (A-3: Arabic digits accepted, nothing ever throws).
     private static bool IsMoney(JsonElement value) =>
-        value.ValueKind == JsonValueKind.String && MoneyString().IsMatch(value.GetString()!)
-        && decimal.Parse(value.GetString()!, CultureInfo.InvariantCulture) is > 0 and <= MoneyCeiling;
+        value.ValueKind == JsonValueKind.String && MoneyInput.TryParse(value.GetString(), out var money)
+        && money.IsPositive && money.Amount <= MoneyCeiling;
+
+    /// The value as stored: money strings in the canonical `"10.00"` form (ASCII digits, two decimals).
+    public static JsonElement Canonical(string key, JsonElement value)
+    {
+        if (MoneyKeys.Contains(key) && value.ValueKind == JsonValueKind.String)
+        {
+            return JsonSerializer.SerializeToElement(MoneyInput.Parse(value.GetString()!).ToWire());
+        }
+
+        return key == SettingKeys.AmountPresets && value.ValueKind == JsonValueKind.Array
+            ? JsonSerializer.SerializeToElement(value.EnumerateArray().Select(e => MoneyInput.Parse(e.GetString()!).ToWire()).ToArray())
+            : value.Clone();
+    }
 }

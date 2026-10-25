@@ -84,6 +84,27 @@ public sealed class CartTests(ScenarioFactory factory) : IClassFixture<ScenarioF
     }
 
     [Fact]
+    public async Task Arabic_digits_are_accepted_and_malformed_amounts_are_400_never_500()
+    {
+        var c = await DonationCatalog.CreateAsync(factory);
+        var guest = factory.Browser();
+
+        var arabic = await guest.SendJsonAsync(HttpMethod.Post, "/v1/cart/lines", new { projectId = c.ProjectId, amount = "٥٠" });
+        arabic.Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        arabic.Body.GetProperty("lines")[0].Str("amount").ShouldBe("50.00");
+        var lineId = arabic.Body.GetProperty("lines")[0].Str("id");
+        (await guest.SendJsonAsync(HttpMethod.Patch, $"/v1/cart/lines/{lineId}", new { amount = "١٢٫٥" })).Body.Str("totalAmount").ShouldBe("12.50");
+
+        foreach (var bad in new[] { "5x", "٥x", "1,000", "١٬٠٠٠" })
+        {
+            var refused = await guest.SendJsonAsync(HttpMethod.Post, "/v1/cart/lines", new { categoryId = c.CategoryId, amount = bad });
+            refused.Response.StatusCode.ShouldBe(HttpStatusCode.BadRequest, bad);
+            refused.Body.Str("code").ShouldBe(ErrorCodes.ValidationFailed);
+            (await guest.SendJsonAsync(HttpMethod.Patch, $"/v1/cart/lines/{lineId}", new { amount = bad })).Response.StatusCode.ShouldBe(HttpStatusCode.BadRequest, bad);
+        }
+    }
+
+    [Fact]
     public async Task The_request_body_has_one_of_three_shapes()
     {
         var guest = factory.Browser();

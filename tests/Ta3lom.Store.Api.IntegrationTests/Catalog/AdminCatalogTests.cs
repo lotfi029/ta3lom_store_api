@@ -202,6 +202,37 @@ public sealed class AdminCatalogTests(ScenarioFactory factory) : IClassFixture<S
         replaced.Body.GetProperty("options").EnumerateArray().Select(o => (o.Str("id"), o.Str("amount"))).ShouldBe([(kept.Str("id"), "6.00")]);
     }
 
+    [Fact]
+    public async Task Admin_money_fields_accept_Arabic_digits_and_refuse_malformed_ones()
+    {
+        var (admin, build) = await AdminAsync();
+        var category = await build.CategoryAsync();
+        var draft = await build.DraftAsync(Guid.Parse(category.Str("id")));
+        var version = draft.GetProperty("version").GetUInt32();
+
+        var options = await admin.SendAsync(HttpMethod.Put, $"/v1/admin/projects/{draft.Str("id")}/options",
+            new { options = new[] { new { id = (Guid?)null, labelAr = "سهم", labelEn = (string?)null, amount = "١٢٫٥", sort = 0, isActive = true } }, version });
+        options.Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        options.Body.GetProperty("options")[0].Str("amount").ShouldBe("12.50");
+
+        var bad = await admin.SendAsync(HttpMethod.Put, $"/v1/admin/projects/{draft.Str("id")}/options",
+            new
+            {
+                options = new[] { new { id = (Guid?)null, labelAr = "سهم", labelEn = (string?)null, amount = "٥x", sort = 0, isActive = true } },
+                version = options.Body.GetProperty("version").GetUInt32()
+            });
+        bad.Response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        var minimum = await admin.SendAsync(HttpMethod.Put, $"/v1/admin/projects/{draft.Str("id")}",
+            CatalogBuilder.ProjectBody(Guid.Parse(category.Str("id")), draft.Str("slug"), minAmount: "١٬٠٠٠", version: options.Body.GetProperty("version").GetUInt32()));
+        minimum.Response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+
+        var setting = await admin.SendAsync(HttpMethod.Put, "/v1/admin/settings/min_gift_amount", new { value = "١٠٫٠٠" });
+        setting.Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await factory.ScalarAsync<string>("SELECT value #>> '{}' FROM store.setting WHERE key = 'min_gift_amount'")).ShouldBe("10.00");
+        (await admin.SendAsync(HttpMethod.Put, "/v1/admin/settings/min_gift_amount", new { value = "١٠٫٠x" })).Response.StatusCode
+            .ShouldBe(HttpStatusCode.UnprocessableEntity);
+    }
+
     [Theory]
     [InlineData(Roles.Finance)]
     [InlineData(Roles.Viewer)]

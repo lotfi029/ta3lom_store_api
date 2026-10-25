@@ -11,6 +11,7 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
 | A-1 | done | Fix A-1, A-2, L-7 | `StaffAuthTests.Parallel_wrong_passwords_are_all_counted_and_lock_the_account`, `…Parallel_wrong_TOTP_codes_are_all_counted_and_lock_the_account`, Domain `Failures_while_locked_count_without_extending_and_the_window_restarts_after_the_lock` |
 | A-2 | done | Fix A-1, A-2, L-7 | `StaffAuthTests.Five_wrong_passwords_lock_and_a_locked_account_does_not_reveal_whether_the_password_is_right`, `…After_the_lock_runs_out_the_right_password_gets_an_MFA_token` |
 | L-7 | done | Fix A-1, A-2, L-7 | `StaffAuthTests.Changing_the_password_issues_a_clean_session_and_revokes_the_old_family` (wrong current password counted + audited) |
+| A-3 | done | Fix A-3 | `CartTests.Arabic_digits_are_accepted_and_malformed_amounts_are_400_never_500`, `AdminCatalogTests.Admin_money_fields_accept_Arabic_digits_and_refuse_malformed_ones`, `Application.Tests MoneyInputTests` |
 | C-1 | done | Fix C-1 | `SiteRebuildTests.A_newer_change_arriving_while_an_older_one_is_handled_still_rebuilds_once`, `…An_older_change_in_retry_backoff_is_absorbed_by_a_newer_due_one`, `…A_burst_of_five_changes_is_one_rebuild` |
 
 ## Decisions
@@ -31,6 +32,12 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
   caller already proved the password with the MFA token. During a lock every login attempt is audited
   `staff.login_failed {reason: "locked"}`; only wrong passwords are counted.
 - L-7: a wrong current password in `POST /v1/admin/auth/password` is a counted failure, audited `staff.password_change_failed`.
+
+- A-3: one helper `Application/Abstractions/Wire/MoneyInput` (moved from AdminCatalog) used by cart add/update, project
+  min amount, option amounts and money settings; settings are stored canonical (`"10.00"`). P-6: `,` and U+066C are
+  rejected, never stripped. Quantities are JSON integers (never parsed from strings), so no change there.
+- **REVIEW** A-3: money settings now also accept `"10"` / `"10.5"` (stored as `"10.00"` / `"10.50"`); before they had to
+  have exactly two decimals.
 
 ## Migrations
 

@@ -28,7 +28,8 @@ internal sealed class UpdateSettingCommandHandler(
         }
 
         var now = clock.UtcNow;
-        var json = command.Value.GetRawText();
+        var value = SettingRules.Canonical(command.Key, command.Value);
+        var json = value.GetRawText();
         var setting = await settings.FirstOrDefaultAsync(s => s.Key == command.Key, ct);
         if (setting is null)
         {
@@ -39,6 +40,6 @@ internal sealed class UpdateSettingCommandHandler(
         setting.SetValue(json, actor.Name, now);
         await uow.SaveChangesAsync(ct);
         cache.Invalidate();
-        return new SettingResponse(setting.Key, command.Value.Clone(), setting.UpdatedAt, setting.UpdatedBy);
+        return new SettingResponse(setting.Key, value, setting.UpdatedAt, setting.UpdatedBy);
     }
 }

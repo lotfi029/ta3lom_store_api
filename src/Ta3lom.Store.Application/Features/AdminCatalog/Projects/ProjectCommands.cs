@@ -1,4 +1,5 @@
 using FluentValidation;
+using Ta3lom.Store.Application.Abstractions.Wire;
 using Ta3lom.Store.Application.DTOs.Catalog;
 using Ta3lom.Store.Domain.Entities.Catalog;
 using Ta3lom.Store.Domain.Entities.Media;
