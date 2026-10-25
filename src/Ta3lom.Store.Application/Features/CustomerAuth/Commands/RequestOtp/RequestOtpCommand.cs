@@ -62,6 +62,11 @@ internal sealed class RequestOtpCommandHandler(
 
     private async Task<Result> IssueAsync(string mobile, string code, CancellationToken ct)
     {
+        if (actor.IpHash is { } lockIp)
+        {
+            await otps.LockIpAsync(lockIp, ct);                  // IP first, then mobile: one fixed order
+        }
+
         await otps.LockMobileAsync(mobile, ct);
         var now = clock.UtcNow;
         var byMobile = await otps.IssuedForMobileSinceAsync(mobile, now - SessionPolicy.OtpMobileWindow, ct);

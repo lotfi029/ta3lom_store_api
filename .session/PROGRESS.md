@@ -16,6 +16,8 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
 | A-5 | done | Fix A-5 | `ImageOrientationTests.The_orientation_is_applied_before_the_image_is_stored` (origins 1, 3, 6, 8) |
 | L-1 | done | Fix L-1, L-2 | `CheckoutTests.A_refused_checkout_releases_its_key_so_the_same_key_works_after_fixing_the_cart`, `…The_stored_replay_holds_no_status_token_and_the_replay_still_returns_a_working_one` |
 | L-2 | done | Fix L-1, L-2 | `IdempotencyStoreTests.Claims_racing_releases_never_throw`, `CheckoutTests.Parallel_requests_with_one_key_never_fail_with_500` |
+| L-3 | done | Fix L-3, L-4 | `CustomerAuthTests.Parallel_requests_for_different_mobiles_from_one_IP_never_exceed_ten_per_hour` |
+| L-4 | done | Fix L-3, L-4 | `CartTests.Parallel_first_writes_of_a_donor_end_up_in_one_cart`, `CartTests.Parallel_adds_of_the_same_option_are_one_line_with_the_quantities_summed` (F4) |
 | C-1 | done | Fix C-1 | `SiteRebuildTests.A_newer_change_arriving_while_an_older_one_is_handled_still_rebuilds_once`, `…An_older_change_in_retry_backoff_is_absorbed_by_a_newer_due_one`, `…A_burst_of_five_changes_is_one_rebuild` |
 
 ## Decisions
@@ -58,6 +60,10 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
   `idempotency_key`.
 - L-2: the claim reads with `SingleOrDefaultAsync` and retries the insert once when the conflicting row disappeared
   meanwhile; still nothing → 409 in progress, never 500.
+
+- L-3: RequestOtp takes the advisory lock on `hashtextextended('otp-ip:' || ipHash)` before the mobile lock (fixed order).
+- L-4: `ICartRepository.GetOrCreateForCustomerForUpdateAsync`: `INSERT … ON CONFLICT (customer_id) WHERE customer_id IS
+  NOT NULL DO NOTHING` (the predicate of `ux_cart_customer`), then lock + load; used by cart writes and the sign-in merge.
 
 ## Migrations
 

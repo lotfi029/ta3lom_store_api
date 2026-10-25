@@ -17,6 +17,19 @@ internal sealed class CartRepository(StoreDbContext db) : GenericRepository<Cart
         var locked = await Db.Database.SqlQuery<Guid>($"""SELECT id AS "Value" FROM store.cart WHERE customer_id = {customerId} FOR UPDATE""").ToListAsync(ct);
         return locked.Count == 0 ? null : await Set.Include(c => c.Lines).FirstAsync(c => c.Id == locked[0], ct);
     }
+
+    public async Task<Cart> GetOrCreateForCustomerForUpdateAsync(Guid customerId, DateTimeOffset now, CancellationToken ct = default)
+    {
+        var fresh = Cart.CreateFor(customerId, now);
+        // The conflict target and predicate match the partial unique index ux_cart_customer.
+        await Db.Database.ExecuteSqlAsync($"""
+            INSERT INTO store.cart (id, customer_id, created_at, updated_at, expires_at)
+            VALUES ({fresh.Id}, {customerId}, {fresh.CreatedAt}, {fresh.UpdatedAt}, NULL)
+            ON CONFLICT (customer_id) WHERE customer_id IS NOT NULL DO NOTHING
+            """, ct);
+        return await GetForCustomerForUpdateAsync(customerId, ct)
+               ?? throw new InvalidOperationException($"The cart of customer {customerId} vanished after its insert.");
+    }
 }
 
 internal sealed class OrderRepository(StoreDbContext db) : GenericRepository<Order>(db), IOrderRepository
