@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Ta3lom.Store.Application.Abstractions.Data;
 using Ta3lom.Store.Application.Abstractions.Pagination;
-using Ta3lom.Store.Application.DTOs.AdminCatalog;
+using Ta3lom.Store.Application.DTOs.Media;
 
 namespace Ta3lom.Store.Application.Features.Media.Queries.ListMedia;
 

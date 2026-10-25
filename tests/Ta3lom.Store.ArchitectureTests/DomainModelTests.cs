@@ -13,7 +13,7 @@ public sealed class DomainModelTests
                     && t.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, Type.EmptyTypes) is not null)];
 
     [Fact]
-    public void Every_table_has_an_entity() => Entities.Length.ShouldBe(48);   // 49 tables; idempotency_key is an Infrastructure record
+    public void Every_table_has_an_entity() => Entities.Length.ShouldBe(10);   // P2 skeleton; idempotency_key is an Infrastructure record
 
     [Fact]
     public void Entities_have_no_public_setters()

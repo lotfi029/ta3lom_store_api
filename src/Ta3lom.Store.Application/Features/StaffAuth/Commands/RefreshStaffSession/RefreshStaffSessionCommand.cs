@@ -63,7 +63,7 @@ internal sealed partial class RefreshStaffSessionCommandHandler(
                 }
 
                 var (raw, nextHash) = codec.Create();
-                var expiresAt = now + SessionPolicy.StaffRefreshLifetime;
+                var expiresAt = now + SessionPolicy.StaffFamilyLifetime;
                 var next = RefreshToken.Issue(TokenSubjectType.Staff, user.Id, nextHash, current.FamilyId, expiresAt, command.UserAgent, now);
                 refreshTokens.Add(next);
                 current.Revoke(now, next.Id);

@@ -6,9 +6,6 @@
   <ItemGroup>
     <PackageReference Include="Quartz.Extensions.Hosting" />
     <PackageReference Include="Scriban" />
-    <PackageReference Include="QuestPDF" />
-    <PackageReference Include="QRCoder" />
-    <PackageReference Include="PDFsharp" />
     <PackageReference Include="MailKit" />
     <PackageReference Include="Otp.NET" />
     <PackageReference Include="SkiaSharp" />
@@ -25,10 +22,8 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
-    <!-- P0-3: fonts for the PDF documents (SIL OFL 1.1, licences next to the files). -->
-    <EmbeddedResource Include="Resources/Fonts/*.ttf" LogicalName="Fonts.%(Filename)%(Extension)" />
     <!-- The nightly integrity checks run from code (IntegrityChecks job). -->
-    <EmbeddedResource Include="Resources/Integrity/integrity_checks.sql" LogicalName="Integrity.003_integrity_checks.sql" />
+    <EmbeddedResource Include="Resources/Integrity/integrity_checks.sql" LogicalName="Integrity.integrity_checks.sql" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Ta3lom.Store.Api.IntegrationTests" />

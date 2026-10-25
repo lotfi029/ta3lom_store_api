@@ -4,39 +4,16 @@ using Ta3lom.Store.Domain.Events;
 
 namespace Ta3lom.Store.Application.Features.Outbox.Handlers;
 
-/// Staff e-mail `staff_alert` (payment review, duplicate course, effect missing …), once per message.
-internal sealed class FinanceAlertHandler(NotificationDispatch dispatch, IEmailSender email) : OutboxHandler<FinanceAlert>
+/// Staff e-mail `staff_alert` (integrity checks, dead letters, OTP volume), once per message.
+internal sealed class StaffAlertHandler(NotificationDispatch dispatch, IEmailSender email) : OutboxHandler<StaffAlert>
 {
-    protected override Task HandleAsync(FinanceAlert message, OutboxEnvelope envelope, CancellationToken ct) =>
+    protected override Task HandleAsync(StaffAlert message, OutboxEnvelope envelope, CancellationToken ct) =>
         dispatch.SendOnceAsync(envelope, MessageChannel.Email, email.StaffAlertsAddress, "staff_alert", "ar",
             new
             {
-                subject = string.Create(CultureInfo.InvariantCulture, $"FinanceAlert {message.Kind} {message.Reference}"),
+                subject = string.Create(CultureInfo.InvariantCulture, $"{message.Kind} {message.Reference}").Trim(),
                 body = string.Create(CultureInfo.InvariantCulture,
-                    $"kind: {message.Kind}\norder: {message.Reference ?? message.OrderId?.ToString() ?? "-"}\ndetail: {message.Detail}\nat: {envelope.OccurredAt:O}"),
+                    $"kind: {message.Kind}\nreference: {message.Reference ?? "-"}\ndetail: {message.Detail}\nat: {envelope.OccurredAt:O}"),
             },
-            message.OrderId, ct);
-}
-
-/// Metrics-only messages (09 §4.3): nothing is sent to the customer.
-internal sealed class OrderPlacedHandler : OutboxHandler<OrderPlaced>
-{
-    protected override Task HandleAsync(OrderPlaced message, OutboxEnvelope envelope, CancellationToken ct) => Task.CompletedTask;
-}
-
-internal sealed class OrderExpiredHandler : OutboxHandler<OrderExpired>
-{
-    protected override Task HandleAsync(OrderExpired message, OutboxEnvelope envelope, CancellationToken ct) => Task.CompletedTask;
-}
-
-internal sealed class OrderCancelledHandler : OutboxHandler<OrderCancelled>
-{
-    protected override Task HandleAsync(OrderCancelled message, OutboxEnvelope envelope, CancellationToken ct) => Task.CompletedTask;
-}
-
-/// RUL-59: renders the order's documents after commit (idempotent: a document with a PDF is skipped).
-internal sealed class RenderDocumentsHandler(Documents.OrderDocuments documents) : OutboxHandler<RenderDocuments>
-{
-    protected override Task HandleAsync(RenderDocuments message, OutboxEnvelope envelope, CancellationToken ct) =>
-        documents.RenderForOrderAsync(message.OrderId, ct);
+            ct);
 }

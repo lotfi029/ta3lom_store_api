@@ -37,24 +37,6 @@
   <data name="http.origin_forbidden.detail" xml:space="preserve">
     <value>لا يُقبل هذا الطلب من هذا الموقع.</value>
   </data>
-  <data name="auth.unauthenticated" xml:space="preserve">
-    <value>يلزم تسجيل الدخول</value>
-  </data>
-  <data name="auth.unauthenticated.detail" xml:space="preserve">
-    <value>رمز الدخول مفقود أو منتهي الصلاحية.</value>
-  </data>
-  <data name="auth.forbidden" xml:space="preserve">
-    <value>غير مصرح</value>
-  </data>
-  <data name="auth.forbidden.detail" xml:space="preserve">
-    <value>صلاحياتك لا تسمح بهذا الإجراء.</value>
-  </data>
-  <data name="concurrency.conflict" xml:space="preserve">
-    <value>تم تعديل البيانات</value>
-  </data>
-  <data name="concurrency.conflict.detail" xml:space="preserve">
-    <value>عدّل شخص آخر هذه البيانات. أعد تحميلها ثم حاول مرة أخرى.</value>
-  </data>
   <data name="http.error" xml:space="preserve">
     <value>تعذّر تنفيذ الطلب</value>
   </data>
@@ -66,6 +48,36 @@
   </data>
   <data name="server.error.detail" xml:space="preserve">
     <value>حدث خطأ غير متوقع. حاول مرة أخرى لاحقًا.</value>
+  </data>
+  <data name="concurrency.conflict" xml:space="preserve">
+    <value>تم تعديل البيانات</value>
+  </data>
+  <data name="concurrency.conflict.detail" xml:space="preserve">
+    <value>عدّل شخص آخر هذه البيانات. أعد تحميلها ثم حاول مرة أخرى.</value>
+  </data>
+  <data name="db.duplicate" xml:space="preserve">
+    <value>القيمة مستخدمة</value>
+  </data>
+  <data name="db.duplicate.detail" xml:space="preserve">
+    <value>توجد قيمة مطابقة مسجّلة من قبل.</value>
+  </data>
+  <data name="db.reference_missing" xml:space="preserve">
+    <value>مرجع غير موجود</value>
+  </data>
+  <data name="db.reference_missing.detail" xml:space="preserve">
+    <value>يشير الطلب إلى عنصر غير موجود.</value>
+  </data>
+  <data name="auth.unauthenticated" xml:space="preserve">
+    <value>يلزم تسجيل الدخول</value>
+  </data>
+  <data name="auth.unauthenticated.detail" xml:space="preserve">
+    <value>رمز الدخول مفقود أو منتهي الصلاحية.</value>
+  </data>
+  <data name="auth.forbidden" xml:space="preserve">
+    <value>غير مصرح</value>
+  </data>
+  <data name="auth.forbidden.detail" xml:space="preserve">
+    <value>صلاحياتك لا تسمح بهذا الإجراء.</value>
   </data>
   <data name="auth.account_blocked" xml:space="preserve">
     <value>الحساب موقوف</value>
@@ -163,54 +175,6 @@
   <data name="staff.email_taken.detail" xml:space="preserve">
     <value>يوجد موظف بهذا البريد الإلكتروني.</value>
   </data>
-  <data name="catalog.product_not_found" xml:space="preserve">
-    <value>المنتج غير موجود</value>
-  </data>
-  <data name="catalog.product_not_found.detail" xml:space="preserve">
-    <value>لم نجد هذا المنتج، أو لم يعد متاحًا.</value>
-  </data>
-  <data name="product.slug_taken" xml:space="preserve">
-    <value>الرابط مستخدم</value>
-  </data>
-  <data name="product.slug_taken.detail" xml:space="preserve">
-    <value>يوجد منتج آخر بهذا الرابط المختصر.</value>
-  </data>
-  <data name="category.slug_taken" xml:space="preserve">
-    <value>الرابط مستخدم</value>
-  </data>
-  <data name="category.slug_taken.detail" xml:space="preserve">
-    <value>يوجد تصنيف آخر بهذا الرابط المختصر.</value>
-  </data>
-  <data name="product.type_locked" xml:space="preserve">
-    <value>لا يمكن تغيير النوع</value>
-  </data>
-  <data name="product.type_locked.detail" xml:space="preserve">
-    <value>لا يمكن تغيير نوع منتج بعد أول طلب عليه.</value>
-  </data>
-  <data name="product.publish_incomplete" xml:space="preserve">
-    <value>بيانات النشر ناقصة</value>
-  </data>
-  <data name="product.publish_incomplete.detail" xml:space="preserve">
-    <value>أكمل الحقول المطلوبة قبل النشر؛ راجع قائمة الحقول الناقصة.</value>
-  </data>
-  <data name="offer.active_exists" xml:space="preserve">
-    <value>توجد كفالة نشطة</value>
-  </data>
-  <data name="offer.active_exists.detail" xml:space="preserve">
-    <value>لهذا المنتج عرض كفالة نشط بالفعل.</value>
-  </data>
-  <data name="offer.dates_invalid" xml:space="preserve">
-    <value>تواريخ غير صحيحة</value>
-  </data>
-  <data name="offer.dates_invalid.detail" xml:space="preserve">
-    <value>يجب أن يكون تاريخ النهاية بعد تاريخ البداية.</value>
-  </data>
-  <data name="cause.general_fund_exists" xml:space="preserve">
-    <value>الصندوق العام موجود</value>
-  </data>
-  <data name="cause.general_fund_exists.detail" xml:space="preserve">
-    <value>يوجد منتج آخر محدد كصندوق عام.</value>
-  </data>
   <data name="media.alt_required" xml:space="preserve">
     <value>النص البديل مطلوب</value>
   </data>
@@ -241,102 +205,6 @@
   <data name="setting.invalid_value.detail" xml:space="preserve">
     <value>القيمة لا تناسب نوع هذا الإعداد.</value>
   </data>
-  <data name="cart.product_unavailable" xml:space="preserve">
-    <value>المنتج غير متاح</value>
-  </data>
-  <data name="cart.product_unavailable.detail" xml:space="preserve">
-    <value>هذا المنتج أو هذه النسخة غير متاحة حاليًا.</value>
-  </data>
-  <data name="cart.mode_not_allowed" xml:space="preserve">
-    <value>طريقة غير مسموحة</value>
-  </data>
-  <data name="cart.mode_not_allowed.detail" xml:space="preserve">
-    <value>لا يمكن إضافة هذا المنتج بهذه الطريقة.</value>
-  </data>
-  <data name="cart.quantity_limit" xml:space="preserve">
-    <value>تجاوزت الكمية المسموحة</value>
-  </data>
-  <data name="cart.quantity_limit.detail" xml:space="preserve">
-    <value>الكمية أكبر من الحد المسموح لهذا البند.</value>
-  </data>
-  <data name="cart.amount_below_minimum" xml:space="preserve">
-    <value>المبلغ أقل من الحد الأدنى</value>
-  </data>
-  <data name="cart.amount_below_minimum.detail" xml:space="preserve">
-    <value>المبلغ أقل من الحد الأدنى المسموح.</value>
-  </data>
-  <data name="cart.campaign_ended" xml:space="preserve">
-    <value>انتهت الحملة</value>
-  </data>
-  <data name="cart.campaign_ended.detail" xml:space="preserve">
-    <value>انتهى الإهداء أو التبرع لهذا المنتج.</value>
-  </data>
-  <data name="cart.duplicate_course" xml:space="preserve">
-    <value>الدورة في السلة</value>
-  </data>
-  <data name="cart.duplicate_course.detail" xml:space="preserve">
-    <value>هذه الدورة موجودة في سلتك.</value>
-  </data>
-  <data name="cart.course_owned" xml:space="preserve">
-    <value>أنت مسجل في الدورة</value>
-  </data>
-  <data name="cart.course_owned.detail" xml:space="preserve">
-    <value>أنت مسجل في هذه الدورة مسبقًا.</value>
-  </data>
-  <data name="cart.course_in_unpaid_order" xml:space="preserve">
-    <value>الدورة في طلب غير مدفوع</value>
-  </data>
-  <data name="cart.course_in_unpaid_order.detail" xml:space="preserve">
-    <value>هذه الدورة في طلب لم يُدفع بعد. أكمل الدفع أو انتظر انتهاء صلاحيته.</value>
-  </data>
-  <data name="cart.zakat_not_allowed" xml:space="preserve">
-    <value>الزكاة غير مسموحة</value>
-  </data>
-  <data name="cart.zakat_not_allowed.detail" xml:space="preserve">
-    <value>لا يمكن دفع الزكاة لهذا المشروع.</value>
-  </data>
-  <data name="cart.dedication_not_allowed" xml:space="preserve">
-    <value>الإهداء غير مسموح</value>
-  </data>
-  <data name="cart.dedication_not_allowed.detail" xml:space="preserve">
-    <value>لا يمكن إهداء المشتريات.</value>
-  </data>
-  <data name="cart.dedication_invalid" xml:space="preserve">
-    <value>بيانات الإهداء غير صحيحة</value>
-  </data>
-  <data name="cart.dedication_invalid.detail" xml:space="preserve">
-    <value>تحقق من اسم المُهدى إليه ورقم جواله والرسالة.</value>
-  </data>
-  <data name="cart.dedication_free_text_disabled" xml:space="preserve">
-    <value>النص الحر غير متاح</value>
-  </data>
-  <data name="cart.dedication_free_text_disabled.detail" xml:space="preserve">
-    <value>اختر رسالة من القوالب المعتمدة.</value>
-  </data>
-  <data name="cart.out_of_stock" xml:space="preserve">
-    <value>الكمية غير متوفرة</value>
-  </data>
-  <data name="cart.out_of_stock.detail" xml:space="preserve">
-    <value>الكمية المطلوبة أكبر من المتوفر.</value>
-  </data>
-  <data name="cart.too_many_lines" xml:space="preserve">
-    <value>السلة ممتلئة</value>
-  </data>
-  <data name="cart.too_many_lines.detail" xml:space="preserve">
-    <value>لا يمكن أن تزيد السلة عن 50 بندًا.</value>
-  </data>
-  <data name="cart.total_exceeded" xml:space="preserve">
-    <value>تجاوزت حد السلة</value>
-  </data>
-  <data name="cart.total_exceeded.detail" xml:space="preserve">
-    <value>مجموع السلة أكبر من الحد المسموح. للمبالغ الكبيرة تواصل مع الجمعية.</value>
-  </data>
-  <data name="cart.line_not_found" xml:space="preserve">
-    <value>البند غير موجود</value>
-  </data>
-  <data name="cart.line_not_found.detail" xml:space="preserve">
-    <value>هذا البند غير موجود في سلتك.</value>
-  </data>
   <data name="idempotency.key_required" xml:space="preserve">
     <value>مفتاح التكرار مطلوب</value>
   </data>
@@ -354,222 +222,6 @@
   </data>
   <data name="idempotency.in_progress.detail" xml:space="preserve">
     <value>طلب بالمفتاح نفسه قيد التنفيذ. أعد المحاولة بعد لحظات.</value>
-  </data>
-  <data name="checkout.cart_empty" xml:space="preserve">
-    <value>السلة فارغة</value>
-  </data>
-  <data name="checkout.cart_empty.detail" xml:space="preserve">
-    <value>لا يوجد ما يُدفع.</value>
-  </data>
-  <data name="checkout.lines_invalid" xml:space="preserve">
-    <value>بنود غير صالحة</value>
-  </data>
-  <data name="checkout.lines_invalid.detail" xml:space="preserve">
-    <value>بعض بنود السلة لم تعد متاحة. راجع السلة.</value>
-  </data>
-  <data name="checkout.price_changed" xml:space="preserve">
-    <value>تغيّر السعر</value>
-  </data>
-  <data name="checkout.price_changed.detail" xml:space="preserve">
-    <value>تغيّر المجموع. راجع المبلغ الجديد قبل الدفع.</value>
-  </data>
-  <data name="checkout.out_of_stock" xml:space="preserve">
-    <value>نفدت الكمية</value>
-  </data>
-  <data name="checkout.out_of_stock.detail" xml:space="preserve">
-    <value>لم تعد الكمية المطلوبة متوفرة.</value>
-  </data>
-  <data name="checkout.address_required" xml:space="preserve">
-    <value>العنوان مطلوب</value>
-  </data>
-  <data name="checkout.address_required.detail" xml:space="preserve">
-    <value>أضف عنوان الشحن للكتب المطبوعة.</value>
-  </data>
-  <data name="checkout.contact_required" xml:space="preserve">
-    <value>بيانات التواصل مطلوبة</value>
-  </data>
-  <data name="checkout.contact_required.detail" xml:space="preserve">
-    <value>الاسم والبريد الإلكتروني مطلوبان.</value>
-  </data>
-  <data name="checkout.terms_not_accepted" xml:space="preserve">
-    <value>الشروط غير مقبولة</value>
-  </data>
-  <data name="checkout.terms_not_accepted.detail" xml:space="preserve">
-    <value>يجب الموافقة على الشروط والأحكام.</value>
-  </data>
-  <data name="checkout.gateway_unavailable" xml:space="preserve">
-    <value>تعذّر بدء الدفع</value>
-  </data>
-  <data name="checkout.gateway_unavailable.detail" xml:space="preserve">
-    <value>أُنشئ الطلب لكن تعذّر فتح صفحة الدفع. أعد المحاولة.</value>
-  </data>
-  <data name="order.not_found" xml:space="preserve">
-    <value>الطلب غير موجود</value>
-  </data>
-  <data name="order.not_found.detail" xml:space="preserve">
-    <value>لا يوجد طلب بهذا الرقم.</value>
-  </data>
-  <data name="order.cancel_not_allowed" xml:space="preserve">
-    <value>لا يمكن إلغاء الطلب</value>
-  </data>
-  <data name="order.cancel_not_allowed.detail" xml:space="preserve">
-    <value>يمكن إلغاء الطلبات غير المدفوعة فقط.</value>
-  </data>
-  <data name="document.not_found" xml:space="preserve">
-    <value>المستند غير موجود</value>
-  </data>
-  <data name="document.not_found.detail" xml:space="preserve">
-    <value>لم يصدر هذا المستند.</value>
-  </data>
-  <data name="document.not_ready" xml:space="preserve">
-    <value>المستند قيد الإعداد</value>
-  </data>
-  <data name="document.not_ready.detail" xml:space="preserve">
-    <value>المستند قيد الإعداد. حاول بعد قليل.</value>
-  </data>
-  <data name="enrolment.not_active" xml:space="preserve">
-    <value>الدورة غير متاحة</value>
-  </data>
-  <data name="enrolment.not_active.detail" xml:space="preserve">
-    <value>لا يمكن فتح هذه الدورة الآن.</value>
-  </data>
-  <data name="download.limit_reached" xml:space="preserve">
-    <value>انتهت مرات التحميل</value>
-  </data>
-  <data name="download.limit_reached.detail" xml:space="preserve">
-    <value>استخدمت كل مرات التحميل المتاحة لهذا الكتاب. تواصل معنا لإعادة تفعيلها.</value>
-  </data>
-  <data name="download.revoked" xml:space="preserve">
-    <value>التحميل ملغى</value>
-  </data>
-  <data name="download.revoked.detail" xml:space="preserve">
-    <value>أُلغي حق تحميل هذا الكتاب.</value>
-  </data>
-  <data name="download.link_expired" xml:space="preserve">
-    <value>انتهت صلاحية الرابط</value>
-  </data>
-  <data name="download.link_expired.detail" xml:space="preserve">
-    <value>انتهت صلاحية رابط التحميل. اطلب رابطًا جديدًا من حسابك.</value>
-  </data>
-  <data name="stock.below_reserved" xml:space="preserve">
-    <value>المخزون أقل من المحجوز</value>
-  </data>
-  <data name="stock.below_reserved.detail" xml:space="preserve">
-    <value>لا يمكن أن يقل المخزون عن الكمية المحجوزة للطلبات.</value>
-  </data>
-  <data name="shipment.invalid_transition" xml:space="preserve">
-    <value>تغيير غير مسموح</value>
-  </data>
-  <data name="shipment.invalid_transition.detail" xml:space="preserve">
-    <value>لا يمكن نقل الشحنة إلى هذه الحالة الآن.</value>
-  </data>
-  <data name="beneficiary.not_found" xml:space="preserve">
-    <value>المستفيد غير موجود</value>
-  </data>
-  <data name="beneficiary.not_found.detail" xml:space="preserve">
-    <value>لا يوجد مستفيد بهذا المعرّف.</value>
-  </data>
-  <data name="beneficiary.mobile_exists" xml:space="preserve">
-    <value>الجوال مسجّل مسبقًا</value>
-  </data>
-  <data name="beneficiary.mobile_exists.detail" xml:space="preserve">
-    <value>هذا الجوال مسجّل لمستفيد آخر.</value>
-  </data>
-  <data name="beneficiary.import_invalid" xml:space="preserve">
-    <value>ملف الاستيراد غير صالح</value>
-  </data>
-  <data name="beneficiary.import_invalid.detail" xml:space="preserve">
-    <value>في الملف صفوف غير صحيحة؛ لم يُحفظ شيء. راجع قائمة الأخطاء.</value>
-  </data>
-  <data name="beneficiary.no_live_seat" xml:space="preserve">
-    <value>لا يوجد مقعد مخصّص</value>
-  </data>
-  <data name="beneficiary.no_live_seat.detail" xml:space="preserve">
-    <value>لا يملك المستفيد مقعد دورة مخصّصًا لإرسال الدعوة.</value>
-  </data>
-  <data name="allocation.no_units" xml:space="preserve">
-    <value>لا توجد وحدات متاحة</value>
-  </data>
-  <data name="allocation.no_units.detail" xml:space="preserve">
-    <value>لا توجد وحدات بانتظار التخصيص لهذا المنتج الآن.</value>
-  </data>
-  <data name="allocation.rejected" xml:space="preserve">
-    <value>تعذّر التخصيص</value>
-  </data>
-  <data name="allocation.rejected.detail" xml:space="preserve">
-    <value>لم يُخصَّص شيء؛ راجع أسباب الرفض لكل مستفيد.</value>
-  </data>
-  <data name="allocation.not_approved" xml:space="preserve">
-    <value>المستفيد غير معتمد</value>
-  </data>
-  <data name="allocation.not_approved.detail" xml:space="preserve">
-    <value>لم يُعتمد المستفيد بعد.</value>
-  </data>
-  <data name="allocation.group_mismatch" xml:space="preserve">
-    <value>فئة غير مطابقة</value>
-  </data>
-  <data name="allocation.group_mismatch.detail" xml:space="preserve">
-    <value>المستفيد ليس من الفئة المستهدفة لهذا العرض.</value>
-  </data>
-  <data name="allocation.already_enrolled" xml:space="preserve">
-    <value>مسجّل مسبقًا</value>
-  </data>
-  <data name="allocation.already_enrolled.detail" xml:space="preserve">
-    <value>المستفيد مسجّل في هذه الدورة بالفعل.</value>
-  </data>
-  <data name="allocation.zakat_mismatch" xml:space="preserve">
-    <value>غير مستحق للزكاة</value>
-  </data>
-  <data name="allocation.zakat_mismatch.detail" xml:space="preserve">
-    <value>الوحدة مموّلة من الزكاة والمستفيد غير مستحق لها.</value>
-  </data>
-  <data name="allocation.no_matching_unit" xml:space="preserve">
-    <value>لا توجد وحدة مناسبة</value>
-  </data>
-  <data name="allocation.no_matching_unit.detail" xml:space="preserve">
-    <value>لا توجد وحدة متاحة تناسب هذا المستفيد.</value>
-  </data>
-  <data name="allocation.mobile_required" xml:space="preserve">
-    <value>الجوال مطلوب</value>
-  </data>
-  <data name="allocation.mobile_required.detail" xml:space="preserve">
-    <value>مقعد الدورة يحتاج رقم جوال للمستفيد أو وليّ أمره.</value>
-  </data>
-  <data name="allocation.conflict" xml:space="preserve">
-    <value>تعارض في التخصيص</value>
-  </data>
-  <data name="allocation.conflict.detail" xml:space="preserve">
-    <value>تغيّرت البيانات أثناء التخصيص؛ أعد المحاولة.</value>
-  </data>
-  <data name="unit.invalid_transition" xml:space="preserve">
-    <value>تغيير غير مسموح</value>
-  </data>
-  <data name="unit.invalid_transition.detail" xml:space="preserve">
-    <value>لا يمكن نقل الوحدة إلى هذه الحالة الآن.</value>
-  </data>
-  <data name="card.not_found" xml:space="preserve">
-    <value>البطاقة غير موجودة</value>
-  </data>
-  <data name="card.not_found.detail" xml:space="preserve">
-    <value>لا توجد بطاقة إهداء بهذا الرابط.</value>
-  </data>
-  <data name="cause_update.already_notified" xml:space="preserve">
-    <value>أُبلغ المتبرعون مسبقًا</value>
-  </data>
-  <data name="cause_update.already_notified.detail" xml:space="preserve">
-    <value>لا يمكن حذف تحديث أُرسل إلى المتبرعين.</value>
-  </data>
-  <data name="goal.adjustment_invalid" xml:space="preserve">
-    <value>تصحيح غير صالح</value>
-  </data>
-  <data name="goal.adjustment_invalid.detail" xml:space="preserve">
-    <value>التصحيح فارغ أو سيجعل أحد العدادات سالبًا.</value>
-  </data>
-  <data name="zakat.balance_insufficient" xml:space="preserve">
-    <value>رصيد الزكاة غير كافٍ</value>
-  </data>
-  <data name="zakat.balance_insufficient.detail" xml:space="preserve">
-    <value>مبلغ السند أكبر من رصيد الزكاة لهذا المنتج.</value>
   </data>
   <data name="template.render_failed" xml:space="preserve">
     <value>القالب غير صالح</value>

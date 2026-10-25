@@ -8,7 +8,6 @@ using Ta3lom.Store.Application.Abstractions.Time;
 using Ta3lom.Store.Application.Interfaces;
 using Ta3lom.Store.Domain.Entities.Auditing;
 using Ta3lom.Store.Domain.ValueObjects;
-using Ta3lom.Store.Infrastructure.Persistence.Converters;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Interceptors;
 
@@ -102,8 +101,7 @@ internal sealed class AuditSaveChangesInterceptor(ICurrentActor actor, IClock cl
     private static bool IsSensitive(PropertyEntry property)
     {
         var name = property.Metadata.Name;
-        return property.Metadata.GetValueConverter() is ProtectedStringConverter
-               || property.Metadata.ClrType == typeof(byte[])
+        return property.Metadata.ClrType == typeof(byte[])
                || SecretFragments.Any(f => name.Contains(f, StringComparison.OrdinalIgnoreCase))
                || PersonalSuffixes.Any(s => name.EndsWith(s, StringComparison.OrdinalIgnoreCase));
     }

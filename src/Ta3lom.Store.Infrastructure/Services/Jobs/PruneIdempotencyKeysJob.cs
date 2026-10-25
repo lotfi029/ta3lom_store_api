@@ -1,10 +1,10 @@
 using Quartz;
 using Ta3lom.Store.Application.Abstractions.Messaging;
-using Ta3lom.Store.Application.Features.AdminOps.Commands;
+using Ta3lom.Store.Application.Features.Operations;
 
 namespace Ta3lom.Store.Infrastructure.Services.Jobs;
 
-/// `0 30 * * * ?` (09 §6) — hourly at :30: idempotency keys older than 24 h (11 §1.5).
+/// `0 30 * * * ?` — hourly at :30: idempotency keys past their 24-hour expiry (D-14).
 [DisallowConcurrentExecution]
 internal sealed class PruneIdempotencyKeysJob(ICommandHandler<PruneIdempotencyKeysCommand, int> handler) : IJob
 {

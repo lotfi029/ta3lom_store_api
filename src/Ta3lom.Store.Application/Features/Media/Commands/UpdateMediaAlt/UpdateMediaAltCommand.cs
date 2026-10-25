@@ -1,4 +1,4 @@
-using Ta3lom.Store.Application.DTOs.AdminCatalog;
+using Ta3lom.Store.Application.DTOs.Media;
 using Ta3lom.Store.Domain.Entities.Media;
 
 namespace Ta3lom.Store.Application.Features.Media.Commands.UpdateMediaAlt;
@@ -19,7 +19,7 @@ internal sealed class UpdateMediaAltCommandHandler(IGenericRepository<MediaAsset
 
         if (asset.Kind == MediaKind.Image && string.IsNullOrWhiteSpace(command.AltAr))
         {
-            return AdminCatalogErrors.MediaAltRequired;
+            return MediaErrors.AltRequired;
         }
 
         asset.SetAlt(command.AltAr, command.AltEn);

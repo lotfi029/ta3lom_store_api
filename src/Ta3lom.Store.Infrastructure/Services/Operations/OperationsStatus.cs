@@ -7,7 +7,7 @@ using Ta3lom.Store.Infrastructure.Persistence;
 
 namespace Ta3lom.Store.Infrastructure.Services.Operations;
 
-/// Runs the embedded `db/reference/003_integrity_checks.sql` (one source for staff tooling and the nightly job): each
+/// Runs the embedded `Resources/Integrity/integrity_checks.sql` (one source for staff tooling and the nightly job): each
 /// statement becomes `SELECT count(*) FROM (…) q`. Read-only.
 internal sealed partial class OperationsStatus(StoreDbContext db) : IOperationsStatus
 {
@@ -38,12 +38,12 @@ internal sealed partial class OperationsStatus(StoreDbContext db) : IOperationsS
 
     public async Task<int> DeadOutboxCountAsync(CancellationToken ct = default) =>
         (await db.Database.SqlQueryRaw<int>(
-            "SELECT count(*)::int AS \"Value\" FROM store.outbox_message WHERE processed_at IS NULL AND next_attempt_at = 'infinity'::timestamptz")
+            "SELECT count(*)::int AS \"Value\" FROM store.outbox_message WHERE processed_at IS NULL AND dead_lettered")
             .ToListAsync(ct)).Single();
 
     private static List<(int Number, string Title, string Sql)> Load()
     {
-        using var stream = typeof(OperationsStatus).Assembly.GetManifestResourceStream("Integrity.003_integrity_checks.sql")
+        using var stream = typeof(OperationsStatus).Assembly.GetManifestResourceStream("Integrity.integrity_checks.sql")
                            ?? throw new InvalidOperationException("integrity checks resource missing");
         using var reader = new StreamReader(stream, Encoding.UTF8);
         var checks = new List<(int, string, string)>();

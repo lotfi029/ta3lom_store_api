@@ -1,24 +1,19 @@
 namespace Ta3lom.Store.Application.Features.Settings;
 
-/// Typed view of the `setting` table (03 §M + seller_vat_no + dedication_templates; 09 §4.10). Cached 60 s,
-/// invalidated when an admin updates a key (S-09).
+/// Typed view of the `setting` table. Missing keys fall back to the seeded defaults.
 public sealed record StoreSettings(
-    bool VatEnabled,
-    decimal VatRate,
-    string? SellerVatNo,
-    Money ShippingFlatFee,
     Money MinGiftAmount,
+    Money MaxLineAmount,
+    int CartMaxLines,
     Money CartMaxTotal,
-    int OrderPaymentTimeoutMin,
-    int DownloadLimit,
-    int AllocationAlertDays,
-    int AllocationEscalateDays,
-    int LapseDays,
-    int RefundWindowDays,
-    int RefundProgressMaxPct,
-    int LowStockDefaultThreshold,
-    int GiftRefundWindowHours,
-    bool DedicationFreeTextEnabled,
-    IReadOnlyList<DedicationTemplate> DedicationTemplates);
-
-public sealed record DedicationTemplate(string Key, string Ar, string En);
+    int PaymentWindowMinutes,
+    IReadOnlyList<Money> AmountPresets,
+    string? SiteNameAr,
+    string? SiteNameEn,
+    string? SupportMobile)
+{
+    /// The seeded values (D-03, D-04 and the session defaults: minimum gift 10.00).
+    public static StoreSettings Defaults { get; } = new(
+        new Money(10.00m), new Money(100_000.00m), 50, new Money(100_000.00m), 60,
+        [new Money(50.00m), new Money(100.00m), new Money(500.00m)], null, null, null);
+}

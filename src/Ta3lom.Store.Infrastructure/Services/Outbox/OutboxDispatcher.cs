@@ -154,9 +154,9 @@ internal sealed partial class OutboxDispatcher(
                 await retryDb.Database.ExecuteSqlAsync($"""
                     UPDATE store.outbox_message SET next_attempt_at = 'infinity'::timestamptz, last_error = {error} WHERE id = {row.Id}
                     """, ct);
-                if (row.Type != nameof(FinanceAlert))
+                if (row.Type != nameof(StaffAlert))
                 {
-                    retryScope.ServiceProvider.GetRequiredService<IOutbox>().Enqueue(new FinanceAlert("outbox_dead_letter", null, null,
+                    retryScope.ServiceProvider.GetRequiredService<IOutbox>().Enqueue(new StaffAlert("outbox_dead_letter", null,
                         string.Create(CultureInfo.InvariantCulture, $"{row.Type} {row.Id} after {row.Attempts} attempts: {error}")));
                     await retryDb.SaveChangesAsync(ct);
                 }

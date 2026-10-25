@@ -37,24 +37,6 @@
   <data name="http.origin_forbidden.detail" xml:space="preserve">
     <value>This request is not accepted from this site.</value>
   </data>
-  <data name="auth.unauthenticated" xml:space="preserve">
-    <value>Sign-in required</value>
-  </data>
-  <data name="auth.unauthenticated.detail" xml:space="preserve">
-    <value>The access token is missing or has expired.</value>
-  </data>
-  <data name="auth.forbidden" xml:space="preserve">
-    <value>Forbidden</value>
-  </data>
-  <data name="auth.forbidden.detail" xml:space="preserve">
-    <value>Your role does not allow this action.</value>
-  </data>
-  <data name="concurrency.conflict" xml:space="preserve">
-    <value>Data changed</value>
-  </data>
-  <data name="concurrency.conflict.detail" xml:space="preserve">
-    <value>Someone else changed this data. Reload it and try again.</value>
-  </data>
   <data name="http.error" xml:space="preserve">
     <value>Request not supported</value>
   </data>
@@ -66,6 +48,36 @@
   </data>
   <data name="server.error.detail" xml:space="preserve">
     <value>An unexpected error occurred. Please try again later.</value>
+  </data>
+  <data name="concurrency.conflict" xml:space="preserve">
+    <value>Data changed</value>
+  </data>
+  <data name="concurrency.conflict.detail" xml:space="preserve">
+    <value>Someone else changed this data. Reload it and try again.</value>
+  </data>
+  <data name="db.duplicate" xml:space="preserve">
+    <value>Already exists</value>
+  </data>
+  <data name="db.duplicate.detail" xml:space="preserve">
+    <value>A matching value already exists.</value>
+  </data>
+  <data name="db.reference_missing" xml:space="preserve">
+    <value>Reference not found</value>
+  </data>
+  <data name="db.reference_missing.detail" xml:space="preserve">
+    <value>The request refers to something that does not exist.</value>
+  </data>
+  <data name="auth.unauthenticated" xml:space="preserve">
+    <value>Sign-in required</value>
+  </data>
+  <data name="auth.unauthenticated.detail" xml:space="preserve">
+    <value>The access token is missing or has expired.</value>
+  </data>
+  <data name="auth.forbidden" xml:space="preserve">
+    <value>Forbidden</value>
+  </data>
+  <data name="auth.forbidden.detail" xml:space="preserve">
+    <value>Your role does not allow this action.</value>
   </data>
   <data name="auth.account_blocked" xml:space="preserve">
     <value>Account blocked</value>
@@ -163,54 +175,6 @@
   <data name="staff.email_taken.detail" xml:space="preserve">
     <value>A staff user with this email already exists.</value>
   </data>
-  <data name="catalog.product_not_found" xml:space="preserve">
-    <value>Product not found</value>
-  </data>
-  <data name="catalog.product_not_found.detail" xml:space="preserve">
-    <value>This product does not exist or is no longer available.</value>
-  </data>
-  <data name="product.slug_taken" xml:space="preserve">
-    <value>Slug taken</value>
-  </data>
-  <data name="product.slug_taken.detail" xml:space="preserve">
-    <value>Another product already uses this slug.</value>
-  </data>
-  <data name="category.slug_taken" xml:space="preserve">
-    <value>Slug taken</value>
-  </data>
-  <data name="category.slug_taken.detail" xml:space="preserve">
-    <value>Another category already uses this slug.</value>
-  </data>
-  <data name="product.type_locked" xml:space="preserve">
-    <value>Type locked</value>
-  </data>
-  <data name="product.type_locked.detail" xml:space="preserve">
-    <value>The product type cannot change after its first order.</value>
-  </data>
-  <data name="product.publish_incomplete" xml:space="preserve">
-    <value>Cannot publish yet</value>
-  </data>
-  <data name="product.publish_incomplete.detail" xml:space="preserve">
-    <value>Complete the required fields before publishing; see the missing list.</value>
-  </data>
-  <data name="offer.active_exists" xml:space="preserve">
-    <value>Active offer exists</value>
-  </data>
-  <data name="offer.active_exists.detail" xml:space="preserve">
-    <value>This product already has an active sponsorship offer.</value>
-  </data>
-  <data name="offer.dates_invalid" xml:space="preserve">
-    <value>Invalid dates</value>
-  </data>
-  <data name="offer.dates_invalid.detail" xml:space="preserve">
-    <value>The end date must be after the start date.</value>
-  </data>
-  <data name="cause.general_fund_exists" xml:space="preserve">
-    <value>General fund exists</value>
-  </data>
-  <data name="cause.general_fund_exists.detail" xml:space="preserve">
-    <value>Another cause is already the general fund.</value>
-  </data>
   <data name="media.alt_required" xml:space="preserve">
     <value>Alt text required</value>
   </data>
@@ -241,102 +205,6 @@
   <data name="setting.invalid_value.detail" xml:space="preserve">
     <value>The value does not fit this setting's type.</value>
   </data>
-  <data name="cart.product_unavailable" xml:space="preserve">
-    <value>Product unavailable</value>
-  </data>
-  <data name="cart.product_unavailable.detail" xml:space="preserve">
-    <value>This product or format is not available right now.</value>
-  </data>
-  <data name="cart.mode_not_allowed" xml:space="preserve">
-    <value>Mode not allowed</value>
-  </data>
-  <data name="cart.mode_not_allowed.detail" xml:space="preserve">
-    <value>This product cannot be added this way.</value>
-  </data>
-  <data name="cart.quantity_limit" xml:space="preserve">
-    <value>Quantity limit</value>
-  </data>
-  <data name="cart.quantity_limit.detail" xml:space="preserve">
-    <value>The quantity is above the limit for this line.</value>
-  </data>
-  <data name="cart.amount_below_minimum" xml:space="preserve">
-    <value>Amount below minimum</value>
-  </data>
-  <data name="cart.amount_below_minimum.detail" xml:space="preserve">
-    <value>The amount is below the minimum.</value>
-  </data>
-  <data name="cart.campaign_ended" xml:space="preserve">
-    <value>Campaign ended</value>
-  </data>
-  <data name="cart.campaign_ended.detail" xml:space="preserve">
-    <value>Giving to this product has ended.</value>
-  </data>
-  <data name="cart.duplicate_course" xml:space="preserve">
-    <value>Course already in cart</value>
-  </data>
-  <data name="cart.duplicate_course.detail" xml:space="preserve">
-    <value>This course is already in your cart.</value>
-  </data>
-  <data name="cart.course_owned" xml:space="preserve">
-    <value>Course already owned</value>
-  </data>
-  <data name="cart.course_owned.detail" xml:space="preserve">
-    <value>You are already enrolled in this course.</value>
-  </data>
-  <data name="cart.course_in_unpaid_order" xml:space="preserve">
-    <value>Course in an unpaid order</value>
-  </data>
-  <data name="cart.course_in_unpaid_order.detail" xml:space="preserve">
-    <value>This course is in an order that is not paid yet. Complete the payment or wait for it to expire.</value>
-  </data>
-  <data name="cart.zakat_not_allowed" xml:space="preserve">
-    <value>Zakat not allowed</value>
-  </data>
-  <data name="cart.zakat_not_allowed.detail" xml:space="preserve">
-    <value>Zakat cannot be paid to this project.</value>
-  </data>
-  <data name="cart.dedication_not_allowed" xml:space="preserve">
-    <value>Dedication not allowed</value>
-  </data>
-  <data name="cart.dedication_not_allowed.detail" xml:space="preserve">
-    <value>Purchases cannot be dedicated.</value>
-  </data>
-  <data name="cart.dedication_invalid" xml:space="preserve">
-    <value>Invalid dedication</value>
-  </data>
-  <data name="cart.dedication_invalid.detail" xml:space="preserve">
-    <value>Check the recipient name, mobile and message.</value>
-  </data>
-  <data name="cart.dedication_free_text_disabled" xml:space="preserve">
-    <value>Free text disabled</value>
-  </data>
-  <data name="cart.dedication_free_text_disabled.detail" xml:space="preserve">
-    <value>Choose a message from the approved templates.</value>
-  </data>
-  <data name="cart.out_of_stock" xml:space="preserve">
-    <value>Out of stock</value>
-  </data>
-  <data name="cart.out_of_stock.detail" xml:space="preserve">
-    <value>The quantity is above the stock available.</value>
-  </data>
-  <data name="cart.too_many_lines" xml:space="preserve">
-    <value>Too many lines</value>
-  </data>
-  <data name="cart.too_many_lines.detail" xml:space="preserve">
-    <value>A cart cannot have more than 50 lines.</value>
-  </data>
-  <data name="cart.total_exceeded" xml:space="preserve">
-    <value>Cart total exceeded</value>
-  </data>
-  <data name="cart.total_exceeded.detail" xml:space="preserve">
-    <value>The cart total is above the limit. For larger gifts please contact the association.</value>
-  </data>
-  <data name="cart.line_not_found" xml:space="preserve">
-    <value>Line not found</value>
-  </data>
-  <data name="cart.line_not_found.detail" xml:space="preserve">
-    <value>This line is not in your cart.</value>
-  </data>
   <data name="idempotency.key_required" xml:space="preserve">
     <value>Idempotency key required</value>
   </data>
@@ -354,222 +222,6 @@
   </data>
   <data name="idempotency.in_progress.detail" xml:space="preserve">
     <value>A request with the same key is still running. Try again shortly.</value>
-  </data>
-  <data name="checkout.cart_empty" xml:space="preserve">
-    <value>Cart is empty</value>
-  </data>
-  <data name="checkout.cart_empty.detail" xml:space="preserve">
-    <value>There is nothing to pay for.</value>
-  </data>
-  <data name="checkout.lines_invalid" xml:space="preserve">
-    <value>Some lines are invalid</value>
-  </data>
-  <data name="checkout.lines_invalid.detail" xml:space="preserve">
-    <value>Some cart lines are no longer available. Please review your cart.</value>
-  </data>
-  <data name="checkout.price_changed" xml:space="preserve">
-    <value>Price changed</value>
-  </data>
-  <data name="checkout.price_changed.detail" xml:space="preserve">
-    <value>The total has changed. Review the new amount before paying.</value>
-  </data>
-  <data name="checkout.out_of_stock" xml:space="preserve">
-    <value>Out of stock</value>
-  </data>
-  <data name="checkout.out_of_stock.detail" xml:space="preserve">
-    <value>The quantity is no longer available.</value>
-  </data>
-  <data name="checkout.address_required" xml:space="preserve">
-    <value>Address required</value>
-  </data>
-  <data name="checkout.address_required.detail" xml:space="preserve">
-    <value>Add a shipping address for printed books.</value>
-  </data>
-  <data name="checkout.contact_required" xml:space="preserve">
-    <value>Contact required</value>
-  </data>
-  <data name="checkout.contact_required.detail" xml:space="preserve">
-    <value>Name and email are required.</value>
-  </data>
-  <data name="checkout.terms_not_accepted" xml:space="preserve">
-    <value>Terms not accepted</value>
-  </data>
-  <data name="checkout.terms_not_accepted.detail" xml:space="preserve">
-    <value>You must accept the terms and conditions.</value>
-  </data>
-  <data name="checkout.gateway_unavailable" xml:space="preserve">
-    <value>Payment unavailable</value>
-  </data>
-  <data name="checkout.gateway_unavailable.detail" xml:space="preserve">
-    <value>The order was created but the payment page could not be opened. Please retry.</value>
-  </data>
-  <data name="order.not_found" xml:space="preserve">
-    <value>Order not found</value>
-  </data>
-  <data name="order.not_found.detail" xml:space="preserve">
-    <value>No order with this reference.</value>
-  </data>
-  <data name="order.cancel_not_allowed" xml:space="preserve">
-    <value>Cancel not allowed</value>
-  </data>
-  <data name="order.cancel_not_allowed.detail" xml:space="preserve">
-    <value>Only unpaid orders can be cancelled.</value>
-  </data>
-  <data name="document.not_found" xml:space="preserve">
-    <value>Document not found</value>
-  </data>
-  <data name="document.not_found.detail" xml:space="preserve">
-    <value>This document was not issued.</value>
-  </data>
-  <data name="document.not_ready" xml:space="preserve">
-    <value>Document not ready</value>
-  </data>
-  <data name="document.not_ready.detail" xml:space="preserve">
-    <value>The document is still being prepared. Try again shortly.</value>
-  </data>
-  <data name="enrolment.not_active" xml:space="preserve">
-    <value>Course not available</value>
-  </data>
-  <data name="enrolment.not_active.detail" xml:space="preserve">
-    <value>This course cannot be opened now.</value>
-  </data>
-  <data name="download.limit_reached" xml:space="preserve">
-    <value>Download limit reached</value>
-  </data>
-  <data name="download.limit_reached.detail" xml:space="preserve">
-    <value>You have used all downloads for this book. Contact us to reset them.</value>
-  </data>
-  <data name="download.revoked" xml:space="preserve">
-    <value>Download revoked</value>
-  </data>
-  <data name="download.revoked.detail" xml:space="preserve">
-    <value>The download right for this book was revoked.</value>
-  </data>
-  <data name="download.link_expired" xml:space="preserve">
-    <value>Link expired</value>
-  </data>
-  <data name="download.link_expired.detail" xml:space="preserve">
-    <value>This download link has expired. Request a new one from your account.</value>
-  </data>
-  <data name="stock.below_reserved" xml:space="preserve">
-    <value>Below reserved</value>
-  </data>
-  <data name="stock.below_reserved.detail" xml:space="preserve">
-    <value>Stock cannot drop below the quantity reserved for orders.</value>
-  </data>
-  <data name="shipment.invalid_transition" xml:space="preserve">
-    <value>Invalid transition</value>
-  </data>
-  <data name="shipment.invalid_transition.detail" xml:space="preserve">
-    <value>The shipment cannot move to this state now.</value>
-  </data>
-  <data name="beneficiary.not_found" xml:space="preserve">
-    <value>Beneficiary not found</value>
-  </data>
-  <data name="beneficiary.not_found.detail" xml:space="preserve">
-    <value>No beneficiary with this id.</value>
-  </data>
-  <data name="beneficiary.mobile_exists" xml:space="preserve">
-    <value>Mobile already registered</value>
-  </data>
-  <data name="beneficiary.mobile_exists.detail" xml:space="preserve">
-    <value>This mobile belongs to another beneficiary.</value>
-  </data>
-  <data name="beneficiary.import_invalid" xml:space="preserve">
-    <value>Import file invalid</value>
-  </data>
-  <data name="beneficiary.import_invalid.detail" xml:space="preserve">
-    <value>Some rows are invalid; nothing was saved. See the error list.</value>
-  </data>
-  <data name="beneficiary.no_live_seat" xml:space="preserve">
-    <value>No allocated seat</value>
-  </data>
-  <data name="beneficiary.no_live_seat.detail" xml:space="preserve">
-    <value>The beneficiary has no allocated course seat to invite to.</value>
-  </data>
-  <data name="allocation.no_units" xml:space="preserve">
-    <value>No units available</value>
-  </data>
-  <data name="allocation.no_units.detail" xml:space="preserve">
-    <value>No units are awaiting allocation for this product right now.</value>
-  </data>
-  <data name="allocation.rejected" xml:space="preserve">
-    <value>Allocation rejected</value>
-  </data>
-  <data name="allocation.rejected.detail" xml:space="preserve">
-    <value>Nothing was allocated; see the reason for each beneficiary.</value>
-  </data>
-  <data name="allocation.not_approved" xml:space="preserve">
-    <value>Not approved</value>
-  </data>
-  <data name="allocation.not_approved.detail" xml:space="preserve">
-    <value>The beneficiary is not approved.</value>
-  </data>
-  <data name="allocation.group_mismatch" xml:space="preserve">
-    <value>Group mismatch</value>
-  </data>
-  <data name="allocation.group_mismatch.detail" xml:space="preserve">
-    <value>The beneficiary is not in this offer's group.</value>
-  </data>
-  <data name="allocation.already_enrolled" xml:space="preserve">
-    <value>Already enrolled</value>
-  </data>
-  <data name="allocation.already_enrolled.detail" xml:space="preserve">
-    <value>The beneficiary is already enrolled in this course.</value>
-  </data>
-  <data name="allocation.zakat_mismatch" xml:space="preserve">
-    <value>Zakat mismatch</value>
-  </data>
-  <data name="allocation.zakat_mismatch.detail" xml:space="preserve">
-    <value>The unit is zakat-funded and the beneficiary is not zakat-eligible.</value>
-  </data>
-  <data name="allocation.no_matching_unit" xml:space="preserve">
-    <value>No matching unit</value>
-  </data>
-  <data name="allocation.no_matching_unit.detail" xml:space="preserve">
-    <value>No free unit fits this beneficiary.</value>
-  </data>
-  <data name="allocation.mobile_required" xml:space="preserve">
-    <value>Mobile required</value>
-  </data>
-  <data name="allocation.mobile_required.detail" xml:space="preserve">
-    <value>A course seat needs the beneficiary's or guardian's mobile.</value>
-  </data>
-  <data name="allocation.conflict" xml:space="preserve">
-    <value>Allocation conflict</value>
-  </data>
-  <data name="allocation.conflict.detail" xml:space="preserve">
-    <value>The data changed during allocation; try again.</value>
-  </data>
-  <data name="unit.invalid_transition" xml:space="preserve">
-    <value>Invalid transition</value>
-  </data>
-  <data name="unit.invalid_transition.detail" xml:space="preserve">
-    <value>The unit cannot move to that state now.</value>
-  </data>
-  <data name="card.not_found" xml:space="preserve">
-    <value>Card not found</value>
-  </data>
-  <data name="card.not_found.detail" xml:space="preserve">
-    <value>No dedication card for this link.</value>
-  </data>
-  <data name="cause_update.already_notified" xml:space="preserve">
-    <value>Donors already notified</value>
-  </data>
-  <data name="cause_update.already_notified.detail" xml:space="preserve">
-    <value>An update already sent to donors cannot be deleted.</value>
-  </data>
-  <data name="goal.adjustment_invalid" xml:space="preserve">
-    <value>Invalid correction</value>
-  </data>
-  <data name="goal.adjustment_invalid.detail" xml:space="preserve">
-    <value>The correction is empty or would make a counter negative.</value>
-  </data>
-  <data name="zakat.balance_insufficient" xml:space="preserve">
-    <value>Insufficient zakat balance</value>
-  </data>
-  <data name="zakat.balance_insufficient.detail" xml:space="preserve">
-    <value>The voucher amount is above this product's zakat balance.</value>
   </data>
   <data name="template.render_failed" xml:space="preserve">
     <value>Template invalid</value>

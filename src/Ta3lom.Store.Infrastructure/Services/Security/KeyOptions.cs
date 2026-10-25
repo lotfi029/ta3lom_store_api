@@ -3,8 +3,8 @@ using Microsoft.Extensions.Options;
 
 namespace Ta3lom.Store.Infrastructure.Services.Security;
 
-/// Signing keys and peppers (Run-plan-review §2 #4). Real values come from /run/secrets in production.
-/// Outside Production an empty key falls back to its DEV ONLY value; in Production start-up fails when a key
+/// Signing keys and peppers. Real values come from the environment (or files under /run/secrets).
+/// In Development an empty key falls back to its DEV ONLY value; every other environment refuses to start when a key
 /// is missing, equals its DEV ONLY value or is shorter than 32 bytes.
 public sealed class JwtOptions
 {
@@ -37,26 +37,26 @@ public sealed class TokenKeyOptions
 {
     public const string Section = "Store:Tokens";
 
-    /// HMAC key of the per-order status token (`GET /v1/orders/{ref}/status`, S-15).
+    /// HMAC key of the per-order status token (`GET /v1/orders/{ref}/status?t=`).
     public string StatusKeyBase64 { get; set; } = string.Empty;
 }
 
-public sealed class DownloadKeyOptions
+/// HMAC key for the pseudonymised values (IP hashes, recipient hashes). Changing it breaks lookups of existing hashes.
+public sealed class HashingOptions
 {
-    public const string Section = "Store:Downloads";
+    public const string Section = "Store:Hashing";
 
-    /// HMAC key of the signed 10-minute download links (RUL-41, S-20).
-    public string LinkKeyBase64 { get; set; } = string.Empty;
+    public string KeyBase64 { get; set; } = string.Empty;
 }
 
-/// Deterministic development keys: SHA-256("ta3lom-store DEV ONLY &lt;purpose&gt;"). Public by design, refused in Production.
+/// Deterministic development keys: SHA-256("ta3lom-store DEV ONLY &lt;purpose&gt;"). Public by design, refused outside Development.
 public static class DevOnlyKeys
 {
     public const string JwtCustomer = "+zco5EjjaH++zZf/zVfF/52+4kgGxbIIYIXf3tlwPlY=";
     public const string JwtStaff = "yyp7JEZrsV3kfEczPvnNSyvU4ipbgz9ZO9VX/oul4j0=";
     public const string OtpPepper = "RmWH6Y2B4QC79EjwbHT9RREfbcIzuTpo095HTumzUtI=";
     public const string OrderStatus = "JRSbCH7+CypDBf48ErxfUj6JVHKluq1YTByYLNf8THs=";
-    public const string DownloadLink = "fUJygvuodzCxeXaaPHBmxKybMxgoWxADnzGa5D5rOzg=";
+    public const string Hashing = "dxjryIuC+ysWAAN6/KjHOgY+5AY52AUi6l2qO/VjyJM=";
 
     public static int KeyLength(string? base64)
     {
@@ -78,30 +78,28 @@ public static class DevOnlyKeys
     /// Null when the key is acceptable for <paramref name="environment"/>, else the reason.
     public static string? Problem(string name, string? value, string devValue, IHostEnvironment environment)
     {
-        if (!environment.IsProduction())
+        ArgumentNullException.ThrowIfNull(environment);
+        if (!environment.IsDevelopment())
         {
-            return KeyLength(value) >= 32 ? null : $"{name} must be at least 32 bytes (base64)";
-        }
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return $"{name} is required outside Development";
+            }
 
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return $"{name} is required in Production";
-        }
-
-        if (value == devValue)
-        {
-            return $"{name} must not be the DEV ONLY value in Production";
+            if (value == devValue)
+            {
+                return $"{name} must not be the DEV ONLY value outside Development";
+            }
         }
 
         return KeyLength(value) >= 32 ? null : $"{name} must be at least 32 bytes (base64)";
     }
 }
 
-/// Fills empty keys with their DEV ONLY value outside Production (so Development, Testing and Staging start
-/// without secrets), then validates every key.
+/// Fills empty keys with their DEV ONLY value in Development (so it starts without secrets), then validates every key.
 internal sealed class KeyOptionsSetup(IHostEnvironment environment)
-    : IPostConfigureOptions<JwtOptions>, IPostConfigureOptions<OtpOptions>, IPostConfigureOptions<TokenKeyOptions>, IPostConfigureOptions<DownloadKeyOptions>,
-      IValidateOptions<JwtOptions>, IValidateOptions<OtpOptions>, IValidateOptions<TokenKeyOptions>, IValidateOptions<DownloadKeyOptions>
+    : IPostConfigureOptions<JwtOptions>, IPostConfigureOptions<OtpOptions>, IPostConfigureOptions<TokenKeyOptions>, IPostConfigureOptions<HashingOptions>,
+      IValidateOptions<JwtOptions>, IValidateOptions<OtpOptions>, IValidateOptions<TokenKeyOptions>, IValidateOptions<HashingOptions>
 {
     public void PostConfigure(string? name, JwtOptions options)
     {
@@ -113,12 +111,12 @@ internal sealed class KeyOptionsSetup(IHostEnvironment environment)
 
     public void PostConfigure(string? name, TokenKeyOptions options) => options.StatusKeyBase64 = Fallback(options.StatusKeyBase64, DevOnlyKeys.OrderStatus);
 
-    public void PostConfigure(string? name, DownloadKeyOptions options) => options.LinkKeyBase64 = Fallback(options.LinkKeyBase64, DevOnlyKeys.DownloadLink);
+    public void PostConfigure(string? name, HashingOptions options) => options.KeyBase64 = Fallback(options.KeyBase64, DevOnlyKeys.Hashing);
 
     public ValidateOptionsResult Validate(string? name, JwtOptions options) => Result(
         DevOnlyKeys.Problem("Store:Jwt:CustomerSigningKeyBase64", options.CustomerSigningKeyBase64, DevOnlyKeys.JwtCustomer, environment),
         DevOnlyKeys.Problem("Store:Jwt:StaffSigningKeyBase64", options.StaffSigningKeyBase64, DevOnlyKeys.JwtStaff, environment),
-        options.CustomerSigningKeyBase64 == options.StaffSigningKeyBase64 && environment.IsProduction()
+        options.CustomerSigningKeyBase64 == options.StaffSigningKeyBase64 && !environment.IsDevelopment()
             ? "Store:Jwt customer and staff keys must differ" : null);
 
     public ValidateOptionsResult Validate(string? name, OtpOptions options) =>
@@ -127,11 +125,11 @@ internal sealed class KeyOptionsSetup(IHostEnvironment environment)
     public ValidateOptionsResult Validate(string? name, TokenKeyOptions options) =>
         Result(DevOnlyKeys.Problem("Store:Tokens:StatusKeyBase64", options.StatusKeyBase64, DevOnlyKeys.OrderStatus, environment));
 
-    public ValidateOptionsResult Validate(string? name, DownloadKeyOptions options) =>
-        Result(DevOnlyKeys.Problem("Store:Downloads:LinkKeyBase64", options.LinkKeyBase64, DevOnlyKeys.DownloadLink, environment));
+    public ValidateOptionsResult Validate(string? name, HashingOptions options) =>
+        Result(DevOnlyKeys.Problem("Store:Hashing:KeyBase64", options.KeyBase64, DevOnlyKeys.Hashing, environment));
 
     private string Fallback(string value, string devValue) =>
-        string.IsNullOrWhiteSpace(value) && !environment.IsProduction() ? devValue : value;
+        string.IsNullOrWhiteSpace(value) && environment.IsDevelopment() ? devValue : value;
 
     private static ValidateOptionsResult Result(params string?[] problems)
     {

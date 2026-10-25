@@ -8,7 +8,7 @@ Approved plan: v3 (owner review R-1…R-12 applied).
 | Phase | Status | Build | Format | Tests | Notes |
 |---|---|---|---|---|---|
 | P1 clean repo | done | green | clean | not run (old suite references deleted features; P2 replaces it) | |
-| P2 strip | pending | | | | |
+| P2 strip | done | green | clean | Domain, Application, Architecture green; integration suite cannot run until P3 (no migration → fixture seed fails), as the plan's P2 gate allows | |
 | P3 model + InitialSchema | pending | | | | |
 | P4 auth | pending | | | | |
 | P5 catalogue | pending | | | | |
@@ -38,6 +38,18 @@ Lines marked **REVIEW** are not covered by the specs (or deviate from them) and 
 - **REVIEW** MFA token single use: the ERD has no column for it, so used `jti`s live behind an `IUsedTokenStore` port
   (IMemoryCache implementation) until the 5-minute token expires. Needs a shared store if the API ever runs as >1 instance (R-6).
 - Coverage is measured on the merged Cobertura report of all test projects.
+- The cloud environment presets `STORE_TEST_DB=external`; test runs unset it (`env -u STORE_TEST_DB`) so they use
+  Testcontainers `postgres:18` as specified.
+- P2: the operations path is kept in `Application/Features/Operations` (IntegrityChecks, PruneIdempotencyKeys, Retention,
+  plus PruneOtp and ExpireGuestCarts as set-based deletes through `IOperationsMaintenance`, so the jobs work without the
+  Cart aggregate) (R-1).
+- P2: `UploadMedia`, `KeyOptions`, `SkiaImageProcessor`, `MediaAsset`, `Notification`, CORS and `/dev` were brought to their
+  final shape while touching them (magic-byte sniff, 40 MP limit, orphan-file cleanup; DEV/missing keys refused outside
+  Development; `/dev` Development only; allow-list store + store-staging, localhost in Development).
+- P2: the beneficiary PII protector is gone; the hashing key is now `Store:Hashing:KeyBase64` (IPs, recipient hashes).
+  `Store:Downloads:*` and `Store:Pii:*` are no longer read.
+- **REVIEW** `notification` rows are claimed as `failed` (= not delivered yet) before the provider call and set to `sent`
+  after it; the ERD allows only `sent | failed`, so there is no `queued` state.
 
 ## Owner review (plan v3)
 

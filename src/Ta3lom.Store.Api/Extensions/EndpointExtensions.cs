@@ -29,11 +29,11 @@ public static class EndpointExtensions
         return app;
     }
 
-    /// `/dev/*` only in Development and Staging (plan 14 §4.3).
+    /// `/dev/*` only in Development.
     public static IEndpointRouteBuilder MapDevEndpoints(this WebApplication app)
     {
         ArgumentNullException.ThrowIfNull(app);
-        if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
+        if (app.Environment.IsDevelopment())
         {
             var dev = app.MapGroup("/dev").WithTags("Dev").ExcludeFromDescription();
             foreach (var endpoint in app.Services.GetServices<IDevEndpoint>())

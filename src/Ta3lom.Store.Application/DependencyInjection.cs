@@ -19,8 +19,6 @@ public static class DependencyInjection
                 .AsImplementedInterfaces().WithScopedLifetime()
             .AddClasses(c => c.AssignableTo(typeof(IQueryHandler<,>)), publicOnly: false)
                 .AsImplementedInterfaces().WithScopedLifetime()
-            .AddClasses(c => c.AssignableTo<Features.Settlement.ILineSettlementEffect>(), publicOnly: false)   // one per line case (§13.4)
-                .As<Features.Settlement.ILineSettlementEffect>().WithScopedLifetime()
             .AddClasses(c => c.AssignableTo<Features.Outbox.IOutboxHandler>(), publicOnly: false)               // one per message type
                 .As<Features.Outbox.IOutboxHandler>().WithScopedLifetime());
 
@@ -28,25 +26,8 @@ public static class DependencyInjection
         services.AddHandlerDecorators();
         services.AddMapping();
 
-        services.AddScoped<ICartMergeHook, Features.Cart.CartMergeHook>();            // RUL-17 (S-13 fills the S-04 hook)
-        services.AddScoped<ISponsoredUnitCompletion, Features.Allocation.Commands.SponsoredUnitCompletion>();   // RUL-50 (S-25 fills the S-40 hook)
-        services.AddScoped<Features.Allocation.AllocationReader>();
-        services.AddScoped<Features.Giving.PoolSweeper>();
-        services.AddScoped<Features.Giving.Commands.SponsorDigestReader>();
-        services.AddScoped<Features.AdminCatalog.CatalogChanges>();
-        services.AddScoped<Features.Cart.CartCatalog>();
-        services.AddScoped<Features.Cart.CartAccess>();
-        services.AddScoped<Features.Checkout.CheckoutPricing>();
-        services.AddScoped<Features.Settlement.SettlementLedger>();
-        services.AddScoped<Features.Orders.OrderReader>();
-        services.AddScoped<Features.Orders.OrderStock>();
+        services.AddScoped<ICartMergeHook, NoCartMergeHook>();                             // replaced by the donation cart (P6)
         services.AddScoped<Features.Notifications.NotificationDispatch>();
-        services.AddScoped<Features.Outbox.Handlers.OrderMessages>();
-        services.AddScoped<Features.Documents.OrderDocuments>();
-        services.AddScoped<Features.Fulfilment.FulfilmentReader>();
-        services.AddScoped<Features.Settlement.IOrderSettlement, Features.Settlement.OrderSettlement>();
-        services.AddScoped<Features.Catalog.CatalogReader>();
-        services.AddScoped<Features.AdminCatalog.AdminCatalogReader>();
         return services;
     }
 

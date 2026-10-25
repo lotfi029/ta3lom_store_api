@@ -16,7 +16,7 @@ public sealed record SessionResponse(string AccessToken, int ExpiresIn, Customer
 public sealed record CustomerSessionResponse(Guid Id, string Mobile, string? FullName, string? Email, string Locale,
     bool AnonymousDefault, bool IsNew, bool ProfileComplete);
 
-public sealed record CartNoticeResponse(string Code, string Slug);
+public sealed record CartNoticeResponse(string Code, Guid? LineId);
 
 /// `POST /v1/auth/refresh` body (11 §4.3).
 public sealed record AccessTokenResponse(string AccessToken, int ExpiresIn);

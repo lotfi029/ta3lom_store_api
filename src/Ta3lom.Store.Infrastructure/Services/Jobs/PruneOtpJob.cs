@@ -1,10 +1,10 @@
 using Quartz;
 using Ta3lom.Store.Application.Abstractions.Messaging;
-using Ta3lom.Store.Application.Features.CustomerAuth.Commands.PruneOtp;
+using Ta3lom.Store.Application.Features.Operations;
 
 namespace Ta3lom.Store.Infrastructure.Services.Jobs;
 
-/// Hourly (`0 0 * * * ?`): deletes OTP challenges older than 24 h (PDPL, 09 §6).
+/// Hourly (`0 0 * * * ?`): deletes OTP challenges older than 24 h (D-14).
 [DisallowConcurrentExecution]
 internal sealed class PruneOtpJob(ICommandHandler<PruneOtpCommand, int> handler) : IJob
 {

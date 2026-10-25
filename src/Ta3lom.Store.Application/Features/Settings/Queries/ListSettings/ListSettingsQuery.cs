@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Ta3lom.Store.Application.Abstractions.Data;
-using Ta3lom.Store.Application.DTOs.AdminCatalog;
+using Ta3lom.Store.Application.DTOs.Settings;
 
 namespace Ta3lom.Store.Application.Features.Settings.Queries.ListSettings;
 
-/// `GET /v1/admin/settings` (#118).
+/// `GET /v1/admin/settings` .
 public sealed record ListSettingsQuery : IQuery<IReadOnlyList<SettingResponse>>;
 
 internal sealed class ListSettingsQueryHandler(IApplicationDbContext db) : IQueryHandler<ListSettingsQuery, IReadOnlyList<SettingResponse>>

@@ -21,6 +21,7 @@ internal sealed class RequestOtpCommandHandler(
     IOtpHasher hasher,
     ITemplateRenderer templates,
     ISmsSender sms,
+    IPseudonymizer pseudonymizer,
     ICurrentActor actor,
     IApplicationDbContext db,
     IOutbox outbox,
@@ -67,14 +68,14 @@ internal sealed class RequestOtpCommandHandler(
         var message = await templates.RenderAsync("otp", MessageChannel.Sms, locale, new { code }, ct);
         var sent = await sms.SendAsync(mobile, message.Body, ct);
 
-        var log = Notification.Direct(MessageChannel.Sms, mobile, "otp", locale, relatedOrderId: null, now);
+        var log = new Notification(MessageChannel.Sms, pseudonymizer.HashMobile(mobile), "otp", null, now);
         if (sent.Sent)
         {
-            log.MarkSent(sent.ProviderMessageId, clock.UtcNow);
+            log.MarkSent(sent.ProviderMessageId);
         }
         else
         {
-            log.MarkFailed(sent.Error ?? "send failed", clock.UtcNow);
+            log.MarkFailed();
         }
 
         notifications.Add(log);
@@ -90,10 +91,10 @@ internal sealed class RequestOtpCommandHandler(
     private async Task AlertCapOnceAsync(DateTimeOffset dayStart, CancellationToken ct)
     {
         var alerts = await db.OutboxMessages.AsNoTracking()
-            .Where(m => m.Type == nameof(FinanceAlert) && m.OccurredAt >= dayStart).Select(m => m.Payload).ToListAsync(ct);   // jsonb: filtered here
+            .Where(m => m.Type == nameof(StaffAlert) && m.OccurredAt >= dayStart).Select(m => m.Payload).ToListAsync(ct);   // jsonb: filtered here
         if (!alerts.Exists(p => p.Contains(CapAlertKind, StringComparison.Ordinal)))
         {
-            outbox.Enqueue(new FinanceAlert(CapAlertKind, null, null,
+            outbox.Enqueue(new StaffAlert(CapAlertKind, null,
                 string.Create(CultureInfo.InvariantCulture, $"OTP daily cap of {SessionPolicy.OtpDailyGlobalCap} codes reached; requests refused until midnight Riyadh")));
             await uow.SaveChangesAsync(ct);
         }

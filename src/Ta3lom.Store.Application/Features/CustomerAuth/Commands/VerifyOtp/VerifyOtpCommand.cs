@@ -82,7 +82,7 @@ internal sealed class VerifyOtpCommandHandler(
                 var access = issuer.IssueCustomer(customer.Id);
                 var profile = mapper.Map<CustomerSessionResponse>(customer) with { IsNew = isNew };
                 var body = new SessionResponse(access.Token, access.ExpiresInSeconds, profile,
-                    [.. notices.Select(n => new CartNoticeResponse(n.Code, n.Slug))]);
+                    [.. notices.Select(n => new CartNoticeResponse(n.Code, n.LineId))]);
                 return Result.Success(new CustomerSession(body, raw, expiresAt));
             },
             commitOnFailure: true,
