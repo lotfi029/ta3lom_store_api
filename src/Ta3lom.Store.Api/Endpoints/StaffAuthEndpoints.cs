@@ -51,7 +51,8 @@ internal sealed class StaffAuthEndpoints : IEndpoint
             .Produces<StaffSessionResponse>()
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status423Locked);
         auth.MapPost("/refresh", RefreshAsync)
             .AllowAnonymous()
             .RequireRateLimiting(RatePolicies.AuthRefresh)

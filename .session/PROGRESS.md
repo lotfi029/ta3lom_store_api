@@ -7,4 +7,6 @@ A-5 → order.idempotency_key + stale claim (2 min) replays the order; A-7 → I
 | Id | Status | Commit | Test |
 |---|---|---|---|
 | A-1 | done | 4db5f6e | OutboxTimeoutTests (handler timeout → retried, batch continues; SMS timeout → failed send) |
-| A-2 | done | (next) | NotificationOnceTests (unknown outcome → once + alert; refused → retried); migration 20261025174608_NotificationSendingStatus |
+| A-2 | done | 913cb0f | NotificationOnceTests (unknown outcome → once + alert; refused → retried); migration 20261025174608_NotificationSendingStatus |
+| A-3 | done | (next) | StaffAuthTests.A_locked_account_cannot_change_its_password_even_with_the_right_one (423, hash unchanged, not counted, audited reason locked) |
+| L-5 | done | (next) | StaffAuthTests.Enrolling_an_authenticator_is_audited (staff.totp_enrolled) |

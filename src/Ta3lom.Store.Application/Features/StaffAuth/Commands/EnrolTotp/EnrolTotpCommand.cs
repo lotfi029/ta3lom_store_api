@@ -9,6 +9,7 @@ public sealed record EnrolTotpCommand(Guid StaffId) : ICommand<TotpEnrolResponse
 internal sealed class EnrolTotpCommandHandler(
     IStaffUserRepository staff,
     ITotpService totp,
+    IAuditTrail audit,
     IUnitOfWork uow,
     IClock clock) : ICommandHandler<EnrolTotpCommand, TotpEnrolResponse>
 {
@@ -32,6 +33,7 @@ internal sealed class EnrolTotpCommandHandler(
 
         var enrolment = totp.CreateEnrolment(user.Email);
         user.EnrolTotp(enrolment.ProtectedSecret);
+        audit.Record(AuditActions.StaffTotpEnrolled, "staff_user", user.Id.ToString(), user.Email);        // L-5: the MFA token has no staff actor
         await uow.SaveChangesAsync(ct);
         return new TotpEnrolResponse(enrolment.OtpauthUri, enrolment.SecretBase32);
     }
