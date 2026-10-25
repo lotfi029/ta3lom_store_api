@@ -39,7 +39,7 @@ public sealed class SiteRebuildTests(SiteRebuildFactory factory) : IClassFixture
     [Fact]
     public async Task A_burst_of_writes_is_one_rebuild_and_claimed_rows_are_left_alone()
     {
-        await factory.DrainOutboxAsync();
+        await ResetAsync();
         var build = new CatalogBuilder(await factory.StaffAsync(Roles.Admin));
         await build.PublishedAsync();
         (await factory.ScalarAsync<long>(Pending)).ShouldBeGreaterThanOrEqualTo(3);
@@ -66,6 +66,88 @@ public sealed class SiteRebuildTests(SiteRebuildFactory factory) : IClassFixture
         await factory.DrainOutboxAsync();
         factory.Rebuilds.ShouldBe(["category.created"]);
         (await factory.ScalarAsync<long>(Pending)).ShouldBe(0);
+    }
+
+    /// Every test starts with no pending catalogue change (the tests of this class share one database).
+    private Task ResetAsync() =>
+        factory.ExecuteSqlAsync("UPDATE store.outbox_message SET processed_at = now(), claimed_until = NULL WHERE processed_at IS NULL");
+
+    private async Task<List<Guid>> PendingIdsAsync()
+    {
+        List<Guid> ids = [];
+        await using var connection = new Npgsql.NpgsqlConnection(factory.DatabaseConnectionString);
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
+        await using var command = new Npgsql.NpgsqlCommand(
+            "SELECT id FROM store.outbox_message WHERE type = 'CatalogChanged' AND processed_at IS NULL ORDER BY occurred_at, id", connection);
+        await using var reader = await command.ExecuteReaderAsync(TestContext.Current.CancellationToken);
+        while (await reader.ReadAsync(TestContext.Current.CancellationToken))
+        {
+            ids.Add(reader.GetGuid(0));
+        }
+
+        return ids;
+    }
+
+    [Fact]
+    public async Task A_newer_change_arriving_while_an_older_one_is_handled_still_rebuilds_once()
+    {
+        await ResetAsync();
+        var build = new CatalogBuilder(await factory.StaffAsync(Roles.Admin));
+        await build.CategoryAsync();
+        await build.CategoryAsync();
+        var ids = await PendingIdsAsync();
+        ids.Count.ShouldBe(2);
+
+        // The older row is being handled (claimed); the newer one arrived after the claim and is not claimed.
+        await factory.ExecuteSqlAsync($"UPDATE store.outbox_message SET claimed_until = now() + interval '5 minutes' WHERE id = '{ids[0]}'");
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var debounce = scope.ServiceProvider.GetRequiredService<ICatalogChangeDebounce>();
+            (await debounce.AbsorbAsync(ids[0], factory.Clock.UtcNow, TestContext.Current.CancellationToken)).ShouldBeFalse();
+        }
+
+        (await PendingIdsAsync()).ShouldContain(ids[1]);
+        await factory.ExecuteSqlAsync($"UPDATE store.outbox_message SET processed_at = now(), claimed_until = NULL WHERE id = '{ids[0]}'");
+        factory.Rebuilds.Clear();
+        await factory.DrainOutboxAsync();
+
+        factory.Rebuilds.ShouldBe(["category.created"]);
+    }
+
+    [Fact]
+    public async Task An_older_change_in_retry_backoff_is_absorbed_by_a_newer_due_one()
+    {
+        await ResetAsync();
+        var build = new CatalogBuilder(await factory.StaffAsync(Roles.Admin));
+        await build.CategoryAsync();
+        var older = (await PendingIdsAsync()).Single();
+        await factory.ExecuteSqlAsync($"UPDATE store.outbox_message SET attempts = 1, next_attempt_at = now() + interval '1 hour', last_error = 'boom' WHERE id = '{older}'");
+        await build.CategoryAsync();
+        factory.Rebuilds.Clear();
+
+        await factory.DrainOutboxAsync();
+
+        factory.Rebuilds.ShouldBe(["category.created"]);
+        (await PendingIdsAsync()).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_burst_of_five_changes_is_one_rebuild()
+    {
+        await ResetAsync();
+        var build = new CatalogBuilder(await factory.StaffAsync(Roles.Admin));
+        for (var i = 0; i < 5; i++)
+        {
+            await build.CategoryAsync();
+        }
+
+        (await PendingIdsAsync()).Count.ShouldBe(5);
+        factory.Rebuilds.Clear();
+
+        await factory.DrainOutboxAsync();
+
+        factory.Rebuilds.Count.ShouldBe(1);
+        (await PendingIdsAsync()).ShouldBeEmpty();
     }
 
     [Fact]

@@ -67,19 +67,24 @@ internal sealed class CatalogChangeDebounce(StoreDbContext db) : ICatalogChangeD
 
     public async Task<bool> AbsorbAsync(Guid handledId, DateTimeOffset now, CancellationToken ct = default)
     {
-        // Rows of one SaveChanges share occurred_at; ids are UUIDv7, so (occurred_at, id) orders the changes. A newer change,
-        // pending or already handled, rebuilds the site after this one, so this one needs no rebuild of its own.
+        // Rows of one SaveChanges share occurred_at; ids are UUIDv7, so (occurred_at, id) orders the changes. Only OLDER
+        // pending rows that no dispatcher has claimed are absorbed: the rebuild this message triggers covers them. A NEWER
+        // pending row is never absorbed; while one is pending it rebuilds later, so this one needs no rebuild of its own.
+        // Net rule: the newest pending change always triggers a rebuild.
         await db.Database.ExecuteSqlAsync($"""
-            UPDATE store.outbox_message
+            UPDATE store.outbox_message o
                SET processed_at = {now}, last_error = NULL
-             WHERE type = {nameof(CatalogChanged)} AND id <> {handledId} AND processed_at IS NULL AND NOT dead_lettered
-               AND (claimed_until IS NULL OR claimed_until < {now})
+              FROM store.outbox_message me
+             WHERE me.id = {handledId} AND o.type = {nameof(CatalogChanged)} AND o.id <> me.id
+               AND o.processed_at IS NULL AND NOT o.dead_lettered
+               AND (o.claimed_until IS NULL OR o.claimed_until < {now})
+               AND (o.occurred_at, o.id) < (me.occurred_at, me.id)
             """, ct);
         var newer = await db.Database.SqlQuery<Row>($"""
             SELECT o.id
               FROM store.outbox_message o, store.outbox_message me
              WHERE me.id = {handledId} AND o.type = {nameof(CatalogChanged)} AND o.id <> me.id
-               AND NOT o.dead_lettered AND (o.occurred_at, o.id) > (me.occurred_at, me.id)
+               AND o.processed_at IS NULL AND NOT o.dead_lettered AND (o.occurred_at, o.id) > (me.occurred_at, me.id)
              LIMIT 1
             """).ToListAsync(ct);
         return newer.Count == 0;

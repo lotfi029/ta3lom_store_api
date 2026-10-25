@@ -126,7 +126,9 @@ internal sealed partial class OutboxDispatcher(
                 """).ToListAsync(ct);
         }
 
-        foreach (var row in batch)
+        // RETURNING has no order: handle the batch oldest first, in PostgreSQL's (occurred_at, uuid) order, so a newer
+        // change is still pending while an older one runs (the site-rebuild debounce relies on it).
+        foreach (var row in batch.OrderBy(r => r.OccurredAt).ThenBy(r => r.Id, PostgresUuidOrder.Instance))
         {
             await HandleAsync(row, ct);
         }
@@ -187,4 +189,12 @@ internal sealed partial class OutboxDispatcher(
     private static partial void LogLoopFailed(ILogger logger, Exception ex);
 
     internal sealed record OutboxRow(Guid Id, string Type, string Payload, DateTimeOffset OccurredAt, int Attempts);
+}
+
+/// PostgreSQL compares uuids byte by byte in big-endian order; <see cref="Guid.CompareTo(Guid)"/> does not.
+internal sealed class PostgresUuidOrder : IComparer<Guid>
+{
+    public static readonly PostgresUuidOrder Instance = new();
+
+    public int Compare(Guid x, Guid y) => x.ToByteArray(bigEndian: true).AsSpan().SequenceCompareTo(y.ToByteArray(bigEndian: true));
 }
