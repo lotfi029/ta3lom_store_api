@@ -11,7 +11,7 @@ Approved plan: v3 (owner review R-1…R-12 applied).
 | P2 strip | done | green | clean | Domain, Application, Architecture green; integration suite cannot run until P3 (no migration → fixture seed fails), as the plan's P2 gate allows | |
 | P3 model + InitialSchema | done | green | clean | 337 passed / 0 failed (Domain 118) on postgres:18 | migration Up/Down/Up checked by hand; `has-pending-model-changes`: none |
 | P4 auth | done | green | clean | 377 passed / 0 failed | donor OTP + sessions, staff password/TOTP/forced change, staff admin |
-| P5 catalogue | pending | | | | |
+| P5 catalogue | done | green | clean | 403 passed / 0 failed | public catalogue, admin categories/projects/options, media, ETag/output cache, site rebuild |
 | P6 donations | pending | | | | |
 | P7 admin ops | pending | | | | |
 | P8 hardening | pending | | | | |
@@ -75,6 +75,18 @@ Lines marked **REVIEW** are not covered by the specs (or deviate from them) and 
 - P4: package `Microsoft.Extensions.Caching.Memory` 10.0.13 added for the `IUsedTokenStore` (owner R-6).
 - **REVIEW** `notification` rows are claimed as `failed` (= not delivered yet) before the provider call and set to `sent`
   after it; the ERD allows only `sent | failed`, so there is no `queued` state.
+- P5: an old slug answers `200 { "redirectTo": "<slug>" }` (the web site does the 301); it stays reserved for every project.
+- P5: `GET /v1/catalog/projects?fields=slug` lists every published slug (no paging); any other `fields` value is 400.
+- P5: the output cache varies by `q, category, sort, page, pageSize, fields` only; any other query key shares the entry.
+  Every admin write to a category, project, option, media alt text or setting evicts the `catalog` tag.
+- **REVIEW** P5 site-rebuild debounce: a handled `CatalogChanged` absorbs the pending rows no dispatcher has claimed, and
+  only the newest change (by occurred_at, id) triggers `repository_dispatch`; older ones finish without a call. A claimed
+  row (in flight on another instance) is never absorbed. Without `Store:SiteRebuild:Token` the trigger logs (Information)
+  and the message is done; Production refuses to start without `Store:SiteRebuild:Token` and `:Repository` (R-9).
+- P5: `GlobalExceptionHandler` maps races that pass the handlers' checks: `DbUpdateConcurrencyException` → 409
+  `concurrency.conflict`, 23505 → 409 `db.duplicate`, 23503 → 422 `db.reference_missing`.
+- P5: "options used in an order are deactivated, not deleted" is covered by the domain tests now and gets its API test in
+  P6 (it needs an order).
 
 ## Owner review (plan v3)
 

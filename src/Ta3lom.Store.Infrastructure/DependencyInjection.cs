@@ -24,6 +24,7 @@ using Ta3lom.Store.Infrastructure.Services.Operations;
 using Ta3lom.Store.Infrastructure.Services.Outbox;
 using Ta3lom.Store.Infrastructure.Services.Security;
 using Ta3lom.Store.Infrastructure.Services.Settings;
+using Ta3lom.Store.Infrastructure.Services.SiteRebuild;
 using Ta3lom.Store.Infrastructure.Services.Sms;
 using Ta3lom.Store.Infrastructure.Services.Templates;
 using Ta3lom.Store.Infrastructure.Services.Time;
@@ -97,6 +98,9 @@ public static class DependencyInjection
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IStaffUserRepository, StaffUserRepository>();
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<IProjectRepository, ProjectRepository>();
+        services.AddScoped<ICatalogSearch, Services.Catalog.CatalogSearch>();
         services.AddScoped<IOperationsStatus, OperationsStatus>();
         services.AddScoped<IOperationsMaintenance, OperationsMaintenance>();
     }
@@ -154,6 +158,11 @@ public static class DependencyInjection
         services.AddSingleton<OutboxSignal>();
         services.AddSingleton<OutboxDispatcher>();
         services.AddHostedService(sp => sp.GetRequiredService<OutboxDispatcher>());
+
+        services.AddOptions<SiteRebuildOptions>().BindConfiguration(SiteRebuildOptions.Section).ValidateOnStart();
+        services.AddSingleton<IValidateOptions<SiteRebuildOptions>, SiteRebuildOptionsValidator>();
+        services.AddHttpClient<ISiteRebuildTrigger, GitHubSiteRebuildTrigger>(c => c.Timeout = TimeSpan.FromSeconds(10));
+        services.AddScoped<ICatalogChangeDebounce, CatalogChangeDebounce>();
 
         services.AddSingleton<StoreSettingsProvider>();
         services.AddSingleton<IStoreSettings>(sp => sp.GetRequiredService<StoreSettingsProvider>());

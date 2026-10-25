@@ -1,0 +1,201 @@
+using System.Net;
+using System.Text.Json;
+using Ta3lom.Store.Api.IntegrationTests.Infrastructure;
+using Ta3lom.Store.Api.IntegrationTests.Infrastructure.Scenario;
+using Ta3lom.Store.Domain.Constants;
+using Ta3lom.Store.Domain.Errors;
+
+namespace Ta3lom.Store.Api.IntegrationTests.Catalog;
+
+/// `/v1/catalog/*` (BR-A06): anonymous, filtered in SQL, cached with an ETag.
+public sealed class PublicCatalogTests(ScenarioFactory factory) : IClassFixture<ScenarioFactory>
+{
+    private async Task<(ActorClient Admin, CatalogBuilder Build)> AdminAsync()
+    {
+        var admin = await factory.StaffAsync(Roles.Admin);
+        return (admin, new CatalogBuilder(admin));
+    }
+
+    private async Task<(HttpResponseMessage Response, JsonElement Body)> GetAsync(string path, string? ifNoneMatch = null)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, path);
+        if (ifNoneMatch is not null)
+        {
+            request.Headers.TryAddWithoutValidation("If-None-Match", ifNoneMatch);
+        }
+
+        var response = await factory.Anonymous().SendAsync(request, TestContext.Current.CancellationToken);
+        var text = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        return (response, text.Length > 0 ? JsonDocument.Parse(text).RootElement.Clone() : default);
+    }
+
+    private static List<string> Slugs(JsonElement page) => [.. page.GetProperty("items").EnumerateArray().Select(i => i.Str("slug"))];
+
+    [Fact]
+    [Rule("D-05")]
+    [Rule("D-07")]
+    public async Task Only_published_projects_of_active_categories_are_listed()
+    {
+        var (admin, build) = await AdminAsync();
+        var category = await build.CategoryAsync();
+        var categoryId = Guid.Parse(category.Str("id"));
+        var published = await build.PublishAsync(await build.DraftAsync(categoryId));
+        var draft = await build.DraftAsync(categoryId);
+        var listing = $"/v1/catalog/projects?category={category.Str("slug")}";
+
+        var page = (await GetAsync(listing)).Body;
+        Slugs(page).ShouldBe([published.Str("slug")]);
+        page.GetProperty("items")[0].Str("minAmount").ShouldBe("10.00");
+        (await GetAsync($"/v1/catalog/projects/{draft.Str("slug")}")).Response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+
+        (await admin.PostAsync($"/v1/admin/projects/{published.Str("id")}/archive")).Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        Slugs((await GetAsync(listing)).Body).ShouldBeEmpty();
+        (await GetAsync($"/v1/catalog/projects/{published.Str("slug")}")).Response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+
+        (await admin.PostAsync($"/v1/admin/projects/{published.Str("id")}/publish")).Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        Slugs((await GetAsync(listing)).Body).ShouldBe([published.Str("slug")]);
+
+        var off = await admin.SendAsync(HttpMethod.Put, $"/v1/admin/categories/{categoryId}",
+            CatalogBuilder.CategoryBody(category.Str("slug"), isActive: false, version: category.GetProperty("version").GetUInt32()));
+        off.Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        Slugs((await GetAsync(listing)).Body).ShouldBeEmpty();
+        (await GetAsync($"/v1/catalog/projects/{published.Str("slug")}")).Response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await GetAsync("/v1/catalog/categories")).Body.EnumerateArray().Select(c => c.Str("slug")).ShouldNotContain(category.Str("slug"));
+    }
+
+    [Fact]
+    public async Task A_project_page_shows_its_active_options_and_category()
+    {
+        var (_, build) = await AdminAsync();
+        var category = await build.CategoryAsync();
+        var draft = await build.DraftAsync(Guid.Parse(category.Str("id")), allowOpenAmount: false);
+        draft = await build.OptionsAsync(draft, ("نسخة", "4.00", true), ("خمس نسخ", "20.00", true), ("قديم", "9.00", false));
+        var project = await build.PublishAsync(draft);
+
+        var (response, body) = await GetAsync($"/v1/catalog/projects/{project.Str("slug")}");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        body.Str("status").ShouldBe("published");
+        body.GetProperty("category").Str("slug").ShouldBe(category.Str("slug"));
+        body.GetProperty("options").EnumerateArray().Select(o => o.Str("amount")).ShouldBe(["4.00", "20.00"]);
+        body.Str("coverUrl").ShouldEndWith(".webp");
+        var card = (await GetAsync($"/v1/catalog/projects?category={category.Str("slug")}")).Body.GetProperty("items")[0];
+        card.Str("fromAmount").ShouldBe("4.00");
+        card.GetProperty("allowOpenAmount").GetBoolean().ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task An_unknown_category_is_an_empty_page_and_bad_parameters_are_400()
+    {
+        var (_, build) = await AdminAsync();
+        await build.PublishedAsync();
+
+        var empty = await GetAsync("/v1/catalog/projects?category=no-such-category");
+        empty.Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        empty.Body.GetProperty("total").GetInt32().ShouldBe(0);
+
+        var badSort = await GetAsync("/v1/catalog/projects?sort=price");
+        badSort.Response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        badSort.Body.Str("code").ShouldBe(ErrorCodes.ValidationFailed);
+        (await GetAsync("/v1/catalog/projects?pageSize=1000")).Response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await GetAsync("/v1/catalog/projects?fields=title")).Body.Str("code").ShouldBe(ErrorCodes.ValidationFailed);
+    }
+
+    [Fact]
+    public async Task Fields_slug_lists_every_published_slug_for_prerendering()
+    {
+        var (_, build) = await AdminAsync();
+        var (category, project) = await build.PublishedAsync();
+        var draft = await build.DraftAsync(Guid.Parse(category.Str("id")));
+
+        var (response, body) = await GetAsync("/v1/catalog/projects?fields=slug");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var slugs = body.GetProperty("slugs").EnumerateArray().Select(s => s.GetString()).ToList();
+        slugs.ShouldContain(project.Str("slug"));
+        slugs.ShouldNotContain(draft.Str("slug"));
+    }
+
+    [Fact]
+    public async Task Search_normalises_Arabic_and_treats_LIKE_wildcards_as_text()
+    {
+        var (_, build) = await AdminAsync();
+        var category = await build.CategoryAsync();
+        var categoryId = Guid.Parse(category.Str("id"));
+        var iftar = await build.PublishAsync(await build.DraftAsync(categoryId, titleAr: "إفطار صائم في رمضان"));
+        var percent = await build.PublishAsync(await build.DraftAsync(categoryId, titleAr: "خصم 50% للطلاب", titleEn: "Half_price"));
+        var scope = $"&category={category.Str("slug")}";
+
+        Slugs((await GetAsync($"/v1/catalog/projects?q=افطار{scope}")).Body).ShouldBe([iftar.Str("slug")]);
+        Slugs((await GetAsync($"/v1/catalog/projects?q=%25{scope}")).Body).ShouldBe([percent.Str("slug")]);
+        Slugs((await GetAsync($"/v1/catalog/projects?q=a_f{scope}")).Body).ShouldBeEmpty();
+        Slugs((await GetAsync($"/v1/catalog/projects?q=Half_price{scope}")).Body).ShouldBe([percent.Str("slug")]);
+    }
+
+    [Fact]
+    [Rule("D-08")]
+    public async Task An_old_slug_of_a_published_project_redirects_and_stays_reserved()
+    {
+        var (admin, build) = await AdminAsync();
+        var (category, project) = await build.PublishedAsync();
+        var oldSlug = project.Str("slug");
+        var newSlug = CatalogBuilder.NewSlug("renamed");
+
+        var renamed = await admin.SendAsync(HttpMethod.Put, $"/v1/admin/projects/{project.Str("id")}",
+            CatalogBuilder.ProjectBody(Guid.Parse(category.Str("id")), newSlug, cover: Guid.Parse(project.Str("coverAssetId")),
+                version: project.GetProperty("version").GetUInt32()));
+        renamed.Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        renamed.Body.GetProperty("oldSlugs").EnumerateArray().Select(s => s.GetString()).ShouldBe([oldSlug]);
+
+        var redirect = await GetAsync($"/v1/catalog/projects/{oldSlug}");
+        redirect.Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        redirect.Body.Str("redirectTo").ShouldBe(newSlug);
+        (await GetAsync($"/v1/catalog/projects/{newSlug}")).Body.Str("slug").ShouldBe(newSlug);
+
+        var taken = await admin.PostAsync("/v1/admin/projects", CatalogBuilder.ProjectBody(Guid.Parse(category.Str("id")), oldSlug));
+        taken.Response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        taken.Body.Str("code").ShouldBe(ErrorCodes.ProjectSlugTaken);
+        var invalid = await admin.PostAsync("/v1/admin/projects", CatalogBuilder.ProjectBody(Guid.Parse(category.Str("id")), "Bad Slug"));
+        invalid.Response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        invalid.Body.GetProperty("errors").EnumerateObject().Select(p => p.Name).ShouldContain("slug");
+    }
+
+    [Fact]
+    public async Task Home_categories_and_config_describe_the_catalogue()
+    {
+        var (_, build) = await AdminAsync();
+        var (category, project) = await build.PublishedAsync();
+
+        var home = (await GetAsync("/v1/catalog/home")).Body;
+        home.GetProperty("featured").GetArrayLength().ShouldBeGreaterThan(0);
+        home.GetProperty("amountPresets").GetArrayLength().ShouldBeGreaterThan(0);
+        var summary = (await GetAsync("/v1/catalog/categories")).Body.EnumerateArray().Single(c => c.Str("slug") == category.Str("slug"));
+        summary.GetProperty("projectCount").GetInt32().ShouldBe(1);
+
+        var config = (await GetAsync("/v1/catalog/config")).Body;
+        config.Str("minGiftAmount").ShouldBe("10.00");
+        config.Str("maxLineAmount").ShouldBe("100000.00");
+        config.GetProperty("cartMaxLines").GetInt32().ShouldBe(50);
+        project.Str("status").ShouldBe("published");
+    }
+
+    [Fact]
+    public async Task Responses_carry_an_ETag_answer_304_and_are_evicted_by_a_catalogue_write()
+    {
+        var (_, build) = await AdminAsync();
+        var first = await GetAsync("/v1/catalog/categories");
+        first.Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var etag = first.Response.Headers.ETag!.ToString();
+        first.Response.Headers.CacheControl!.ToString().ShouldContain("max-age=60");
+
+        (await GetAsync("/v1/catalog/categories", etag)).Response.StatusCode.ShouldBe(HttpStatusCode.NotModified);
+        (await GetAsync("/v1/catalog/categories?junk=1")).Response.Headers.ETag!.ToString().ShouldBe(etag);
+
+        var category = await build.CategoryAsync();
+
+        var after = await GetAsync("/v1/catalog/categories", etag);
+        after.Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        after.Response.Headers.ETag!.ToString().ShouldNotBe(etag);
+        after.Body.EnumerateArray().Select(c => c.Str("slug")).ShouldContain(category.Str("slug"));
+    }
+}

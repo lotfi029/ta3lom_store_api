@@ -87,9 +87,24 @@ public sealed class RateLimitedApiFactory : ProbeApiFactory
 }
 
 /// Production environment: appsettings.Production.json, no /docs, HSTS on.
-public sealed class ProductionApiFactory : StoreApiFactory
+public class ProductionApiFactory : StoreApiFactory
 {
     protected override string EnvironmentName => "Production";
+
+    /// Production also requires the site-rebuild settings (a throw-away token; the outbox is off, nothing is dispatched).
+    protected override IReadOnlyDictionary<string, string?> Settings => new Dictionary<string, string?>(base.Settings)
+    {
+        ["Store:SiteRebuild:Repository"] = "example/web",
+        ["Store:SiteRebuild:Token"] = "test-token-not-real",
+        ["Store:Outbox:Enabled"] = "false",
+    };
+}
+
+/// Production without `Store:SiteRebuild`: must refuse to start.
+public sealed class ProductionWithoutRebuildFactory : ProductionApiFactory
+{
+    protected override IReadOnlyDictionary<string, string?> Settings =>
+        base.Settings.Where(s => !s.Key.StartsWith("Store:SiteRebuild", StringComparison.Ordinal)).ToDictionary();
 }
 
 /// Development environment: `/dev` and OpenAPI are mapped, DEV ONLY keys are accepted.

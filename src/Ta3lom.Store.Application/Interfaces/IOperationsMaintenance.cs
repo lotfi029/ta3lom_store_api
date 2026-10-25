@@ -24,3 +24,12 @@ public interface ISiteRebuildTrigger
 {
     Task<bool> TriggerAsync(string reason, CancellationToken ct = default);
 }
+
+/// Debounce of the site rebuild. Pending `CatalogChanged` rows that no dispatcher has claimed are absorbed (marked processed)
+/// by the one being handled; a claimed row (in flight here or elsewhere) is never touched. Only the newest pending change
+/// triggers: an older one is done when a newer one exists (pending or handled), since that one rebuilds after it.
+public interface ICatalogChangeDebounce
+{
+    /// True when this message should trigger the rebuild.
+    Task<bool> AbsorbAsync(Guid handledId, DateTimeOffset now, CancellationToken ct = default);
+}
