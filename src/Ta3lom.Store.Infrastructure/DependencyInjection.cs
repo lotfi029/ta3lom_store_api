@@ -70,6 +70,7 @@ public static class DependencyInjection
             .Configure<IConfiguration>((o, c) => o.ConnectionString = c.GetConnectionString(ConnectionStringName) ?? string.Empty)
             .Validate(o => !string.IsNullOrWhiteSpace(o.ConnectionString), $"ConnectionStrings:{ConnectionStringName} is required")
             .ValidateOnStart();
+        services.AddSingleton<IValidateOptions<DatabaseOptions>, DatabaseSearchPathValidator>();
 
         services.AddScoped<AuditSaveChangesInterceptor>();
         services.AddScoped<OutboxSaveChangesInterceptor>();
@@ -200,4 +201,41 @@ public static class DependencyInjection
 public sealed class DatabaseOptions
 {
     public string ConnectionString { get; set; } = string.Empty;
+}
+
+/// A-4: the extensions (citext, pg_trgm) live in `public`. A `Search Path` that leaves `public` out breaks citext
+/// comparisons (staff e-mail) and the trigram search: refused outside Development, a warning in Development. No
+/// `Search Path` at all is fine (the server default includes `public`; the tables are schema-qualified).
+internal sealed partial class DatabaseSearchPathValidator(IHostEnvironment environment, ILogger<DatabaseSearchPathValidator> logger)
+    : IValidateOptions<DatabaseOptions>
+{
+    public ValidateOptionsResult Validate(string? name, DatabaseOptions options)
+    {
+        string? searchPath;
+        try
+        {
+            searchPath = new Npgsql.NpgsqlConnectionStringBuilder(options.ConnectionString).SearchPath;
+        }
+        catch (ArgumentException)
+        {
+            return ValidateOptionsResult.Fail("ConnectionStrings:Store is not a valid PostgreSQL connection string");
+        }
+
+        if (string.IsNullOrWhiteSpace(searchPath)
+            || searchPath.Split(',', StringSplitOptions.TrimEntries).Any(s => string.Equals(s.Trim('"'), "public", StringComparison.OrdinalIgnoreCase)))
+        {
+            return ValidateOptionsResult.Success;
+        }
+
+        if (environment.IsDevelopment())
+        {
+            LogSearchPath(logger, searchPath);
+            return ValidateOptionsResult.Success;
+        }
+
+        return ValidateOptionsResult.Fail($"ConnectionStrings:Store Search Path '{searchPath}' must include public (citext, pg_trgm), e.g. Search Path=store,public");
+    }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "ConnectionStrings:Store Search Path {SearchPath} does not include public (citext, pg_trgm live there)")]
+    private static partial void LogSearchPath(ILogger logger, string searchPath);
 }

@@ -241,6 +241,17 @@ public sealed class StaffAuthTests(ScenarioFactory factory) : IClassFixture<Scen
     }
 
     [Fact]
+    public async Task The_email_is_matched_case_insensitively_with_the_store_public_search_path()
+    {
+        new Npgsql.NpgsqlConnectionStringBuilder(factory.DatabaseConnectionString).SearchPath.ShouldBe("store,public");
+        var (_, email, oneTime) = await factory.NewStaffAccountAsync(Roles.Viewer);
+
+        var login = await LoginAsync(char.ToUpperInvariant(email[0]) + email[1..].ToUpperInvariant(), oneTime);
+
+        login.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
     [Rule("D-12")]
     public async Task An_unknown_email_answers_like_a_wrong_password()
     {

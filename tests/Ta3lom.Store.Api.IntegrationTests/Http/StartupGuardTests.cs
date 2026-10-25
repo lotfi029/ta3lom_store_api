@@ -35,6 +35,22 @@ public sealed class StartupGuardTests
     }
 }
 
+/// A-4: citext and pg_trgm live in `public`; a search path without it breaks case-insensitive e-mail lookups.
+public sealed class SearchPathGuardTests
+{
+    [Theory]
+    [InlineData("Production")]
+    [InlineData("Staging")]
+    public void A_search_path_without_public_stops_the_host(string environment)
+    {
+        using var factory = new GuardedProductionFactory("ConnectionStrings:Store", "Host=localhost;Database=store;Username=u;Password=p;Search Path=store", environment);
+
+        var failure = Should.Throw<Exception>(() => factory.CreateClient());
+
+        failure.ToString().ShouldContain("Search Path");
+    }
+}
+
 /// Deny by default: every mapped route states its access — a policy or AllowAnonymous.
 public sealed class EndpointAccessTests(StoreApiFactory factory) : IClassFixture<StoreApiFactory>
 {

@@ -12,6 +12,7 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
 | A-2 | done | Fix A-1, A-2, L-7 | `StaffAuthTests.Five_wrong_passwords_lock_and_a_locked_account_does_not_reveal_whether_the_password_is_right`, `…After_the_lock_runs_out_the_right_password_gets_an_MFA_token` |
 | L-7 | done | Fix A-1, A-2, L-7 | `StaffAuthTests.Changing_the_password_issues_a_clean_session_and_revokes_the_old_family` (wrong current password counted + audited) |
 | A-3 | done | Fix A-3 | `CartTests.Arabic_digits_are_accepted_and_malformed_amounts_are_400_never_500`, `AdminCatalogTests.Admin_money_fields_accept_Arabic_digits_and_refuse_malformed_ones`, `Application.Tests MoneyInputTests` |
+| A-4 | done | Fix A-4 | `SearchPathGuardTests.A_search_path_without_public_stops_the_host`, `StaffAuthTests.The_email_is_matched_case_insensitively_with_the_store_public_search_path` |
 | C-1 | done | Fix C-1 | `SiteRebuildTests.A_newer_change_arriving_while_an_older_one_is_handled_still_rebuilds_once`, `…An_older_change_in_retry_backoff_is_absorbed_by_a_newer_due_one`, `…A_burst_of_five_changes_is_one_rebuild` |
 
 ## Decisions
@@ -38,6 +39,10 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
   rejected, never stripped. Quantities are JSON integers (never parsed from strings), so no change there.
 - **REVIEW** A-3: money settings now also accept `"10"` / `"10.5"` (stored as `"10.00"` / `"10.50"`); before they had to
   have exactly two decimals.
+
+- A-4: README uses `Search Path=store,public`; `DatabaseSearchPathValidator` refuses a search path without `public`
+  outside Development (warning in Development); no search path at all is accepted. The test databases already use
+  `store,public`.
 
 ## Migrations
 
