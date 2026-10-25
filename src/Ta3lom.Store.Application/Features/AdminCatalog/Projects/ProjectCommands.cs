@@ -209,7 +209,8 @@ internal sealed class ReplaceProjectOptionsCommandValidator : AbstractValidator<
     public ReplaceProjectOptionsCommandValidator()
     {
         RuleFor(c => c.Input.Options).NotNull().Must(o => o.Count <= 50).WithMessage("At most 50 options.")
-            .Must(o => o.Select(x => x.LabelAr.Trim()).Distinct(StringComparer.Ordinal).Count() == o.Count).WithMessage("Option labels must be unique.");
+            .Must(o => o.Select(x => x.LabelAr.Trim()).Distinct(StringComparer.Ordinal).Count() == o.Count).WithMessage("Option labels must be unique.")
+            .Must(o => o.Where(x => x.Id is not null).GroupBy(x => x.Id).All(g => g.Count() == 1)).WithMessage("Option ids must be unique.");
         RuleForEach(c => c.Input.Options).ChildRules(o =>
         {
             o.RuleFor(x => x.LabelAr).NotEmpty().Length(2, ProjectOption.LabelMax);

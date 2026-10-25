@@ -105,12 +105,15 @@ public sealed class Project : AggregateRoot
     }
 
     /// Replaces the option list. Options already used in an order are deactivated, not deleted (their order lines keep
-    /// the snapshot). An input without an id that has the label of an existing option reuses that option.
+    /// the snapshot). An input without an id that has the label of an existing option reuses that option, unless another
+    /// input claims that option by id; ids are unique within the list.
     public Result ReplaceOptions(IReadOnlyList<ProjectOptionInput> inputs, IReadOnlySet<Guid> usedInOrders, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(inputs);
         ArgumentNullException.ThrowIfNull(usedInOrders);
         Guard.Against(inputs.Select(i => i.LabelAr.Trim()).Distinct(StringComparer.Ordinal).Count() != inputs.Count, "project.option_label_duplicate");
+        var ids = inputs.Where(i => i.Id is not null).Select(i => i.Id!.Value).ToList();
+        Guard.Against(ids.Distinct().Count() != ids.Count, "project.option_id_duplicate");
 
         if (IsPublished && !AllowOpenAmount && !inputs.Any(i => i.IsActive))
         {
@@ -133,7 +136,7 @@ public sealed class Project : AggregateRoot
         {
             var existing = input.Id is { } id
                 ? _options.FirstOrDefault(o => o.Id == id)
-                : _options.FirstOrDefault(o => string.Equals(o.LabelAr, input.LabelAr.Trim(), StringComparison.Ordinal));
+                : _options.FirstOrDefault(o => !claimed.Contains(o.Id) && string.Equals(o.LabelAr, input.LabelAr.Trim(), StringComparison.Ordinal));   // A-4
             if (existing is null)
             {
                 existing = new ProjectOption(Id, input);
