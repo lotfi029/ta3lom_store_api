@@ -12,7 +12,7 @@ Approved plan: v3 (owner review R-1…R-12 applied).
 | P3 model + InitialSchema | done | green | clean | 337 passed / 0 failed (Domain 118) on postgres:18 | migration Up/Down/Up checked by hand; `has-pending-model-changes`: none |
 | P4 auth | done | green | clean | 377 passed / 0 failed | donor OTP + sessions, staff password/TOTP/forced change, staff admin |
 | P5 catalogue | done | green | clean | 403 passed / 0 failed | public catalogue, admin categories/projects/options, media, ETag/output cache, site rebuild |
-| P6 donations | pending | | | | |
+| P6 donations | done | green | clean | 422 passed / 0 failed | cart + merge, quote, idempotent checkout, order status, /me |
 | P7 admin ops | pending | | | | |
 | P8 hardening | pending | | | | |
 | P9 gates | pending | | | | |
@@ -85,8 +85,28 @@ Lines marked **REVIEW** are not covered by the specs (or deviate from them) and 
   and the message is done; Production refuses to start without `Store:SiteRebuild:Token` and `:Repository` (R-9).
 - P5: `GlobalExceptionHandler` maps races that pass the handlers' checks: `DbUpdateConcurrencyException` → 409
   `concurrency.conflict`, 23505 → 409 `db.duplicate`, 23503 → 422 `db.reference_missing`.
-- P5: "options used in an order are deactivated, not deleted" is covered by the domain tests now and gets its API test in
-  P6 (it needs an order).
+- P5: "options used in an order are deactivated, not deleted" is covered by the domain tests and by an API test in P6.
+- P6: every cart write and the checkout run in one transaction under the cart row lock (`FOR UPDATE`); adding an option
+  that is already in the cart raises the quantity of that line (upsert), backed by `ux_cart_option_line`.
+- P6: the cart is priced from the catalogue on every read (indicative, D-05) and each line lists its problems; the quote
+  is the same pricing (409 `checkout.cart_empty` on an empty cart) and the checkout refuses any problem with 422
+  `checkout.lines_invalid` + `problems[]` (`lineId`, `code`).
+- P6: sign-in merge: guest cart and donor cart are locked (guest first), guest lines move, option lines combine, a line
+  over a limit is dropped; the notices are `cart.merge_combined` / `cart.merge_dropped`; the guest cart is deleted.
+- P6: a guest cart that expired (30 days idle) reads as no cart even before the purge job removes it.
+- **REVIEW** P6: the status token is base64url(HMAC-SHA256(`Store:Tokens:StatusKeyBase64`, reference)); the order keeps its
+  SHA-256. A request without the donor's bearer or the right token gets 404 `order.not_found` (existence is not revealed).
+- **REVIEW** P6: checkout takes name and e-mail from the body or, when absent, from the profile (422
+  `checkout.contact_required` if neither has them) and saves what was confirmed to the profile.
+- P6: checkout answers 201 with `Location: /v1/orders/{reference}/status`; `payment` is always null (R5-Payments).
+- **REVIEW** P6: `OrderPlaced` / `OrderCancelled` are logged (reference and amount, no donor data) and each sends one
+  `staff_alert` e-mail — one per order may be noisy; the owner may prefer a daily digest.
+- P6: D-13: a blocked or anonymised donor gets 403 `auth.account_blocked` on cart writes, checkout, `PATCH /v1/me` and
+  `DELETE /v1/me`; reads (`GET /v1/me`, donations, export) stay open for a blocked donor.
+- P6: `DELETE /v1/me` (D-14) anonymises the donor and the contact snapshot of their orders, deletes the cart, revokes every
+  refresh token, writes `customer.deleted` to the audit log and clears the session and cart cookies.
+- **REVIEW** P6: removing an unused option from a project deletes it, and cart lines pointing at it go with it (ERD:
+  `fk_cart_line_option` cascades); a used option is only deactivated and its cart lines show `cart.option_unavailable`.
 
 ## Owner review (plan v3)
 

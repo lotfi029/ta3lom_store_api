@@ -26,7 +26,11 @@ public static class DependencyInjection
         services.AddHandlerDecorators();
         services.AddMapping();
 
-        services.AddScoped<ICartMergeHook, NoCartMergeHook>();                             // replaced by the donation cart (P6)
+        services.AddScoped<ICartMergeHook, Features.Donations.CartMergeHook>();
+        services.AddScoped<Features.Donations.CartPricer>();
+        services.AddScoped<Features.Donations.CartAccess>();
+        services.AddScoped<Features.Donations.CartWriter>();
+        services.AddScoped<Features.Donations.CartReader>();
         services.AddScoped<Features.Notifications.NotificationDispatch>();
         services.AddScoped<Features.StaffAuth.StaffSessions>();
         services.AddScoped<Features.Catalog.CatalogReader>();

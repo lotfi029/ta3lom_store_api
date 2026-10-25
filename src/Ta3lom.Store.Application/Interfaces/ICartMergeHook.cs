@@ -8,10 +8,3 @@ public interface ICartMergeHook
 
 /// What the merge changed, e.g. `cart.merge_combined` or `cart.merge_dropped` (a line over a limit).
 public sealed record CartMergeNotice(string Code, Guid? LineId);
-
-/// Until the donation cart exists: nothing to merge.
-internal sealed class NoCartMergeHook : ICartMergeHook
-{
-    public Task<IReadOnlyList<CartMergeNotice>> MergeGuestCartAsync(Guid? guestCartId, Guid customerId, CancellationToken ct = default) =>
-        Task.FromResult<IReadOnlyList<CartMergeNotice>>([]);
-}

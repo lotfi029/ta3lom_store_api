@@ -99,6 +99,8 @@ public static class DependencyInjection
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IStaffUserRepository, StaffUserRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<ICartRepository, CartRepository>();
+        services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IProjectRepository, ProjectRepository>();
         services.AddScoped<ICatalogSearch, Services.Catalog.CatalogSearch>();
         services.AddScoped<IOperationsStatus, OperationsStatus>();
@@ -130,6 +132,7 @@ public static class DependencyInjection
         services.AddSingleton<ITotpService, TotpService>();
         services.AddMemoryCache();
         services.AddSingleton<IUsedTokenStore, MemoryUsedTokenStore>();
+        services.AddSingleton<IOrderStatusTokens, OrderStatusTokens>();
         services.AddScoped<IAuditTrail, Services.Auditing.AuditTrail>();
     }
 
