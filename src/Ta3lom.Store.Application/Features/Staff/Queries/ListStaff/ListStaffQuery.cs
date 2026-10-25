@@ -5,7 +5,7 @@ using Ta3lom.Store.Application.DTOs.Staff;
 
 namespace Ta3lom.Store.Application.Features.Staff.Queries.ListStaff;
 
-/// `GET /v1/admin/staff` (#123), ordered by email.
+/// `GET /v1/admin/staff`, ordered by email.
 public sealed record ListStaffQuery : IQuery<IReadOnlyList<StaffUserResponse>>;
 
 internal sealed class ListStaffQueryHandler(IApplicationDbContext db, TypeAdapterConfig mapping)

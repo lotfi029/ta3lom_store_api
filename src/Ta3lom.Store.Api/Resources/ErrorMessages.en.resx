@@ -169,11 +169,41 @@
   <data name="auth.totp_not_enrolled.detail" xml:space="preserve">
     <value>No authenticator app is enrolled for this account yet.</value>
   </data>
+  <data name="auth.totp_already_enrolled" xml:space="preserve">
+    <value>Authenticator already enrolled</value>
+  </data>
+  <data name="auth.totp_already_enrolled.detail" xml:space="preserve">
+    <value>An authenticator is already enrolled; ask an admin to reset it.</value>
+  </data>
+  <data name="auth.password_change_required" xml:space="preserve">
+    <value>Password change required</value>
+  </data>
+  <data name="auth.password_change_required.detail" xml:space="preserve">
+    <value>Change your one-time password first, then try again.</value>
+  </data>
+  <data name="auth.password_weak" xml:space="preserve">
+    <value>Weak password</value>
+  </data>
+  <data name="auth.password_weak.detail" xml:space="preserve">
+    <value>Use at least 12 characters and avoid common passwords.</value>
+  </data>
+  <data name="auth.current_password_invalid" xml:space="preserve">
+    <value>Current password is wrong</value>
+  </data>
+  <data name="auth.current_password_invalid.detail" xml:space="preserve">
+    <value>Enter your current password correctly.</value>
+  </data>
   <data name="staff.email_taken" xml:space="preserve">
     <value>Email already used</value>
   </data>
   <data name="staff.email_taken.detail" xml:space="preserve">
     <value>A staff user with this email already exists.</value>
+  </data>
+  <data name="staff.last_admin" xml:space="preserve">
+    <value>Last admin</value>
+  </data>
+  <data name="staff.last_admin.detail" xml:space="preserve">
+    <value>At least one active admin must remain.</value>
   </data>
   <data name="media.alt_required" xml:space="preserve">
     <value>Alt text required</value>

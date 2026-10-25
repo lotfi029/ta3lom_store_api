@@ -5,7 +5,7 @@ using Ta3lom.Store.Application.DTOs.Staff;
 
 namespace Ta3lom.Store.Application.Features.StaffAuth.Queries.GetStaffMe;
 
-/// `GET /v1/admin/me` (#52).
+/// `GET /v1/admin/me`.
 public sealed record GetStaffMeQuery(Guid StaffId) : IQuery<StaffMeResponse>;
 
 internal sealed class GetStaffMeQueryHandler(IApplicationDbContext db, TypeAdapterConfig mapping) : IQueryHandler<GetStaffMeQuery, StaffMeResponse>

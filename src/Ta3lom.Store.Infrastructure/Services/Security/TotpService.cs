@@ -4,8 +4,9 @@ using Ta3lom.Store.Application.Interfaces;
 
 namespace Ta3lom.Store.Infrastructure.Services.Security;
 
-/// Staff TOTP (RUL-62, 09 §5.8): RFC 6238, 30-second step, verification window ±1 step. The 20-byte secret is
-/// stored Data-Protection-encrypted (purpose `Store.Staff.Totp.v1`) in `staff_user.totp_secret_enc`.
+/// Staff TOTP (D-12): RFC 6238, 30-second step, verification window ±1 step. The 20-byte secret is stored
+/// Data-Protection-encrypted (purpose `Store.Staff.Totp.v1`) in `staff_user.totp_secret_enc`. The matched time step is
+/// returned so the caller can refuse a step that was already used (`totp_last_step`).
 internal sealed class TotpService(IDataProtectionProvider provider) : ITotpService
 {
     public const string Issuer = "ta3lom store";
@@ -20,14 +21,14 @@ internal sealed class TotpService(IDataProtectionProvider provider) : ITotpServi
         return new TotpEnrolment(uri, base32, _protector.Protect(secret));
     }
 
-    public bool Verify(byte[] protectedSecret, string code)
+    public long? VerifyStep(byte[] protectedSecret, string code)
     {
         if (string.IsNullOrWhiteSpace(code))
         {
-            return false;
+            return null;
         }
 
         var totp = new Totp(_protector.Unprotect(protectedSecret));
-        return totp.VerifyTotp(code.Trim(), out _, new VerificationWindow(previous: 1, future: 1));
+        return totp.VerifyTotp(code.Trim(), out var step, new VerificationWindow(previous: 1, future: 1)) ? step : null;
     }
 }

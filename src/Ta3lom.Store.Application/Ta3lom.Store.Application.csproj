@@ -15,6 +15,10 @@
     <PackageReference Include="Scrutor" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Features/StaffAuth/Resources/common-passwords.txt" LogicalName="StaffAuth.common-passwords.txt" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="Ta3lom.Store.Application.Tests" />
+    <InternalsVisibleTo Include="Ta3lom.Store.Api.IntegrationTests" />
   </ItemGroup>
 </Project>

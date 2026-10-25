@@ -10,7 +10,7 @@ Approved plan: v3 (owner review R-1…R-12 applied).
 | P1 clean repo | done | green | clean | not run (old suite references deleted features; P2 replaces it) | |
 | P2 strip | done | green | clean | Domain, Application, Architecture green; integration suite cannot run until P3 (no migration → fixture seed fails), as the plan's P2 gate allows | |
 | P3 model + InitialSchema | done | green | clean | 337 passed / 0 failed (Domain 118) on postgres:18 | migration Up/Down/Up checked by hand; `has-pending-model-changes`: none |
-| P4 auth | pending | | | | |
+| P4 auth | done | green | clean | 377 passed / 0 failed | donor OTP + sessions, staff password/TOTP/forced change, staff admin |
 | P5 catalogue | pending | | | | |
 | P6 donations | pending | | | | |
 | P7 admin ops | pending | | | | |
@@ -60,6 +60,19 @@ Lines marked **REVIEW** are not covered by the specs (or deviate from them) and 
 - P3: deleting a donor also anonymises the contact snapshot on their orders (name, e-mail, mobile); amounts stay (D-14).
 - P3: Development demo projects avoid the words the P9 grep forbids: `print-a-title` (طباعة كتاب), `support-a-daiya`
   (كفالة داعية), `dawah-umrah`, `water-wells`, `iftar-meals`, `learner-support`.
+- P4: the `pwd_change` limit is an authorization requirement on every staff policy; only `POST /v1/admin/auth/password`
+  (its own policy) and logout (cookie only) stay open, and a refused call answers 403 `auth.password_change_required`.
+  `GET /v1/admin/me` is closed too while the change is pending (plan: only password and logout).
+- P4: staff login verifies the password before looking at the lock: a wrong password answers 401 `auth.invalid_credentials`
+  whether the account is locked, unknown or inactive; the right password of a locked account answers 423. Failures while
+  already locked do not extend the lock. Unknown e-mails cost one full PBKDF2 run (`SimulateVerify`), so timing is the same.
+- P4: hashes with fewer than 600,000 iterations (or another PRF) still verify and are rehashed at the next sign-in.
+- **REVIEW** P4: the common-password list (`Application/Features/StaffAuth/Resources/common-passwords.txt`) holds 56 entries
+  of ≥ 12 characters plus a "single repeated character" rule; the owner may want a larger list.
+- P4: a password change (and an admin reset) revokes every refresh family of the member; the change returns a fresh session.
+- P4: a donor refresh token lives at most 30 days inside the 60-day family (expires_at = min(now + 30 d, family end)).
+- P4: the 50 % OTP alert is one `StaffAlert` per Riyadh day (`otp_volume_half_cap`); at the cap requests get 429 until midnight.
+- P4: package `Microsoft.Extensions.Caching.Memory` 10.0.13 added for the `IUsedTokenStore` (owner R-6).
 - **REVIEW** `notification` rows are claimed as `failed` (= not delivered yet) before the provider call and set to `sent`
   after it; the ERD allows only `sent | failed`, so there is no `queued` state.
 

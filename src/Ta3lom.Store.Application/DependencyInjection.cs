@@ -28,6 +28,7 @@ public static class DependencyInjection
 
         services.AddScoped<ICartMergeHook, NoCartMergeHook>();                             // replaced by the donation cart (P6)
         services.AddScoped<Features.Notifications.NotificationDispatch>();
+        services.AddScoped<Features.StaffAuth.StaffSessions>();
         return services;
     }
 

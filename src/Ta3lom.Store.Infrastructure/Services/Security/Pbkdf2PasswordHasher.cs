@@ -4,11 +4,12 @@ using Ta3lom.Store.Application.Interfaces;
 
 namespace Ta3lom.Store.Infrastructure.Services.Security;
 
-/// ASP.NET Core Identity `PasswordHasher` v3 format (09 §5.8), written without the Identity package:
-/// 0x01 | PRF (HMAC-SHA512 = 2) | iterations | salt length | salt (16 bytes) | subkey (32 bytes), base64.
+/// ASP.NET Core Identity `PasswordHasher` v3 format, written without the Identity package (D-12: PBKDF2-SHA512, 600,000
+/// iterations): 0x01 | PRF (HMAC-SHA512 = 2) | iterations | salt length | salt (16 bytes) | subkey (32 bytes), base64.
+/// Hashes made with fewer iterations or another PRF still verify and are reported by <see cref="NeedsRehash"/>.
 internal sealed class Pbkdf2PasswordHasher : IPasswordHasher
 {
-    private const int Iterations = 100_000;
+    public const int Iterations = 600_000;
     private const int SaltLength = 16;
     private const int SubkeyLength = 32;
     private const uint PrfHmacSha512 = 2;
@@ -68,6 +69,26 @@ internal sealed class Pbkdf2PasswordHasher : IPasswordHasher
         var actual = Rfc2898DeriveBytes.Pbkdf2(password, salt.ToArray(), iterations, algorithm, expected.Length);
         return CryptographicOperations.FixedTimeEquals(actual, expected);
     }
+
+    public bool NeedsRehash(string hash)
+    {
+        byte[] decoded;
+        try
+        {
+            decoded = Convert.FromBase64String(hash ?? string.Empty);
+        }
+        catch (FormatException)
+        {
+            return true;
+        }
+
+        return decoded.Length < 13 || decoded[0] != 0x01
+               || BinaryPrimitives.ReadUInt32BigEndian(decoded.AsSpan(1)) != PrfHmacSha512
+               || BinaryPrimitives.ReadUInt32BigEndian(decoded.AsSpan(5)) < Iterations;
+    }
+
+    public void SimulateVerify(string password) =>
+        _ = Rfc2898DeriveBytes.Pbkdf2(password ?? string.Empty, new byte[SaltLength], Iterations, HashAlgorithmName.SHA512, SubkeyLength);
 
     public string GenerateOneTimePassword() => RandomNumberGenerator.GetString(OneTimeAlphabet, 16);
 }

@@ -150,17 +150,29 @@ public class ScenarioFactory : StoreApiFactory
         return new ActorClient(Authorized(token.Token), customer.Id, mobile, null);
     }
 
-    /// A staff member with the given roles (created directly; TOTP is covered by the S-05 tests) and a bearer client.
+    /// A staff member with the given roles (created directly, password already changed; the sign-in flow is covered by the
+    /// staff auth tests) and a bearer client.
     public async Task<ActorClient> StaffAsync(params string[] roles)
     {
         await using var scope = Services.CreateAsyncScope();
         var sp = scope.ServiceProvider;
         var email = $"{string.Join('-', roles).Replace('_', '-')}-{Guid.NewGuid():N}@test.ta3lom.sa";
         var staff = StaffUser.Create(email, "Test " + string.Join(", ", roles), "not-a-hash", roles, Clock.UtcNow);
+        staff.ChangePassword("not-a-hash", Clock.UtcNow);
         sp.GetRequiredService<IGenericRepository<StaffUser>>().Add(staff);
         await sp.GetRequiredService<IUnitOfWork>().SaveChangesAsync(TestContext.Current.CancellationToken);
-        var token = sp.GetRequiredService<IAccessTokenIssuer>().IssueStaff(staff.Id, email, roles);
+        var token = sp.GetRequiredService<IAccessTokenIssuer>().IssueStaff(staff.Id, email, roles, passwordChangeRequired: false);
         return new ActorClient(Authorized(token.Token), staff.Id, null, email);
+    }
+
+    /// A staff member created like the admin app does: a real one-time password that must be changed, no authenticator yet.
+    public async Task<(Guid Id, string Email, string OneTimePassword)> NewStaffAccountAsync(params string[] roles)
+    {
+        var email = $"staff-{Guid.NewGuid():N}@test.ta3lom.sa";
+        var created = await RunAsync<Ta3lom.Store.Application.Features.Staff.Commands.CreateStaff.CreateStaffCommand, Ta3lom.Store.Application.DTOs.Staff.CreateStaffResponse>(
+            new(email, "Staff member", roles.Length == 0 ? ["admin"] : roles));
+        created.IsSuccess.ShouldBeTrue();
+        return (created.Value.Staff.Id, email, created.Value.OneTimePassword);
     }
 
     public HttpClient Anonymous() => CreateClient();

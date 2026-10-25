@@ -1,20 +1,18 @@
-using MapsterMapper;
 using Microsoft.Extensions.Logging;
-using Ta3lom.Store.Application.DTOs.Staff;
 using Ta3lom.Store.Domain.Constants;
 
 namespace Ta3lom.Store.Application.Features.StaffAuth.Commands.RefreshStaffSession;
 
-/// Staff refresh rotation (09 §5.8): same reuse detection as customers; an inactive or locked staff user loses
-/// the whole family. Roles are re-read, so a role change applies at the next refresh (≤ 10 min).
+/// Staff refresh rotation (D-11): same reuse detection as donors, within the 8-hour family. An inactive or locked staff
+/// member loses the whole family. Roles and the `pwd_change` claim are re-read, so a change applies at the next refresh.
 public sealed record RefreshStaffSessionCommand(string? RefreshToken, string? UserAgent) : ICommand<StaffSession>;
 
 internal sealed partial class RefreshStaffSessionCommandHandler(
     IRefreshTokenRepository refreshTokens,
     IStaffUserRepository staff,
     IRefreshTokenCodec codec,
-    IAccessTokenIssuer issuer,
-    IMapper mapper,
+    StaffSessions sessions,
+    IAuditTrail audit,
     IUnitOfWork uow,
     IClock clock,
     ILogger<RefreshStaffSessionCommandHandler> logger) : ICommandHandler<RefreshStaffSessionCommand, StaffSession>
@@ -27,50 +25,44 @@ internal sealed partial class RefreshStaffSessionCommandHandler(
         }
 
         var hash = codec.Hash(command.RefreshToken);
-        return await uow.ExecuteInTransactionAsync(
-            async token =>
+        return await uow.ExecuteInTransactionAsync(token => RotateAsync(hash, command.UserAgent, token), commitOnFailure: true, ct);
+    }
+
+    private async Task<Result<StaffSession>> RotateAsync(string hash, string? userAgent, CancellationToken ct)
+    {
+        var now = clock.UtcNow;
+        var current = await refreshTokens.FindByHashForUpdateAsync(hash, ct);
+        if (current is null || current.SubjectType != TokenSubjectType.Staff)
+        {
+            return AuthErrors.RefreshInvalid;
+        }
+
+        if (current.RevokedAt is { } revokedAt)
+        {
+            if (current.ReplacedBy is not null && now - revokedAt < SessionPolicy.RefreshRaceGrace)
             {
-                var now = clock.UtcNow;
-                var current = await refreshTokens.FindByHashForUpdateAsync(hash, token);
-                if (current is null || current.SubjectType != TokenSubjectType.Staff)
-                {
-                    return Result.Failure<StaffSession>(AuthErrors.RefreshInvalid);
-                }
+                return AuthErrors.RefreshRace;
+            }
 
-                if (current.RevokedAt is { } revokedAt)
-                {
-                    if (current.ReplacedBy is not null && now - revokedAt < SessionPolicy.RefreshRaceGrace)
-                    {
-                        return Result.Failure<StaffSession>(AuthErrors.RefreshRace);
-                    }
+            await refreshTokens.RevokeFamilyAsync(current.FamilyId, now, ct);
+            audit.Record(AuditActions.TokenReuseDetected, "refresh_token", current.FamilyId.ToString(), $"staff:{current.SubjectId}");
+            LogReuse(logger, current.FamilyId);
+            return AuthErrors.RefreshReused;
+        }
 
-                    await refreshTokens.RevokeFamilyAsync(current.FamilyId, now, token);
-                    LogReuse(logger, current.FamilyId);
-                    return Result.Failure<StaffSession>(AuthErrors.RefreshReused);
-                }
+        if (current.IsExpired(now))
+        {
+            return AuthErrors.RefreshExpired;
+        }
 
-                if (current.ExpiresAt <= now)
-                {
-                    return Result.Failure<StaffSession>(AuthErrors.RefreshExpired);
-                }
+        var user = await staff.GetByIdAsync(current.SubjectId, ct);
+        if (user is null || !user.IsActive || user.IsLocked(now))
+        {
+            await refreshTokens.RevokeFamilyAsync(current.FamilyId, now, ct);
+            return AuthErrors.RefreshInvalid;
+        }
 
-                var user = await staff.GetByIdAsync(current.SubjectId, token);
-                if (user is null || !user.IsActive || user.IsLocked(now))
-                {
-                    await refreshTokens.RevokeFamilyAsync(current.FamilyId, now, token);
-                    return Result.Failure<StaffSession>(AuthErrors.RefreshInvalid);
-                }
-
-                var (raw, nextHash) = codec.Create();
-                var expiresAt = now + SessionPolicy.StaffFamilyLifetime;
-                var next = current.Rotate(nextHash, SessionPolicy.StaffFamilyLifetime, command.UserAgent, now);
-                refreshTokens.Add(next);
-
-                var access = issuer.IssueStaff(user.Id, user.Email, user.Roles);
-                return Result.Success(new StaffSession(new StaffSessionResponse(access.Token, access.ExpiresInSeconds, mapper.Map<StaffMeResponse>(user)), raw, expiresAt));
-            },
-            commitOnFailure: true,
-            ct);
+        return sessions.Rotate(user, current, userAgent, now);
     }
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Staff refresh token reuse detected; family {FamilyId} revoked")]

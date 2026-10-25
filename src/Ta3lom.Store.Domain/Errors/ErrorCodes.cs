@@ -37,7 +37,12 @@ public static class ErrorCodes
     public const string TotpRequired = "auth.totp_required";
     public const string TotpInvalid = "auth.totp_invalid";
     public const string TotpNotEnrolled = "auth.totp_not_enrolled";
+    public const string TotpAlreadyEnrolled = "auth.totp_already_enrolled";
+    public const string PasswordChangeRequired = "auth.password_change_required";
+    public const string PasswordWeak = "auth.password_weak";
+    public const string CurrentPasswordInvalid = "auth.current_password_invalid";
     public const string StaffEmailTaken = "staff.email_taken";
+    public const string StaffLastAdmin = "staff.last_admin";
 
     // Media and settings
     public const string MediaAltRequired = "media.alt_required";

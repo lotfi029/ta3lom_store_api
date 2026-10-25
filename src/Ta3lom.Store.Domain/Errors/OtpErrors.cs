@@ -1,6 +1,6 @@
 namespace Ta3lom.Store.Domain.Errors;
 
-/// Customer OTP sign-in (RUL-60, 11 §4).
+/// Donor OTP sign-in (BR-A09, D-10).
 public static class OtpErrors
 {
     public static Error MobileInvalid => Error.BadRequest(ErrorCodes.OtpMobileInvalid, "Not a Saudi mobile number.");

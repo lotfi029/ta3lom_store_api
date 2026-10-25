@@ -169,11 +169,41 @@
   <data name="auth.totp_not_enrolled.detail" xml:space="preserve">
     <value>لم يُفعَّل تطبيق المصادقة لهذا الحساب بعد.</value>
   </data>
+  <data name="auth.totp_already_enrolled" xml:space="preserve">
+    <value>تم تفعيل المصادقة مسبقًا</value>
+  </data>
+  <data name="auth.totp_already_enrolled.detail" xml:space="preserve">
+    <value>يوجد تطبيق مصادقة مفعّل؛ اطلب من المسؤول إعادة ضبطه.</value>
+  </data>
+  <data name="auth.password_change_required" xml:space="preserve">
+    <value>يلزم تغيير كلمة المرور</value>
+  </data>
+  <data name="auth.password_change_required.detail" xml:space="preserve">
+    <value>غيّر كلمة المرور المؤقتة أولًا ثم أعد المحاولة.</value>
+  </data>
+  <data name="auth.password_weak" xml:space="preserve">
+    <value>كلمة المرور ضعيفة</value>
+  </data>
+  <data name="auth.password_weak.detail" xml:space="preserve">
+    <value>استخدم 12 حرفًا على الأقل وتجنّب كلمات المرور الشائعة.</value>
+  </data>
+  <data name="auth.current_password_invalid" xml:space="preserve">
+    <value>كلمة المرور الحالية غير صحيحة</value>
+  </data>
+  <data name="auth.current_password_invalid.detail" xml:space="preserve">
+    <value>أدخل كلمة المرور الحالية الصحيحة.</value>
+  </data>
   <data name="staff.email_taken" xml:space="preserve">
     <value>البريد مستخدم</value>
   </data>
   <data name="staff.email_taken.detail" xml:space="preserve">
     <value>يوجد موظف بهذا البريد الإلكتروني.</value>
+  </data>
+  <data name="staff.last_admin" xml:space="preserve">
+    <value>لا يمكن إزالة آخر مسؤول</value>
+  </data>
+  <data name="staff.last_admin.detail" xml:space="preserve">
+    <value>يجب أن يبقى مسؤول نشط واحد على الأقل.</value>
   </data>
   <data name="media.alt_required" xml:space="preserve">
     <value>النص البديل مطلوب</value>

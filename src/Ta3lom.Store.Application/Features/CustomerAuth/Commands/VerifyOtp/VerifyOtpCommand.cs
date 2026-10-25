@@ -1,12 +1,12 @@
-using MapsterMapper;
+using FluentValidation;
 using Ta3lom.Store.Application.DTOs.CustomerAuth;
 using Ta3lom.Store.Domain.Constants;
 using Ta3lom.Store.Domain.Entities.Identity;
 
 namespace Ta3lom.Store.Application.Features.CustomerAuth.Commands.VerifyOtp;
 
-/// RUL-60/61 (09 §5.7): verifies the newest open code (row lock), creates the customer on first login,
-/// refuses a blocked customer, merges the guest cart (RUL-17 hook) and opens a session (09 §5.8).
+/// BR-A09 / D-10: verifies the newest open code (row lock), creates the donor on the first sign-in with the PDPL consent
+/// (D-14), refuses a blocked donor (D-13), merges the guest cart (BR-A07) and starts a refresh-token family (D-11).
 public sealed record VerifyOtpCommand(string Mobile, string Code, Guid? GuestCartId, string? UserAgent) : ICommand<CustomerSession>;
 
 internal sealed class VerifyOtpCommandHandler(
@@ -17,7 +17,6 @@ internal sealed class VerifyOtpCommandHandler(
     IRefreshTokenCodec codec,
     IAccessTokenIssuer issuer,
     ICartMergeHook cartMerge,
-    IMapper mapper,
     IUnitOfWork uow,
     IClock clock) : ICommandHandler<VerifyOtpCommand, CustomerSession>
 {
@@ -29,63 +28,70 @@ internal sealed class VerifyOtpCommandHandler(
         }
 
         // A wrong code must still persist attempts + 1, so this unit of work commits on failure.
-        return await uow.ExecuteInTransactionAsync(
-            async token =>
-            {
-                var now = clock.UtcNow;
-                var challenge = await otps.LatestOpenForUpdateAsync(mobile, OtpPurpose.Login, token);
-                if (challenge is null || !challenge.IsOpen(now))
-                {
-                    return Result.Failure<CustomerSession>(OtpErrors.Expired);
-                }
+        return await uow.ExecuteInTransactionAsync(token => VerifyAsync(command, mobile, token), commitOnFailure: true, ct);
+    }
 
-                if (challenge.IsExhausted)
-                {
-                    return Result.Failure<CustomerSession>(OtpErrors.TooManyAttempts);
-                }
+    private async Task<Result<CustomerSession>> VerifyAsync(VerifyOtpCommand command, string mobile, CancellationToken ct)
+    {
+        var now = clock.UtcNow;
+        var challenge = await otps.LatestOpenForUpdateAsync(mobile, OtpPurpose.Login, ct);
+        if (challenge is null || !challenge.IsOpen(now))
+        {
+            return OtpErrors.Expired;
+        }
 
-                if (!hasher.Matches(challenge.Id, challenge.Mobile, challenge.CodeHash, command.Code))
-                {
-                    challenge.RecordFailure();
-                    return Result.Failure<CustomerSession>(challenge.IsExhausted ? OtpErrors.TooManyAttempts : OtpErrors.Invalid(challenge.AttemptsLeft));
-                }
+        if (challenge.IsExhausted)
+        {
+            return OtpErrors.TooManyAttempts;
+        }
 
-                challenge.Consume(now);
+        if (!hasher.Matches(challenge.Id, challenge.Mobile, challenge.CodeHash, command.Code))
+        {
+            challenge.RecordFailure();
+            return challenge.IsExhausted ? OtpErrors.TooManyAttempts : OtpErrors.Invalid(challenge.AttemptsLeft);
+        }
 
-                var customer = await customers.FindByMobileAsync(mobile, token);
-                if (customer is { IsAnonymised: true })
-                {
-                    customer.ReleaseMobile(now);                                                // a deleted account never signs in again (RUL-61)
-                    await uow.SaveChangesAsync(token);
-                    customer = null;
-                }
+        challenge.Consume(now);
+        var customer = await customers.FindByMobileAsync(mobile, ct);
+        if (customer is { IsAnonymised: true })
+        {
+            customer.ReleaseMobile(now);                         // a deleted account never signs in again; the number starts over
+            await uow.SaveChangesAsync(ct);
+            customer = null;
+        }
 
-                var isNew = customer is null;
-                if (customer is null)
-                {
-                    customer = Customer.RegisterOnFirstLogin(mobile, now);
-                    customers.Add(customer);
-                }
+        var isNew = customer is null;
+        if (customer is null)
+        {
+            customer = Customer.RegisterOnFirstLogin(mobile, now);
+            customers.Add(customer);
+        }
 
-                if (customer.IsBlocked)
-                {
-                    return Result.Failure<CustomerSession>(AuthErrors.AccountBlocked);                // RUL-61
-                }
+        if (!customer.IsActive)
+        {
+            return AuthErrors.AccountBlocked;                    // D-13; the consumed code still commits
+        }
 
-                customer.RecordLogin(now);
-                var notices = await cartMerge.MergeGuestCartAsync(command.GuestCartId, customer.Id, token);   // RUL-17
+        customer.RecordLogin(now);
+        await uow.SaveChangesAsync(ct);                          // the donor row exists before the cart merge points at it
+        var notices = await cartMerge.MergeGuestCartAsync(command.GuestCartId, customer.Id, ct);
+        var (raw, hash) = codec.Create();
+        var refresh = RefreshToken.StartFamily(TokenSubjectType.Customer, customer.Id, hash,
+            SessionPolicy.CustomerFamilyLifetime, SessionPolicy.CustomerRefreshLifetime, command.UserAgent, now);
+        refreshTokens.Add(refresh);
+        var access = issuer.IssueCustomer(customer.Id);
+        var profile = new CustomerSessionResponse(customer.Id, customer.Mobile, customer.FullName, customer.Email, customer.Locale, isNew,
+            !string.IsNullOrWhiteSpace(customer.FullName) && !string.IsNullOrWhiteSpace(customer.Email));
+        var body = new SessionResponse(access.Token, access.ExpiresInSeconds, profile, [.. notices.Select(n => new CartNoticeResponse(n.Code, n.LineId))]);
+        return new CustomerSession(body, raw, refresh.ExpiresAt);
+    }
+}
 
-                var (raw, hash) = codec.Create();
-                var expiresAt = now + SessionPolicy.CustomerRefreshLifetime;
-                refreshTokens.Add(RefreshToken.StartFamily(TokenSubjectType.Customer, customer.Id, hash, SessionPolicy.CustomerFamilyLifetime, SessionPolicy.CustomerRefreshLifetime, command.UserAgent, now));
-
-                var access = issuer.IssueCustomer(customer.Id);
-                var profile = mapper.Map<CustomerSessionResponse>(customer) with { IsNew = isNew };
-                var body = new SessionResponse(access.Token, access.ExpiresInSeconds, profile,
-                    [.. notices.Select(n => new CartNoticeResponse(n.Code, n.LineId))]);
-                return Result.Success(new CustomerSession(body, raw, expiresAt));
-            },
-            commitOnFailure: true,
-            ct);
+internal sealed class VerifyOtpCommandValidator : AbstractValidator<VerifyOtpCommand>
+{
+    public VerifyOtpCommandValidator()
+    {
+        RuleFor(c => c.Mobile).NotEmpty().MaximumLength(20);
+        RuleFor(c => c.Code).NotEmpty().Matches("^[0-9]{6}$").WithMessage("code must be 6 digits.");
     }
 }

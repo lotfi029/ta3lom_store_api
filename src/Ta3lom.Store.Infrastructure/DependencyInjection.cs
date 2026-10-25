@@ -124,6 +124,9 @@ public static class DependencyInjection
         services.AddSingleton<IAccessTokenIssuer, JwtTokenIssuer>();
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
         services.AddSingleton<ITotpService, TotpService>();
+        services.AddMemoryCache();
+        services.AddSingleton<IUsedTokenStore, MemoryUsedTokenStore>();
+        services.AddScoped<IAuditTrail, Services.Auditing.AuditTrail>();
     }
 
     /// SMS (sink unless `Store:Sms:Provider = unifonic`), e-mail (sink unless `Store:Email:Mode = smtp`), templates, outbox, settings.

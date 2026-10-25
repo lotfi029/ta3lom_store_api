@@ -14,6 +14,9 @@ internal sealed class CustomerRepository(StoreDbContext db) : GenericRepository<
 
 internal sealed class OtpChallengeRepository(StoreDbContext db) : GenericRepository<OtpChallenge>(db), IOtpChallengeRepository
 {
+    public Task LockMobileAsync(string mobileE164, CancellationToken ct = default) =>
+        Db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtextextended({"otp:" + mobileE164}, 0))", ct);
+
     public async Task<IReadOnlyList<DateTimeOffset>> IssuedForMobileSinceAsync(string mobileE164, DateTimeOffset since, CancellationToken ct = default) =>
         await Set.AsNoTracking().Where(o => o.Mobile == mobileE164 && o.CreatedAt >= since)
             .OrderBy(o => o.CreatedAt).Select(o => o.CreatedAt).ToListAsync(ct);
@@ -36,9 +39,6 @@ internal sealed class OtpChallengeRepository(StoreDbContext db) : GenericReposit
             """).ToListAsync(ct);
         return rows.SingleOrDefault();
     }
-
-    public Task<int> DeleteCreatedBeforeAsync(DateTimeOffset before, CancellationToken ct = default) =>
-        Set.Where(o => o.CreatedAt < before).ExecuteDeleteAsync(ct);
 }
 
 internal sealed class RefreshTokenRepository(StoreDbContext db) : GenericRepository<RefreshToken>(db), IRefreshTokenRepository
@@ -81,4 +81,9 @@ internal sealed class StaffUserRepository(StoreDbContext db) : GenericRepository
     /// `staff_user.email` is citext: the comparison in SQL is case-insensitive.
     public Task<StaffUser?> FindByEmailAsync(string email, CancellationToken ct = default) =>
         Set.FirstOrDefaultAsync(s => s.Email == email, ct);
+
+    public async Task<IReadOnlyList<Guid>> LockActiveAdminIdsAsync(CancellationToken ct = default) =>
+        await Db.Database.SqlQuery<Guid>($"""
+            SELECT id AS "Value" FROM store.staff_user WHERE is_active AND 'admin' = ANY (roles) ORDER BY id FOR UPDATE
+            """).ToListAsync(ct);
 }
