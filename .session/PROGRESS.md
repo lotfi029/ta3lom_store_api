@@ -11,5 +11,6 @@ A-5 → order.idempotency_key + stale claim (2 min) replays the order; A-7 → I
 | A-3 | done | e65ac1e | StaffAuthTests.A_locked_account_cannot_change_its_password_even_with_the_right_one (423, hash unchanged, not counted, audited reason locked) |
 | L-5 | done | e65ac1e | StaffAuthTests.Enrolling_an_authenticator_is_audited (staff.totp_enrolled) |
 | A-4 | done | f802287 | Domain ProjectTests.An_option_claimed_by_id_is_not_reused_by_label_for_another_input, …Option_ids_in_one_replacement_are_unique; AdminCatalogTests duplicate ids → 400 |
-| A-5 | done | (next) | CheckoutTests.A_claim_left_in_progress_after_the_order_committed_replays_that_order, …A_claim_left_in_progress_before_any_order_lets_the_retry_check_out; migration 20261025180041_OrderIdempotencyKey |
-| L-12 | done | (next) | CheckoutTests.The_stored_replay_… (replay Location = original) |
+| A-5 | done | b656db9 | CheckoutTests.A_claim_left_in_progress_after_the_order_committed_replays_that_order, …A_claim_left_in_progress_before_any_order_lets_the_retry_check_out; migration 20261025180041_OrderIdempotencyKey |
+| L-12 | done | b656db9 | CheckoutTests.The_stored_replay_… (replay Location = original) |
+| A-6 | done | (next) | RefreshTokenRaceTests.Revoking_all_tokens_during_a_rotation_also_revokes_the_successor |

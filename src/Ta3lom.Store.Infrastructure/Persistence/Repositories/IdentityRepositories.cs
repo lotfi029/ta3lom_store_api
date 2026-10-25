@@ -44,10 +44,19 @@ internal sealed class OtpChallengeRepository(StoreDbContext db) : GenericReposit
     }
 }
 
+/// A-6: a rotation and a revoke-all of the same subject serialise on one transaction-scoped advisory lock, so revoke-all
+/// waits for a rotation in flight and its UPDATE then sees the successor (READ COMMITTED gives each statement a new snapshot).
 internal sealed class RefreshTokenRepository(StoreDbContext db) : GenericRepository<RefreshToken>(db), IRefreshTokenRepository
 {
     public async Task<RefreshToken?> FindByHashForUpdateAsync(string tokenHash, CancellationToken ct = default)
     {
+        var subject = await Set.AsNoTracking().Where(t => t.TokenHash == tokenHash).Select(t => new { t.SubjectType, t.SubjectId }).FirstOrDefaultAsync(ct);
+        if (subject is null)
+        {
+            return null;
+        }
+
+        await LockSubjectAsync(subject.SubjectType, subject.SubjectId, ct);
         var rows = await Set.FromSql($"SELECT * FROM store.refresh_token WHERE token_hash = {tokenHash} FOR UPDATE").ToListAsync(ct);
         return rows.SingleOrDefault();
     }
@@ -59,9 +68,31 @@ internal sealed class RefreshTokenRepository(StoreDbContext db) : GenericReposit
         Set.Where(t => t.FamilyId == familyId && t.RevokedAt == null)
             .ExecuteUpdateAsync(u => u.SetProperty(t => t.RevokedAt, now), ct);
 
-    public Task<int> RevokeAllForSubjectAsync(TokenSubjectType subjectType, Guid subjectId, DateTimeOffset now, CancellationToken ct = default) =>
-        Set.Where(t => t.SubjectType == subjectType && t.SubjectId == subjectId && t.RevokedAt == null)
-            .ExecuteUpdateAsync(u => u.SetProperty(t => t.RevokedAt, now), ct);
+    public async Task<int> RevokeAllForSubjectAsync(TokenSubjectType subjectType, Guid subjectId, DateTimeOffset now, CancellationToken ct = default)
+    {
+        if (Db.Database.CurrentTransaction is not null)
+        {
+            return await RevokeLockedAsync();
+        }
+
+        return await Db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+        {
+            await using var tx = await Db.Database.BeginTransactionAsync(ct);
+            var revoked = await RevokeLockedAsync();
+            await tx.CommitAsync(ct);
+            return revoked;
+        });
+
+        async Task<int> RevokeLockedAsync()
+        {
+            await LockSubjectAsync(subjectType, subjectId, ct);
+            return await Set.Where(t => t.SubjectType == subjectType && t.SubjectId == subjectId && t.RevokedAt == null)
+                .ExecuteUpdateAsync(u => u.SetProperty(t => t.RevokedAt, now), ct);
+        }
+    }
+
+    private Task<int> LockSubjectAsync(TokenSubjectType subjectType, Guid subjectId, CancellationToken ct) =>
+        Db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtextextended({"tokens:" + subjectType.ToWire() + ":" + subjectId.ToString("N")}, 0))", ct);
 }
 
 internal sealed class NotificationRepository(StoreDbContext db) : GenericRepository<Notification>(db), INotificationRepository
