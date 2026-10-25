@@ -48,6 +48,19 @@ public sealed class AdminCatalogTests(ScenarioFactory factory) : IClassFixture<S
     }
 
     [Fact]
+    public async Task Reordering_with_a_repeated_category_is_400()
+    {
+        var (admin, build) = await AdminAsync();
+        var category = await build.CategoryAsync();
+        var id = category.Str("id");
+
+        var repeated = await admin.SendAsync(HttpMethod.Put, "/v1/admin/categories/order", new { items = new[] { new { id, sort = 1 }, new { id, sort = 2 } } });
+
+        repeated.Response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        repeated.Body.Str("code").ShouldBe(ErrorCodes.ValidationFailed);
+    }
+
+    [Fact]
     public async Task Category_input_is_validated()
     {
         var (admin, _) = await AdminAsync();

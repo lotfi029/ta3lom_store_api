@@ -27,6 +27,10 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
 | L-13 | done | Fix L-13, L-14, L-15 | `CatalogConsistencyTests.Two_options_swap_their_labels_in_one_save`, `…A_label_kept_by_a_deactivated_option_cannot_be_given_to_another_one` |
 | L-14 | done | Fix L-13, L-14, L-15 | `CatalogConsistencyTests.Alt_text_and_site_visible_settings_queue_a_rebuild` |
 | L-15 | done | Fix L-13, L-14, L-15 | `CatalogConsistencyTests.Money_settings_must_stay_consistent_with_each_other` |
+| L-16 | done | Fix L-16, L-17, L-18, L-19 | `AdminOpsTests.Any_template_that_fails_to_render_is_422_never_500` (6 runtime-error templates) |
+| L-17 | done | Fix L-16, L-17, L-18, L-19 | `AdminOpsTests.Order_detail_and_cancel_find_the_reference_in_any_case` |
+| L-18 | done (already enforced) | Fix L-16, L-17, L-18, L-19 | `AdminCatalogTests.Reordering_with_a_repeated_category_is_400` |
+| L-19 | done (docs) | Fix L-16, L-17, L-18, L-19 | CLAUDE.md: Down never runs in production; newer Downs keep the extensions; `ux_option_label` owned by raw SQL |
 | C-1 | done | Fix C-1 | `SiteRebuildTests.A_newer_change_arriving_while_an_older_one_is_handled_still_rebuilds_once`, `…An_older_change_in_retry_backoff_is_absorbed_by_a_newer_due_one`, `…A_burst_of_five_changes_is_one_rebuild` |
 
 ## Decisions
@@ -101,6 +105,13 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
   `site_name_ar/en` or `support_mobile` enqueues `CatalogChanged("setting", Guid.Empty, key)`.
 - L-15: a setting update is checked with the new value in place: `min_gift_amount ≤ max_line_amount ≤ cart_max_total` and
   every preset ≥ `min_gift_amount`, else 422 `setting.invalid_value`.
+- **REVIEW** L-16: the renderer's `Check` now also catches any non-cancellation exception from the trial render. With
+  Scriban 7.5.0 I found no input that escapes `ScriptRuntimeException` (probed ~30 failing templates), so the regression
+  test covers real runtime-error templates (they answer 422) and the catch-all is a safeguard without a reproducing input.
+- L-17: admin order detail and cancel upper-case the reference before the lookup (the list already did).
+- L-18: the reorder validator already refused repeated ids (400); a test now pins it.
+- L-19: InitialSchema not edited; CLAUDE.md documents that Down is not used in production and newer Downs keep the
+  extensions (both new migrations do).
 - L-3: RequestOtp takes the advisory lock on `hashtextextended('otp-ip:' || ipHash)` before the mobile lock (fixed order).
 - L-4: `ICartRepository.GetOrCreateForCustomerForUpdateAsync`: `INSERT … ON CONFLICT (customer_id) WHERE customer_id IS
   NOT NULL DO NOTHING` (the predicate of `ux_cart_customer`), then lock + load; used by cart writes and the sign-in merge.
