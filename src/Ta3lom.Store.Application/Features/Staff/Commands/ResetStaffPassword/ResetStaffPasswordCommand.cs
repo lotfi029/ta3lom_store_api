@@ -21,7 +21,7 @@ internal sealed class ResetStaffPasswordCommandHandler(
         }
 
         var password = hasher.GenerateOneTimePassword();
-        user.ChangePasswordHash(hasher.Hash(password));
+        user.ResetPassword(hasher.Hash(password), clock.UtcNow);
         await uow.SaveChangesAsync(ct);
         await refreshTokens.RevokeAllForSubjectAsync(TokenSubjectType.Staff, user.Id, clock.UtcNow, ct);
         return new OneTimePasswordResponse(password);

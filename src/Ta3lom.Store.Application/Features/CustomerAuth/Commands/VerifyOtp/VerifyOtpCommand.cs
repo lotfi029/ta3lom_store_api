@@ -77,7 +77,7 @@ internal sealed class VerifyOtpCommandHandler(
 
                 var (raw, hash) = codec.Create();
                 var expiresAt = now + SessionPolicy.CustomerRefreshLifetime;
-                refreshTokens.Add(RefreshToken.Issue(TokenSubjectType.Customer, customer.Id, hash, Guid.CreateVersion7(), expiresAt, command.UserAgent, now));
+                refreshTokens.Add(RefreshToken.StartFamily(TokenSubjectType.Customer, customer.Id, hash, SessionPolicy.CustomerFamilyLifetime, SessionPolicy.CustomerRefreshLifetime, command.UserAgent, now));
 
                 var access = issuer.IssueCustomer(customer.Id);
                 var profile = mapper.Map<CustomerSessionResponse>(customer) with { IsNew = isNew };

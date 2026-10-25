@@ -48,7 +48,7 @@ internal sealed class VerifyTotpCommandHandler(
         user.RecordLogin(now);
         var (raw, hash) = codec.Create();
         var expiresAt = now + SessionPolicy.StaffFamilyLifetime;
-        refreshTokens.Add(RefreshToken.Issue(TokenSubjectType.Staff, user.Id, hash, Guid.CreateVersion7(), expiresAt, command.UserAgent, now));
+        refreshTokens.Add(RefreshToken.StartFamily(TokenSubjectType.Staff, user.Id, hash, SessionPolicy.StaffFamilyLifetime, SessionPolicy.StaffFamilyLifetime, command.UserAgent, now));
         await uow.SaveChangesAsync(ct);
 
         var access = issuer.IssueStaff(user.Id, user.Email, user.Roles);

@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Ta3lom.Store.Application.DTOs.CustomerAuth;
 using Ta3lom.Store.Domain.Constants;
-using Ta3lom.Store.Domain.Entities.Identity;
 
 namespace Ta3lom.Store.Application.Features.CustomerAuth.Commands.RefreshSession;
 
@@ -63,9 +62,8 @@ internal sealed partial class RefreshSessionCommandHandler(
 
                 var (raw, nextHash) = codec.Create();
                 var expiresAt = now + SessionPolicy.CustomerRefreshLifetime;
-                var next = RefreshToken.Issue(TokenSubjectType.Customer, customer.Id, nextHash, current.FamilyId, expiresAt, command.UserAgent, now);
+                var next = current.Rotate(nextHash, SessionPolicy.CustomerRefreshLifetime, command.UserAgent, now);
                 refreshTokens.Add(next);
-                current.Revoke(now, next.Id);
 
                 var access = issuer.IssueCustomer(customer.Id);
                 return Result.Success(new RotatedSession(new AccessTokenResponse(access.Token, access.ExpiresInSeconds), raw, expiresAt));

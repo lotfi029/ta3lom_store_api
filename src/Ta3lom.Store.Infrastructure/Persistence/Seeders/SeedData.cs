@@ -1,7 +1,7 @@
 namespace Ta3lom.Store.Infrastructure.Persistence.Seeders;
 
-/// Reference data every environment needs. The catalogue is not here: Development gets a demo catalogue (P3),
-/// production staff enter theirs.
+/// Reference data every environment needs. The catalogue is not here: Development gets the demo catalogue of
+/// <see cref="DevelopmentCatalogSeeder"/>, production staff enter theirs.
 internal static class SeedData
 {
     /// The settings with their defaults (JSON values; money as "10.00" strings).

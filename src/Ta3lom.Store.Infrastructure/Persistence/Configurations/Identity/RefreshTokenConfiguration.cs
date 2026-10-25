@@ -4,27 +4,23 @@ using Ta3lom.Store.Domain.Entities.Identity;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Identity;
 
-/// `refresh_token` — names, types, defaults and CHECKs match db/reference/001_store_schema.sql (SchemaParityTests).
+/// `refresh_token` (D-11): polymorphic subject (no FK), absolute family expiry.
 internal sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
 {
     public void Configure(EntityTypeBuilder<RefreshToken> e)
     {
         e.ToTable("refresh_token", t =>
         {
-            t.HasCheckConstraint("refresh_token_subject_type_check", "(subject_type = ANY (ARRAY['customer'::text, 'staff'::text]))");
+            t.HasCheckConstraint("ck_refresh_subject", "subject_type IN ('customer', 'staff')");
+            t.HasCheckConstraint("ck_refresh_expiry", "expires_at <= family_expires_at");
         });
-        e.HasKey(x => x.Id).HasName("refresh_token_pkey");
-        e.Property(x => x.Id).HasColumnType("uuid").IsRequired().HasDefaultValueSql("uuidv7()").ValueGeneratedNever();
-        e.Property(x => x.SubjectType).HasColumnType("text").IsRequired().ValueGeneratedNever();
-        e.Property(x => x.SubjectId).HasColumnType("uuid").IsRequired().ValueGeneratedNever();
-        e.Property(x => x.TokenHash).HasColumnType("character(64)").IsRequired().ValueGeneratedNever();
-        e.Property(x => x.FamilyId).HasColumnType("uuid").IsRequired().ValueGeneratedNever();
-        e.Property(x => x.ExpiresAt).HasColumnType("timestamp with time zone").IsRequired().ValueGeneratedNever();
-        e.Property(x => x.RevokedAt).HasColumnType("timestamp with time zone").IsRequired(false).ValueGeneratedNever();
-        e.Property(x => x.ReplacedBy).HasColumnType("uuid").IsRequired(false).ValueGeneratedNever();
-        e.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone").IsRequired().HasDefaultValueSql("now()").ValueGeneratedNever();
-        e.Property(x => x.UserAgent).HasColumnType("text").IsRequired(false).ValueGeneratedNever();
+        e.HasKey(x => x.Id).HasName("pk_refresh_token");
+        e.Property(x => x.Id).ValueGeneratedNever();
+        e.Property(x => x.SubjectType).HasColumnType("text").IsRequired();
+        e.Property(x => x.TokenHash).HasColumnType("character(64)").IsRequired();
+        e.Property(x => x.UserAgent).HasColumnType("text");
+        e.HasIndex(x => x.TokenHash).IsUnique().HasDatabaseName("ux_refresh_token_hash");
         e.HasIndex(x => new { x.SubjectType, x.SubjectId }).HasDatabaseName("ix_refresh_subject");
-        e.HasIndex(x => x.TokenHash).IsUnique().HasDatabaseName("refresh_token_token_hash_key");
+        e.HasIndex(x => x.FamilyId).HasDatabaseName("ix_refresh_family");
     }
 }

@@ -1,14 +1,14 @@
 namespace Ta3lom.Store.Domain.Entities.Notifications;
 
-/// Table `outbox_message` (db/reference/001_store_schema.sql). State only in S-02; behaviour arrives with its session.
+/// Table `outbox_message`: a domain event written in the same transaction as the change that raised it, delivered after
+/// commit. The dispatcher claims rows with a per-row lease (`claimed_until`) and dead-letters after the maximum attempts.
 public sealed class OutboxMessage : Entity
 {
     public OutboxMessage(string type, string payload, DateTimeOffset now) : base(Guid.CreateVersion7())
     {
-        Type = Guard.NotNull(type);
-        Payload = Guard.NotNull(payload);
+        Type = Guard.NotEmpty(type);
+        Payload = Guard.NotEmpty(payload);
         OccurredAt = now;
-        Attempts = 0;
         NextAttemptAt = now;
     }
 
@@ -22,11 +22,16 @@ public sealed class OutboxMessage : Entity
 
     public DateTimeOffset OccurredAt { get; private set; }
 
-    public DateTimeOffset? ProcessedAt { get; private set; }
-
     public int Attempts { get; private set; }
 
     public DateTimeOffset NextAttemptAt { get; private set; }
 
+    /// Lease of the dispatcher that claimed the row; another instance may take it once it has passed.
+    public DateTimeOffset? ClaimedUntil { get; private set; }
+
+    public DateTimeOffset? ProcessedAt { get; private set; }
+
     public string? LastError { get; private set; }
+
+    public bool DeadLettered { get; private set; }
 }

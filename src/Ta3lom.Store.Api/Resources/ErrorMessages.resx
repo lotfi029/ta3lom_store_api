@@ -205,6 +205,132 @@
   <data name="setting.invalid_value.detail" xml:space="preserve">
     <value>القيمة لا تناسب نوع هذا الإعداد.</value>
   </data>
+  <data name="category.not_found" xml:space="preserve">
+    <value>الفئة غير موجودة</value>
+  </data>
+  <data name="category.not_found.detail" xml:space="preserve">
+    <value>لم نجد فئة التبرع المطلوبة.</value>
+  </data>
+  <data name="category.slug_taken" xml:space="preserve">
+    <value>الرابط مستخدم</value>
+  </data>
+  <data name="category.slug_taken.detail" xml:space="preserve">
+    <value>يوجد فئة أخرى بهذا الرابط المختصر.</value>
+  </data>
+  <data name="project.not_found" xml:space="preserve">
+    <value>المشروع غير موجود</value>
+  </data>
+  <data name="project.not_found.detail" xml:space="preserve">
+    <value>لم نجد المشروع المطلوب.</value>
+  </data>
+  <data name="project.slug_taken" xml:space="preserve">
+    <value>الرابط مستخدم</value>
+  </data>
+  <data name="project.slug_taken.detail" xml:space="preserve">
+    <value>يستخدم مشروع آخر هذا الرابط المختصر أو يحتفظ به لإعادة التوجيه.</value>
+  </data>
+  <data name="project.publish_incomplete" xml:space="preserve">
+    <value>المشروع غير مكتمل للنشر</value>
+  </data>
+  <data name="project.publish_incomplete.detail" xml:space="preserve">
+    <value>أكمل الحقول المطلوبة المذكورة في missing ثم أعد النشر.</value>
+  </data>
+  <data name="project.invalid_transition" xml:space="preserve">
+    <value>تغيير الحالة غير مسموح</value>
+  </data>
+  <data name="project.invalid_transition.detail" xml:space="preserve">
+    <value>لا يمكن نقل المشروع من حالته الحالية إلى هذه الحالة.</value>
+  </data>
+  <data name="media.image_required" xml:space="preserve">
+    <value>يلزم اختيار صورة</value>
+  </data>
+  <data name="media.image_required.detail" xml:space="preserve">
+    <value>يجب أن يكون الملف صورة عامة من مكتبة الوسائط.</value>
+  </data>
+  <data name="cart.target_unavailable" xml:space="preserve">
+    <value>لا يقبل التبرع الآن</value>
+  </data>
+  <data name="cart.target_unavailable.detail" xml:space="preserve">
+    <value>المشروع أو الفئة لا يقبل تبرعات جديدة حاليًا.</value>
+  </data>
+  <data name="cart.option_unavailable" xml:space="preserve">
+    <value>خيار التبرع غير متاح</value>
+  </data>
+  <data name="cart.option_unavailable.detail" xml:space="preserve">
+    <value>اختر خيار تبرع متاحًا لهذا المشروع.</value>
+  </data>
+  <data name="cart.open_amount_not_allowed" xml:space="preserve">
+    <value>المبلغ الحر غير متاح</value>
+  </data>
+  <data name="cart.open_amount_not_allowed.detail" xml:space="preserve">
+    <value>هذا المشروع يقبل خيارات التبرع المحددة فقط.</value>
+  </data>
+  <data name="cart.amount_below_minimum" xml:space="preserve">
+    <value>المبلغ أقل من الحد الأدنى</value>
+  </data>
+  <data name="cart.amount_below_minimum.detail" xml:space="preserve">
+    <value>أدخل مبلغًا لا يقل عن الحد الأدنى للتبرع.</value>
+  </data>
+  <data name="cart.amount_above_maximum" xml:space="preserve">
+    <value>المبلغ أعلى من الحد الأقصى</value>
+  </data>
+  <data name="cart.amount_above_maximum.detail" xml:space="preserve">
+    <value>أدخل مبلغًا لا يتجاوز الحد الأقصى للبند الواحد.</value>
+  </data>
+  <data name="cart.quantity_limit" xml:space="preserve">
+    <value>الكمية غير صالحة</value>
+  </data>
+  <data name="cart.quantity_limit.detail" xml:space="preserve">
+    <value>الكمية من 1 إلى 999.</value>
+  </data>
+  <data name="cart.too_many_lines" xml:space="preserve">
+    <value>السلة ممتلئة</value>
+  </data>
+  <data name="cart.too_many_lines.detail" xml:space="preserve">
+    <value>وصلت السلة إلى الحد الأقصى لعدد البنود.</value>
+  </data>
+  <data name="cart.total_exceeded" xml:space="preserve">
+    <value>تجاوز إجمالي السلة</value>
+  </data>
+  <data name="cart.total_exceeded.detail" xml:space="preserve">
+    <value>لا يمكن أن يتجاوز إجمالي السلة الحد المسموح.</value>
+  </data>
+  <data name="cart.line_not_found" xml:space="preserve">
+    <value>البند غير موجود</value>
+  </data>
+  <data name="cart.line_not_found.detail" xml:space="preserve">
+    <value>لم نجد هذا البند في سلتك.</value>
+  </data>
+  <data name="checkout.cart_empty" xml:space="preserve">
+    <value>السلة فارغة</value>
+  </data>
+  <data name="checkout.cart_empty.detail" xml:space="preserve">
+    <value>أضف تبرعًا إلى السلة أولًا.</value>
+  </data>
+  <data name="checkout.lines_invalid" xml:space="preserve">
+    <value>بعض البنود غير متاحة</value>
+  </data>
+  <data name="checkout.lines_invalid.detail" xml:space="preserve">
+    <value>راجع البنود المذكورة في problems ثم أعد المحاولة.</value>
+  </data>
+  <data name="checkout.contact_required" xml:space="preserve">
+    <value>بيانات المتبرع مطلوبة</value>
+  </data>
+  <data name="checkout.contact_required.detail" xml:space="preserve">
+    <value>أدخل الاسم والبريد الإلكتروني لإتمام التبرع.</value>
+  </data>
+  <data name="order.not_found" xml:space="preserve">
+    <value>الطلب غير موجود</value>
+  </data>
+  <data name="order.not_found.detail" xml:space="preserve">
+    <value>لم نجد طلب التبرع المطلوب.</value>
+  </data>
+  <data name="order.cancel_not_allowed" xml:space="preserve">
+    <value>لا يمكن إلغاء الطلب</value>
+  </data>
+  <data name="order.cancel_not_allowed.detail" xml:space="preserve">
+    <value>يمكن إلغاء الطلب فقط وهو بانتظار الدفع.</value>
+  </data>
   <data name="idempotency.key_required" xml:space="preserve">
     <value>مفتاح التكرار مطلوب</value>
   </data>

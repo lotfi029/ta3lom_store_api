@@ -3,10 +3,13 @@ using Microsoft.EntityFrameworkCore.Metadata.Conventions;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Ta3lom.Store.Application.Abstractions.Data;
 using Ta3lom.Store.Domain.Entities.Auditing;
+using Ta3lom.Store.Domain.Entities.Catalog;
+using Ta3lom.Store.Domain.Entities.Donations;
 using Ta3lom.Store.Domain.Entities.Identity;
 using Ta3lom.Store.Domain.Entities.Media;
 using Ta3lom.Store.Domain.Entities.Notifications;
 using Ta3lom.Store.Domain.Entities.Settings;
+using Ta3lom.Store.Domain.ReadModels;
 using Ta3lom.Store.Domain.ValueObjects;
 using Ta3lom.Store.Infrastructure.Persistence.Converters;
 
@@ -19,7 +22,28 @@ public sealed class StoreDbContext(DbContextOptions<StoreDbContext> options) : D
     public const string Schema = "store";
     public const string MigrationsHistoryTable = "__ef_migrations_history";
 
+    public const string OrderReferenceSequence = "order_ref_seq";
+    public const string CatalogStatsView = "v_catalog_stats";
+
     public DbSet<AuditLogEntry> AuditLog => Set<AuditLogEntry>();
+
+    public DbSet<Category> Categories => Set<Category>();
+
+    public DbSet<Project> Projects => Set<Project>();
+
+    public DbSet<ProjectOption> ProjectOptions => Set<ProjectOption>();
+
+    public DbSet<ProjectSlugHistory> ProjectSlugHistory => Set<ProjectSlugHistory>();
+
+    public DbSet<Cart> Carts => Set<Cart>();
+
+    public DbSet<CartLine> CartLines => Set<CartLine>();
+
+    public DbSet<Order> Orders => Set<Order>();
+
+    public DbSet<OrderLine> OrderLines => Set<OrderLine>();
+
+    public DbSet<CatalogStat> CatalogStats => Set<CatalogStat>();
 
     public DbSet<Customer> Customers => Set<Customer>();
 
@@ -42,9 +66,16 @@ public sealed class StoreDbContext(DbContextOptions<StoreDbContext> options) : D
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema(Schema);
-        modelBuilder.HasPostgresExtension("citext");
+        modelBuilder.HasPostgresExtension("citext");               // created in `public` by the migration's raw SQL
         modelBuilder.HasPostgresExtension("pg_trgm");
+        modelBuilder.HasSequence<long>(OrderReferenceSequence).StartsAt(1);       // D-09: T3-YY-NNNNNN
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(StoreDbContext).Assembly);
+
+        // Read model over the view created by raw SQL in the migration. The table mapping is cleared so the default schema
+        // does not leave a nameless table in the model snapshot.
+        var stats = modelBuilder.Entity<CatalogStat>().HasNoKey();
+        stats.ToTable((string?)null);
+        stats.ToView(CatalogStatsView, Schema);
         ApplyEnumConverters(modelBuilder);
     }
 

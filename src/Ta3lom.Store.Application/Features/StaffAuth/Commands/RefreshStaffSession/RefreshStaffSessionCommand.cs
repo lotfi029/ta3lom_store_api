@@ -2,7 +2,6 @@ using MapsterMapper;
 using Microsoft.Extensions.Logging;
 using Ta3lom.Store.Application.DTOs.Staff;
 using Ta3lom.Store.Domain.Constants;
-using Ta3lom.Store.Domain.Entities.Identity;
 
 namespace Ta3lom.Store.Application.Features.StaffAuth.Commands.RefreshStaffSession;
 
@@ -64,9 +63,8 @@ internal sealed partial class RefreshStaffSessionCommandHandler(
 
                 var (raw, nextHash) = codec.Create();
                 var expiresAt = now + SessionPolicy.StaffFamilyLifetime;
-                var next = RefreshToken.Issue(TokenSubjectType.Staff, user.Id, nextHash, current.FamilyId, expiresAt, command.UserAgent, now);
+                var next = current.Rotate(nextHash, SessionPolicy.StaffFamilyLifetime, command.UserAgent, now);
                 refreshTokens.Add(next);
-                current.Revoke(now, next.Id);
 
                 var access = issuer.IssueStaff(user.Id, user.Email, user.Roles);
                 return Result.Success(new StaffSession(new StaffSessionResponse(access.Token, access.ExpiresInSeconds, mapper.Map<StaffMeResponse>(user)), raw, expiresAt));

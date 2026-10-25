@@ -5,9 +5,10 @@ using Microsoft.Extensions.Logging;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Seeders;
 
-/// Runs SeedRunner in the background after start-up (`Store:Seed:RunOnStartup`, default true).
-/// A database outage does not stop the API: readiness reports it and the next start seeds.
-internal sealed partial class SeedHostedService(IServiceScopeFactory scopes, IConfiguration configuration, ILogger<SeedHostedService> logger)
+/// Runs SeedRunner in the background after start-up (`Store:Seed:RunOnStartup`, default true), and in Development also the
+/// demo catalogue. A database outage does not stop the API: readiness reports it and the next start seeds.
+internal sealed partial class SeedHostedService(IServiceScopeFactory scopes, IConfiguration configuration, IHostEnvironment environment,
+    ILogger<SeedHostedService> logger)
     : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -21,6 +22,10 @@ internal sealed partial class SeedHostedService(IServiceScopeFactory scopes, ICo
         {
             await using var scope = scopes.CreateAsyncScope();
             await scope.ServiceProvider.GetRequiredService<SeedRunner>().RunAsync(stoppingToken);
+            if (environment.IsDevelopment())
+            {
+                await scope.ServiceProvider.GetRequiredService<DevelopmentCatalogSeeder>().RunAsync(stoppingToken);
+            }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

@@ -46,6 +46,33 @@ public static class ErrorCodes
     public const string SettingUnknownKey = "setting.unknown_key";
     public const string SettingInvalidValue = "setting.invalid_value";
 
+    // Catalogue
+    public const string CategoryNotFound = "category.not_found";
+    public const string CategorySlugTaken = "category.slug_taken";
+    public const string ProjectNotFound = "project.not_found";
+    public const string ProjectSlugTaken = "project.slug_taken";
+    public const string ProjectPublishIncomplete = "project.publish_incomplete";
+    public const string ProjectInvalidTransition = "project.invalid_transition";
+    public const string MediaImageRequired = "media.image_required";
+
+    // Donation cart (D-01 … D-05)
+    public const string CartTargetUnavailable = "cart.target_unavailable";
+    public const string CartOptionUnavailable = "cart.option_unavailable";
+    public const string CartOpenAmountNotAllowed = "cart.open_amount_not_allowed";
+    public const string CartAmountBelowMinimum = "cart.amount_below_minimum";
+    public const string CartAmountAboveMaximum = "cart.amount_above_maximum";
+    public const string CartQuantityLimit = "cart.quantity_limit";
+    public const string CartTooManyLines = "cart.too_many_lines";
+    public const string CartTotalExceeded = "cart.total_exceeded";
+    public const string CartLineNotFound = "cart.line_not_found";
+
+    // Checkout and orders (D-09)
+    public const string CheckoutCartEmpty = "checkout.cart_empty";
+    public const string CheckoutLinesInvalid = "checkout.lines_invalid";
+    public const string CheckoutContactRequired = "checkout.contact_required";
+    public const string OrderNotFound = "order.not_found";
+    public const string OrderCancelNotAllowed = "order.cancel_not_allowed";
+
     // Idempotency and templates
     public const string IdempotencyKeyRequired = "idempotency.key_required";
     public const string IdempotencyKeyReused = "idempotency.key_reused";

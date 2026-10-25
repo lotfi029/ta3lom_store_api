@@ -205,6 +205,132 @@
   <data name="setting.invalid_value.detail" xml:space="preserve">
     <value>The value does not fit this setting's type.</value>
   </data>
+  <data name="category.not_found" xml:space="preserve">
+    <value>Category not found</value>
+  </data>
+  <data name="category.not_found.detail" xml:space="preserve">
+    <value>The donation category was not found.</value>
+  </data>
+  <data name="category.slug_taken" xml:space="preserve">
+    <value>Slug taken</value>
+  </data>
+  <data name="category.slug_taken.detail" xml:space="preserve">
+    <value>Another category already uses this slug.</value>
+  </data>
+  <data name="project.not_found" xml:space="preserve">
+    <value>Project not found</value>
+  </data>
+  <data name="project.not_found.detail" xml:space="preserve">
+    <value>The project was not found.</value>
+  </data>
+  <data name="project.slug_taken" xml:space="preserve">
+    <value>Slug taken</value>
+  </data>
+  <data name="project.slug_taken.detail" xml:space="preserve">
+    <value>Another project uses this slug or keeps it for a redirect.</value>
+  </data>
+  <data name="project.publish_incomplete" xml:space="preserve">
+    <value>Project not ready to publish</value>
+  </data>
+  <data name="project.publish_incomplete.detail" xml:space="preserve">
+    <value>Complete the requirements listed in missing, then publish again.</value>
+  </data>
+  <data name="project.invalid_transition" xml:space="preserve">
+    <value>Status change not allowed</value>
+  </data>
+  <data name="project.invalid_transition.detail" xml:space="preserve">
+    <value>The project cannot move from its current status to this one.</value>
+  </data>
+  <data name="media.image_required" xml:space="preserve">
+    <value>Image required</value>
+  </data>
+  <data name="media.image_required.detail" xml:space="preserve">
+    <value>The asset must be a public image from the media library.</value>
+  </data>
+  <data name="cart.target_unavailable" xml:space="preserve">
+    <value>Not accepting gifts</value>
+  </data>
+  <data name="cart.target_unavailable.detail" xml:space="preserve">
+    <value>The project or category does not accept new gifts right now.</value>
+  </data>
+  <data name="cart.option_unavailable" xml:space="preserve">
+    <value>Option unavailable</value>
+  </data>
+  <data name="cart.option_unavailable.detail" xml:space="preserve">
+    <value>Choose an available donation option for this project.</value>
+  </data>
+  <data name="cart.open_amount_not_allowed" xml:space="preserve">
+    <value>Open amount not allowed</value>
+  </data>
+  <data name="cart.open_amount_not_allowed.detail" xml:space="preserve">
+    <value>This project accepts its fixed options only.</value>
+  </data>
+  <data name="cart.amount_below_minimum" xml:space="preserve">
+    <value>Amount below minimum</value>
+  </data>
+  <data name="cart.amount_below_minimum.detail" xml:space="preserve">
+    <value>Enter at least the minimum gift amount.</value>
+  </data>
+  <data name="cart.amount_above_maximum" xml:space="preserve">
+    <value>Amount above maximum</value>
+  </data>
+  <data name="cart.amount_above_maximum.detail" xml:space="preserve">
+    <value>Enter no more than the maximum for one line.</value>
+  </data>
+  <data name="cart.quantity_limit" xml:space="preserve">
+    <value>Invalid quantity</value>
+  </data>
+  <data name="cart.quantity_limit.detail" xml:space="preserve">
+    <value>The quantity must be between 1 and 999.</value>
+  </data>
+  <data name="cart.too_many_lines" xml:space="preserve">
+    <value>Cart is full</value>
+  </data>
+  <data name="cart.too_many_lines.detail" xml:space="preserve">
+    <value>The cart has reached its maximum number of lines.</value>
+  </data>
+  <data name="cart.total_exceeded" xml:space="preserve">
+    <value>Cart total exceeded</value>
+  </data>
+  <data name="cart.total_exceeded.detail" xml:space="preserve">
+    <value>The cart total cannot exceed the limit.</value>
+  </data>
+  <data name="cart.line_not_found" xml:space="preserve">
+    <value>Line not found</value>
+  </data>
+  <data name="cart.line_not_found.detail" xml:space="preserve">
+    <value>This line is not in your cart.</value>
+  </data>
+  <data name="checkout.cart_empty" xml:space="preserve">
+    <value>Cart is empty</value>
+  </data>
+  <data name="checkout.cart_empty.detail" xml:space="preserve">
+    <value>Add a gift to the cart first.</value>
+  </data>
+  <data name="checkout.lines_invalid" xml:space="preserve">
+    <value>Some lines are unavailable</value>
+  </data>
+  <data name="checkout.lines_invalid.detail" xml:space="preserve">
+    <value>Review the lines listed in problems and try again.</value>
+  </data>
+  <data name="checkout.contact_required" xml:space="preserve">
+    <value>Donor details required</value>
+  </data>
+  <data name="checkout.contact_required.detail" xml:space="preserve">
+    <value>Enter your name and e-mail to complete the donation.</value>
+  </data>
+  <data name="order.not_found" xml:space="preserve">
+    <value>Order not found</value>
+  </data>
+  <data name="order.not_found.detail" xml:space="preserve">
+    <value>The donation order was not found.</value>
+  </data>
+  <data name="order.cancel_not_allowed" xml:space="preserve">
+    <value>Cannot cancel</value>
+  </data>
+  <data name="order.cancel_not_allowed.detail" xml:space="preserve">
+    <value>Only an order pending payment can be cancelled.</value>
+  </data>
   <data name="idempotency.key_required" xml:space="preserve">
     <value>Idempotency key required</value>
   </data>

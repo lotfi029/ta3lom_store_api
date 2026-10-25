@@ -4,25 +4,25 @@ using Ta3lom.Store.Domain.Entities.Identity;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Identity;
 
-/// `otp_challenge` — names, types, defaults and CHECKs match db/reference/001_store_schema.sql (SchemaParityTests).
+/// `otp_challenge` (D-10): the HMAC of the code only; deleted after 24 h (D-14).
 internal sealed class OtpChallengeConfiguration : IEntityTypeConfiguration<OtpChallenge>
 {
     public void Configure(EntityTypeBuilder<OtpChallenge> e)
     {
         e.ToTable("otp_challenge", t =>
         {
-            t.HasCheckConstraint("otp_challenge_purpose_check", "(purpose = ANY (ARRAY['login'::text, 'beneficiary_invite'::text]))");
+            t.HasCheckConstraint("ck_otp_purpose", "purpose IN ('login')");
+            t.HasCheckConstraint("ck_otp_attempts", "attempts BETWEEN 0 AND 5");
         });
-        e.HasKey(x => x.Id).HasName("otp_challenge_pkey");
-        e.Property(x => x.Id).HasColumnType("uuid").IsRequired().HasDefaultValueSql("uuidv7()").ValueGeneratedNever();
-        e.Property(x => x.Mobile).HasColumnType("text").IsRequired().ValueGeneratedNever();
-        e.Property(x => x.Purpose).HasColumnType("text").IsRequired().ValueGeneratedNever();
-        e.Property(x => x.CodeHash).HasColumnType("character(64)").IsRequired().ValueGeneratedNever();
-        e.Property(x => x.Attempts).HasColumnType("smallint").IsRequired().HasDefaultValueSql("0").ValueGeneratedNever();
-        e.Property(x => x.ExpiresAt).HasColumnType("timestamp with time zone").IsRequired().ValueGeneratedNever();
-        e.Property(x => x.ConsumedAt).HasColumnType("timestamp with time zone").IsRequired(false).ValueGeneratedNever();
-        e.Property(x => x.IpHash).HasColumnType("character(64)").IsRequired(false).ValueGeneratedNever();
-        e.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone").IsRequired().HasDefaultValueSql("now()").ValueGeneratedNever();
+        e.HasKey(x => x.Id).HasName("pk_otp_challenge");
+        e.Property(x => x.Id).ValueGeneratedNever();
+        e.Property(x => x.Mobile).HasColumnType("text").IsRequired();
+        e.Property(x => x.Purpose).HasColumnType("text").IsRequired();
+        e.Property(x => x.CodeHash).HasColumnType("character(64)").IsRequired();
+        e.Property(x => x.Attempts).HasColumnType("smallint").IsRequired();
+        e.Property(x => x.IpHash).HasColumnType("character(64)");
         e.HasIndex(x => new { x.Mobile, x.CreatedAt }).IsDescending(false, true).HasDatabaseName("ix_otp_mobile_recent");
+        e.HasIndex(x => new { x.IpHash, x.CreatedAt }).IsDescending(false, true).HasDatabaseName("ix_otp_ip_recent");
+        e.HasIndex(x => x.CreatedAt).HasDatabaseName("ix_otp_created");
     }
 }

@@ -84,6 +84,7 @@ public static class DependencyInjection
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 
         services.AddScoped<SeedRunner>();
+        services.AddScoped<DevelopmentCatalogSeeder>();
         services.AddHostedService<SeedHostedService>();
 
         services.AddHealthChecks().AddCheck<PostgresHealthCheck>(PostgresHealthCheck.Name, tags: [HealthTags.Ready]);

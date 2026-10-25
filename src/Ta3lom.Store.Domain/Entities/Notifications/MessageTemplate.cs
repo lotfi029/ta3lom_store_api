@@ -1,14 +1,15 @@
 namespace Ta3lom.Store.Domain.Entities.Notifications;
 
-/// Table `message_template` (db/reference/001_store_schema.sql). State only in S-02; behaviour arrives with its session.
+/// Table `message_template`: a Scriban template per key, channel and locale (the OTP SMS, staff alerts).
 public sealed class MessageTemplate
 {
-    public MessageTemplate(string key, MessageChannel channel, string locale, string body, DateTimeOffset now)
+    public MessageTemplate(string key, MessageChannel channel, string locale, string? subject, string body, DateTimeOffset now)
     {
-        Key = Guard.NotNull(key);
+        Key = Guard.NotEmpty(key);
         Channel = channel;
-        Locale = Guard.NotNull(locale);
-        Body = Guard.NotNull(body);
+        Locale = locale is "ar" or "en" ? locale : throw new DomainException("template.locale_invalid");
+        Subject = string.IsNullOrWhiteSpace(subject) ? null : subject;
+        Body = Guard.NotEmpty(body);
         UpdatedAt = now;
     }
 
@@ -28,11 +29,14 @@ public sealed class MessageTemplate
 
     public DateTimeOffset UpdatedAt { get; private set; }
 
-    /// FR-S77: staff edit (validated by the caller: the text must parse as Scriban).
-    public void Edit(string? subject, string body, DateTimeOffset now)
+    public string? UpdatedBy { get; private set; }
+
+    /// Staff edit; the caller has checked that the text parses as Scriban.
+    public void Edit(string? subject, string body, string? updatedBy, DateTimeOffset now)
     {
         Subject = string.IsNullOrWhiteSpace(subject) ? null : subject;
-        Body = Guard.NotNull(body);
+        Body = Guard.NotEmpty(body);
+        UpdatedBy = updatedBy;
         UpdatedAt = now;
     }
 }
