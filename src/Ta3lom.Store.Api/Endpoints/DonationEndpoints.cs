@@ -47,7 +47,7 @@ internal sealed class DonationEndpoints : IEndpoint
     private static IResult WithCookie(Result<CartResult> result, HttpContext http, CartCookie cookie) =>
         result.ToHttp(r =>
         {
-            if (r.NewGuestCartId is { } id)
+            if (r.GuestCartId is { } id)
             {
                 cookie.Write(http.Response, id);
             }

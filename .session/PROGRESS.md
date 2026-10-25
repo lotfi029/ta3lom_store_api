@@ -21,5 +21,8 @@ A-5 → order.idempotency_key + stale claim (2 min) replays the order; A-7 → I
 | L-2 | done | 08243d7 | LogRedactionTests (X-Forwarded-For / X-Real-IP masked) |
 | L-3 | done | 08243d7 | OutboxHealthTests.A_dead_lettered_or_overdue_message_makes_the_outbox_degraded |
 | L-4 | done | 08243d7 | JobRunTests (one scheduled fire runs once across instances; failed Result logged, no throw); migration 20261025182258_JobRunClaims |
-| L-6 | done | (next) | MediaUploadTests (alt text of 301 characters → 400) |
-| L-7 | done | (next) | CatalogConsistencyTests.Parallel_setting_updates_cannot_together_break_the_money_rules (5 rounds, one 422 each) |
+| L-6 | done | 61848fd | MediaUploadTests (alt text of 301 characters → 400) |
+| L-7 | done | 61848fd | CatalogConsistencyTests.Parallel_setting_updates_cannot_together_break_the_money_rules (5 rounds, one 422 each) |
+| L-8 | done | (next) | CartTests.A_guest_cart_holds_… (2nd write re-issues t3s_cart, Max-Age 2592000) |
+| L-9 | done | (next) | CartTests.A_cart_write_racing_the_account_deletion_leaves_no_cart_behind |
+| L-11 | done | (next) | Domain CartTests.Adding_to_an_option_line_checks_the_total_with_the_line_at_its_new_price, …Merging_into_an_option_line_checks_the_total_at_the_donor_line_price |

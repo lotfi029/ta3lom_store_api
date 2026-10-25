@@ -198,4 +198,37 @@ public sealed class CartTests
         guest.Lines.ShouldBeEmpty();
         Should.Throw<DomainException>(() => guest.MergeFrom(donor, Make.Limits, Make.Now));
     }
+
+    [Fact]
+    [Rule("D-04")]
+    public void Adding_to_an_option_line_checks_the_total_with_the_line_at_its_new_price()
+    {
+        var limits = new CartLimits(new Money(10m), new Money(100_000m), 50, new Money(10_000m));
+        var project = Project(true, null, 1000m);
+        var option = project.Options[0];
+        _cart.AddOptionLine(project, _category, option.Id, 5, limits, Make.Now).IsSuccess.ShouldBeTrue();
+        project.ReplaceOptions([new ProjectOptionInput(option.Id, option.LabelAr, null, new Money(1900m), 1, true)], new HashSet<Guid>(), Make.Now);
+
+        _cart.AddOptionLine(project, _category, option.Id, 1, limits, Make.Now).Error.Code.ShouldBe(ErrorCodes.CartTotalExceeded);   // 6 × 1900 = 11 400
+
+        _cart.Total.ShouldBe(new Money(5000m));
+    }
+
+    [Fact]
+    [Rule("D-04")]
+    public void Merging_into_an_option_line_checks_the_total_at_the_donor_line_price()
+    {
+        var limits = new CartLimits(new Money(10m), new Money(100_000m), 50, new Money(10_000m));
+        var project = Project(true, null, 1900m);
+        var option = project.Options[0];
+        var donor = Cart.CreateFor(Guid.NewGuid(), Make.Now);
+        donor.AddOptionLine(project, _category, option.Id, 1, limits, Make.Now);
+        project.ReplaceOptions([new ProjectOptionInput(option.Id, option.LabelAr, null, new Money(1000m), 1, true)], new HashSet<Guid>(), Make.Now);
+        var guest = Cart.CreateGuest(Make.Now);
+        guest.AddOptionLine(project, _category, option.Id, 5, limits, Make.Now);
+
+        donor.MergeFrom(guest, limits, Make.Now.AddMinutes(1)).Single().Kind.ShouldBe(CartMergeOutcome.Dropped);   // 6 × 1900 = 11 400
+
+        donor.Total.ShouldBe(new Money(1900m));
+    }
 }

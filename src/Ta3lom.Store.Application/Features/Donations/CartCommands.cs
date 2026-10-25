@@ -8,8 +8,9 @@ using Ta3lom.Store.Domain.Entities.Donations;
 
 namespace Ta3lom.Store.Application.Features.Donations;
 
-/// The cart after a write; `NewGuestCartId` is set when a guest cart was just created (the endpoint writes `t3s_cart`).
-public sealed record CartResult(CartResponse Cart, Guid? NewGuestCartId);
+/// The cart after a write; `GuestCartId` is set on every guest write, so the endpoint (re)writes `t3s_cart` and its 30 days
+/// run from the last change like the cart's own expiry (L-8, D-14).
+public sealed record CartResult(CartResponse Cart, Guid? GuestCartId);
 
 /// One transaction per cart write, under the cart row lock: an option line added twice is one upsert of its quantity
 /// (D-04), never two rows.
@@ -18,12 +19,6 @@ internal sealed class CartWriter(CartAccess access, CartPricer pricer, IStoreSet
     public async Task<Result<CartResult>> WriteAsync(CartOwner owner, bool create, Func<Cart, CartLimits, CancellationToken, Task<Result>> change,
         CancellationToken ct)
     {
-        var active = await access.EnsureActiveAsync(owner, ct);
-        if (active.IsFailure)
-        {
-            return active.Error;
-        }
-
         var s = await settings.GetAsync(ct);
         return await uow.ExecuteInTransactionAsync(token => ApplyAsync(owner, create, change, s, token), ct);
     }
@@ -31,7 +26,13 @@ internal sealed class CartWriter(CartAccess access, CartPricer pricer, IStoreSet
     private async Task<Result<CartResult>> ApplyAsync(CartOwner owner, bool create, Func<Cart, CartLimits, CancellationToken, Task<Result>> change,
         StoreSettings s, CancellationToken ct)
     {
-        var (cart, isNew) = await access.LockAsync(owner, create, ct);
+        var cart = await access.LockAsync(owner, create, ct);
+        var active = await access.EnsureActiveAsync(owner, ct);              // L-9: after the lock, so a deletion that held it is seen
+        if (active.IsFailure)
+        {
+            return active.Error;
+        }
+
         if (cart is null)
         {
             return CartErrors.LineNotFound;
@@ -45,7 +46,7 @@ internal sealed class CartWriter(CartAccess access, CartPricer pricer, IStoreSet
 
         await uow.SaveChangesAsync(ct);
         var priced = await pricer.PriceAsync(cart.Lines, s, ct);
-        return new CartResult(priced.ToResponse(), isNew && cart.IsGuest ? cart.Id : null);
+        return new CartResult(priced.ToResponse(), cart.IsGuest ? cart.Id : null);
     }
 }
 
@@ -170,7 +171,7 @@ internal sealed class ClearCartCommandHandler(CartAccess access, IUnitOfWork uow
 
         await uow.ExecuteInTransactionAsync(async token =>
         {
-            var (cart, _) = await access.LockAsync(command.Owner, create: false, token);
+            var cart = await access.LockAsync(command.Owner, create: false, token);
             cart?.Clear(clock.UtcNow);
         }, ct);
         return Result.Success();
