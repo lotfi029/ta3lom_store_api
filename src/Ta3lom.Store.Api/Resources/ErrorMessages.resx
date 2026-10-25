@@ -169,6 +169,12 @@
   <data name="auth.totp_not_enrolled.detail" xml:space="preserve">
     <value>لم يُفعَّل تطبيق المصادقة لهذا الحساب بعد.</value>
   </data>
+  <data name="auth.totp_unavailable" xml:space="preserve">
+    <value>لا يمكن التحقق من رمز المصادقة الآن</value>
+  </data>
+  <data name="auth.totp_unavailable.detail" xml:space="preserve">
+    <value>تعذّر فتح سرّ المصادقة المحفوظ. يطلب المسؤول إعادة ضبط المصادقة.</value>
+  </data>
   <data name="auth.totp_already_enrolled" xml:space="preserve">
     <value>تم تفعيل المصادقة مسبقًا</value>
   </data>

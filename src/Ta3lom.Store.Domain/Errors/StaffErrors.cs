@@ -13,6 +13,9 @@ public static class StaffErrors
 
     public static Error TotpInvalid => Error.Unauthorized(ErrorCodes.TotpInvalid, "The authenticator code is wrong.");
 
+    /// L-9: the stored secret cannot be decrypted (key ring lost); an admin resets the authenticator.
+    public static Error TotpUnavailable => Error.Unavailable(ErrorCodes.TotpUnavailable, "The authenticator cannot be checked right now.");
+
     public static Error TotpNotEnrolled => Error.Unauthorized(ErrorCodes.TotpNotEnrolled, "No authenticator is enrolled.");
 
     public static Error TotpAlreadyEnrolled => Error.Conflict(ErrorCodes.TotpAlreadyEnrolled, "An authenticator is already enrolled; ask an admin to reset it.");

@@ -1,4 +1,5 @@
 using FluentValidation;
+using Ta3lom.Store.Domain.Events;
 
 namespace Ta3lom.Store.Application.Features.StaffAuth.Commands.VerifyTotp;
 
@@ -13,6 +14,7 @@ internal sealed class VerifyTotpCommandHandler(
     IUsedTokenStore usedTokens,
     StaffSessions sessions,
     StaffFailures failures,
+    IOutbox outbox,
     IAuditTrail audit,
     IUnitOfWork uow,
     IClock clock) : ICommandHandler<VerifyTotpCommand, StaffSession>
@@ -42,7 +44,15 @@ internal sealed class VerifyTotpCommandHandler(
             return StaffErrors.TotpNotEnrolled;
         }
 
-        var step = totp.VerifyStep(user.TotpSecretEnc, command.Code);
+        var check = totp.VerifyStep(user.TotpSecretEnc, command.Code);
+        if (check.KeyUnavailable)
+        {
+            // L-9: not the member's fault: no failure is counted, the enrolment stays, staff are alerted; an admin resets it.
+            outbox.Enqueue(new StaffAlert("totp_key_lost", user.Id.ToString(), "The TOTP secret of a staff member cannot be decrypted (Data Protection key ring lost). Reset the authenticator."));
+            return StaffErrors.TotpUnavailable;
+        }
+
+        var step = check.Step;
         if (step is null || !user.AcceptTotpStep(step.Value))
         {
             var outcome = await failures.RecordAsync(user, AuditActions.StaffTotpFailed, step is null ? "wrong_code" : "replayed_step", ct);

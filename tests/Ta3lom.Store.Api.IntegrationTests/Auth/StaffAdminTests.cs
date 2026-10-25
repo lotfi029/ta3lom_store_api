@@ -41,6 +41,8 @@ public sealed class StaffAdminTests(ScenarioFactory factory) : IClassFixture<Sce
         (await admin.PostAsync($"/v1/admin/staff/{id}/reset-totp")).Response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
         (await admin.PostAsync($"/v1/admin/staff/{id}/unlock")).Response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
         (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.audit_log WHERE entity = 'staff_user' AND entity_id = '{id}' AND actor = '{admin.Email}'")).ShouldBeGreaterThanOrEqualTo(3);
+        (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.audit_log WHERE action = 'staff.password_reset' AND entity_id = '{id}' AND actor = '{admin.Email}'")).ShouldBe(1);   // L-6
+        (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.audit_log WHERE action = 'staff.totp_reset' AND entity_id = '{id}' AND actor = '{admin.Email}'")).ShouldBe(1);
     }
 
     [Fact]

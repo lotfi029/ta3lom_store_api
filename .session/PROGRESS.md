@@ -19,6 +19,8 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
 | L-3 | done | Fix L-3, L-4 | `CustomerAuthTests.Parallel_requests_for_different_mobiles_from_one_IP_never_exceed_ten_per_hour` |
 | L-4 | done | Fix L-3, L-4 | `CartTests.Parallel_first_writes_of_a_donor_end_up_in_one_cart`, `CartTests.Parallel_adds_of_the_same_option_are_one_line_with_the_quantities_summed` (F4) |
 | L-5 | done | Fix L-5 | `MeTests.After_deletion_the_same_mobile_signs_up_as_a_new_donor_and_admin_search_finds_only_the_new_one` (F4), `MigrationTests.The_anonymised_mobile_migration_clears_placeholders_and_keeps_blocked_mobiles`, `MigrationTests.All_migrations_apply_on_an_empty_database_and_leave_no_pending_model_changes` (F4) |
+| L-6 | done | Fix L-6, L-9 | `StaffAdminTests.An_admin_creates_lists_updates_and_resets_staff` (audit `staff.password_reset` / `staff.totp_reset`) |
+| L-9 | done | Fix L-6, L-9 | `KeyRingGuardTests.An_empty_key_ring_path_stops_the_host`, `…An_unwritable_key_ring_path_stops_the_host`, `StaffAuthTests.A_TOTP_secret_that_cannot_be_decrypted_answers_503_alerts_staff_and_keeps_the_enrolment` |
 | C-1 | done | Fix C-1 | `SiteRebuildTests.A_newer_change_arriving_while_an_older_one_is_handled_still_rebuilds_once`, `…An_older_change_in_retry_backoff_is_absorbed_by_a_newer_due_one`, `…A_burst_of_five_changes_is_one_rebuild` |
 
 ## Decisions
@@ -68,6 +70,12 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
   mobile). The name `ck_customer_mobile` is already the E.164 format check, hence `_present`. Down restores placeholder
   mobiles for NULL rows and leaves the extensions alone. `Customer.Mobile` and the mobile in `MeResponse`,
   `AdminCustomerRow/Detail` (and the export) are nullable; `ReleaseMobile` and the placeholder mobile are gone.
+- L-6: reset password / reset TOTP save and revoke sessions in one `ExecuteInTransactionAsync`; audited
+  `staff.password_reset`, `staff.totp_reset` (the save interceptor's row audit stays as well).
+- L-9: outside Development, `Store:DataProtection:KeysPath` must be set and writable (probe file) or the host stops.
+  P-1: a TOTP secret that cannot be decrypted answers 503 `auth.totp_unavailable` (new code, ar/en), queues
+  `StaffAlert("totp_key_lost", staffId)`, counts no failure and leaves the enrolment untouched; recovery = admin reset-totp.
+  `ITotpService.VerifyStep` returns `TotpCheck(Step, KeyUnavailable)`.
 - L-3: RequestOtp takes the advisory lock on `hashtextextended('otp-ip:' || ipHash)` before the mobile lock (fixed order).
 - L-4: `ICartRepository.GetOrCreateForCustomerForUpdateAsync`: `INSERT … ON CONFLICT (customer_id) WHERE customer_id IS
   NOT NULL DO NOTHING` (the predicate of `ux_cart_customer`), then lock + load; used by cart writes and the sign-in merge.

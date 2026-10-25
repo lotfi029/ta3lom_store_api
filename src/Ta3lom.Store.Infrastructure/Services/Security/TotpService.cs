@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.DataProtection;
 using OtpNet;
 using Ta3lom.Store.Application.Interfaces;
@@ -21,14 +22,24 @@ internal sealed class TotpService(IDataProtectionProvider provider) : ITotpServi
         return new TotpEnrolment(uri, base32, _protector.Protect(secret));
     }
 
-    public long? VerifyStep(byte[] protectedSecret, string code)
+    public TotpCheck VerifyStep(byte[] protectedSecret, string code)
     {
         if (string.IsNullOrWhiteSpace(code))
         {
-            return null;
+            return new TotpCheck(null);
         }
 
-        var totp = new Totp(_protector.Unprotect(protectedSecret));
-        return totp.VerifyTotp(code.Trim(), out var step, new VerificationWindow(previous: 1, future: 1)) ? step : null;
+        byte[] secret;
+        try
+        {
+            secret = _protector.Unprotect(protectedSecret);
+        }
+        catch (CryptographicException)
+        {
+            return new TotpCheck(null, KeyUnavailable: true);                // L-9: the key ring that sealed it is gone
+        }
+
+        var totp = new Totp(secret);
+        return new TotpCheck(totp.VerifyTotp(code.Trim(), out var step, new VerificationWindow(previous: 1, future: 1)) ? step : null);
     }
 }

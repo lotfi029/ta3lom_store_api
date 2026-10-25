@@ -23,8 +23,11 @@ public interface ITotpService
     /// A new secret: the base32 text for the authenticator app and the protected bytes for `staff_user.totp_secret_enc`.
     TotpEnrolment CreateEnrolment(string accountEmail);
 
-    /// The matched time step, or null when the code is wrong. The caller refuses a step that was already used.
-    long? VerifyStep(byte[] protectedSecret, string code);
+    /// The matched time step (null when the code is wrong), or `KeyUnavailable` when the stored secret can no longer be
+    /// decrypted (the Data Protection key ring was lost). The caller refuses a step that was already used.
+    TotpCheck VerifyStep(byte[] protectedSecret, string code);
 }
+
+public sealed record TotpCheck(long? Step, bool KeyUnavailable = false);
 
 public sealed record TotpEnrolment(string OtpauthUri, string SecretBase32, byte[] ProtectedSecret);

@@ -37,6 +37,7 @@ public static class ErrorCodes
     public const string TotpRequired = "auth.totp_required";
     public const string TotpInvalid = "auth.totp_invalid";
     public const string TotpNotEnrolled = "auth.totp_not_enrolled";
+    public const string TotpUnavailable = "auth.totp_unavailable";
     public const string TotpAlreadyEnrolled = "auth.totp_already_enrolled";
     public const string PasswordChangeRequired = "auth.password_change_required";
     public const string PasswordWeak = "auth.password_weak";

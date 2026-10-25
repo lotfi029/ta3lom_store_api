@@ -169,6 +169,12 @@
   <data name="auth.totp_not_enrolled.detail" xml:space="preserve">
     <value>No authenticator app is enrolled for this account yet.</value>
   </data>
+  <data name="auth.totp_unavailable" xml:space="preserve">
+    <value>Authenticator unavailable</value>
+  </data>
+  <data name="auth.totp_unavailable.detail" xml:space="preserve">
+    <value>The stored authenticator secret cannot be read. An admin must reset the authenticator.</value>
+  </data>
   <data name="auth.totp_already_enrolled" xml:space="preserve">
     <value>Authenticator already enrolled</value>
   </data>

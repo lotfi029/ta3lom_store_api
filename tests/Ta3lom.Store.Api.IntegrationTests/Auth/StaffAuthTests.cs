@@ -241,6 +241,29 @@ public sealed class StaffAuthTests(ScenarioFactory factory) : IClassFixture<Scen
     }
 
     [Fact]
+    public async Task A_TOTP_secret_that_cannot_be_decrypted_answers_503_alerts_staff_and_keeps_the_enrolment()
+    {
+        var (id, email, oneTime) = await factory.NewStaffAccountAsync(Roles.Viewer);
+        var mfa = await MfaTokenAsync(email, oneTime);
+        await EnrolAsync(mfa);
+        await factory.ExecuteSqlAsync($"UPDATE store.staff_user SET totp_secret_enc = '\\x00010203'::bytea WHERE id = '{id}'");
+
+        var verify = await VerifyAsync(mfa, "123456");
+
+        verify.StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
+        (await verify.ReadProblemAsync()).Str("code").ShouldBe(ErrorCodes.TotpUnavailable);
+        (await factory.ScalarAsync<int>($"SELECT failed_count FROM store.staff_user WHERE id = '{id}'")).ShouldBe(0);
+        (await factory.ScalarAsync<string>($"SELECT encode(totp_secret_enc, 'hex') FROM store.staff_user WHERE id = '{id}'")).ShouldBe("00010203");
+        (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.outbox_message WHERE type = 'StaffAlert' AND payload->>'kind' = 'totp_key_lost' AND payload->>'reference' = '{id}'"))
+            .ShouldBe(1);
+
+        var admin = await factory.StaffAsync(Roles.Admin);
+        (await admin.PostAsync($"/v1/admin/staff/{id}/reset-totp")).Response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        var secret = await EnrolAsync(await MfaTokenAsync(email, oneTime));
+        secret.ShouldNotBeNullOrEmpty();
+    }
+
+    [Fact]
     public async Task The_email_is_matched_case_insensitively_with_the_store_public_search_path()
     {
         new Npgsql.NpgsqlConnectionStringBuilder(factory.DatabaseConnectionString).SearchPath.ShouldBe("store,public");
