@@ -14,6 +14,8 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
 | A-3 | done | Fix A-3 | `CartTests.Arabic_digits_are_accepted_and_malformed_amounts_are_400_never_500`, `AdminCatalogTests.Admin_money_fields_accept_Arabic_digits_and_refuse_malformed_ones`, `Application.Tests MoneyInputTests` |
 | A-4 | done | Fix A-4 | `SearchPathGuardTests.A_search_path_without_public_stops_the_host`, `StaffAuthTests.The_email_is_matched_case_insensitively_with_the_store_public_search_path` |
 | A-5 | done | Fix A-5 | `ImageOrientationTests.The_orientation_is_applied_before_the_image_is_stored` (origins 1, 3, 6, 8) |
+| L-1 | done | Fix L-1, L-2 | `CheckoutTests.A_refused_checkout_releases_its_key_so_the_same_key_works_after_fixing_the_cart`, `…The_stored_replay_holds_no_status_token_and_the_replay_still_returns_a_working_one` |
+| L-2 | done | Fix L-1, L-2 | `IdempotencyStoreTests.Claims_racing_releases_never_throw`, `CheckoutTests.Parallel_requests_with_one_key_never_fail_with_500` |
 | C-1 | done | Fix C-1 | `SiteRebuildTests.A_newer_change_arriving_while_an_older_one_is_handled_still_rebuilds_once`, `…An_older_change_in_retry_backoff_is_absorbed_by_a_newer_due_one`, `…A_burst_of_five_changes_is_one_rebuild` |
 
 ## Decisions
@@ -48,6 +50,14 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
 - A-5: the processor draws the decoded bitmap upright for its `EncodedOrigin` (all 8 cases, width/height swapped for the
   90° ones) before resizing; the WebP output carries no EXIF. The test builds the JPEG itself and splices an APP1
   Orientation tag (no binary fixture).
+
+- L-1 / P-2: only 2xx responses are stored; every other outcome (business 4xx and 409, 5xx) releases the key.
+  `idempotency.in_progress` comes from the claim state only.
+- **REVIEW** L-1: the stored checkout replay has `statusToken: ""`; on replay a per-endpoint shaper re-derives it from the
+  reference (`IOrderStatusTokens`, deterministic HMAC). So the replay still returns a working token and no token is kept in
+  `idempotency_key`.
+- L-2: the claim reads with `SingleOrDefaultAsync` and retries the insert once when the conflicting row disappeared
+  meanwhile; still nothing → 409 in progress, never 500.
 
 ## Migrations
 
