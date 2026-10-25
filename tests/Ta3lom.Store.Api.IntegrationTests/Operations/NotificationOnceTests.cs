@@ -47,13 +47,13 @@ public sealed class NotificationOnceTests(FlakyMailFactory factory) : IClassFixt
 {
     private OutboxDispatcher Dispatcher => factory.Services.GetServices<IHostedService>().OfType<OutboxDispatcher>().Single();
 
-    private async Task<Guid> AlertAsync(string kind)
+    private async Task<Guid> AlertAsync(string kind, string reference = "null")
     {
         await factory.ExecuteSqlAsync("UPDATE store.outbox_message SET processed_at = now() WHERE processed_at IS NULL");
         var id = Guid.CreateVersion7();
         await factory.ExecuteSqlAsync($$"""
             INSERT INTO store.outbox_message (id, type, payload, occurred_at, next_attempt_at, attempts)
-            VALUES ('{{id}}', 'StaffAlert', '{"kind":"{{kind}}","reference":null,"detail":"test"}', '2000-01-01', '2000-01-01', 0)
+            VALUES ('{{id}}', 'StaffAlert', '{"kind":"{{kind}}","reference":{{reference}},"detail":"test"}', '2000-01-01', '2000-01-01', 0)
             """);
         return id;
     }
@@ -69,7 +69,7 @@ public sealed class NotificationOnceTests(FlakyMailFactory factory) : IClassFixt
     {
         factory.Refuse = false;
         factory.Delivered.Clear();
-        var alert = await AlertAsync("integrity_check");
+        var alert = await AlertAsync("integrity_check", "\"T3-26-000123\"");
 
         await Dispatcher.RunOnceAsync(TestContext.Current.CancellationToken);
         await RetryNowAsync(alert);
@@ -80,6 +80,9 @@ public sealed class NotificationOnceTests(FlakyMailFactory factory) : IClassFixt
         (await factory.ScalarAsync<bool>($"SELECT processed_at IS NOT NULL FROM store.outbox_message WHERE id = '{alert}'")).ShouldBeTrue();
         (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.outbox_message WHERE type = 'StaffAlert' AND payload->>'kind' = 'notification_unknown' AND payload->>'detail' LIKE '%{alert}%'"))
             .ShouldBe(1);
+        var detail = await factory.ScalarAsync<string>($"SELECT payload->>'detail' FROM store.outbox_message WHERE type = 'StaffAlert' AND payload->>'kind' = 'notification_unknown' AND payload->>'detail' LIKE '%{alert}%'");
+        detail.ShouldContain("kind integrity_check");                                                       // R12-5
+        detail.ShouldContain("reference T3-26-000123");
     }
 
     [Fact]
