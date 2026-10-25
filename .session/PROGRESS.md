@@ -18,6 +18,7 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
 | L-2 | done | Fix L-1, L-2 | `IdempotencyStoreTests.Claims_racing_releases_never_throw`, `CheckoutTests.Parallel_requests_with_one_key_never_fail_with_500` |
 | L-3 | done | Fix L-3, L-4 | `CustomerAuthTests.Parallel_requests_for_different_mobiles_from_one_IP_never_exceed_ten_per_hour` |
 | L-4 | done | Fix L-3, L-4 | `CartTests.Parallel_first_writes_of_a_donor_end_up_in_one_cart`, `CartTests.Parallel_adds_of_the_same_option_are_one_line_with_the_quantities_summed` (F4) |
+| L-5 | done | Fix L-5 | `MeTests.After_deletion_the_same_mobile_signs_up_as_a_new_donor_and_admin_search_finds_only_the_new_one` (F4), `MigrationTests.The_anonymised_mobile_migration_clears_placeholders_and_keeps_blocked_mobiles`, `MigrationTests.All_migrations_apply_on_an_empty_database_and_leave_no_pending_model_changes` (F4) |
 | C-1 | done | Fix C-1 | `SiteRebuildTests.A_newer_change_arriving_while_an_older_one_is_handled_still_rebuilds_once`, `…An_older_change_in_retry_backoff_is_absorbed_by_a_newer_due_one`, `…A_burst_of_five_changes_is_one_rebuild` |
 
 ## Decisions
@@ -61,10 +62,16 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
 - L-2: the claim reads with `SingleOrDefaultAsync` and retries the insert once when the conflicting row disappeared
   meanwhile; still nothing → 409 in progress, never 500.
 
+- L-5 / P-4: migration `20261025153628_AnonymisedMobileNull`: drop `ux_customer_mobile` → `mobile DROP NOT NULL` →
+  `UPDATE … SET mobile = NULL WHERE status = 'anonymised'` → filtered unique `ux_customer_mobile (mobile) WHERE mobile IS NOT
+  NULL` → CHECK `ck_customer_mobile_present` (`status = 'anonymised' OR mobile IS NOT NULL`; blocked donors keep their
+  mobile). The name `ck_customer_mobile` is already the E.164 format check, hence `_present`. Down restores placeholder
+  mobiles for NULL rows and leaves the extensions alone. `Customer.Mobile` and the mobile in `MeResponse`,
+  `AdminCustomerRow/Detail` (and the export) are nullable; `ReleaseMobile` and the placeholder mobile are gone.
 - L-3: RequestOtp takes the advisory lock on `hashtextextended('otp-ip:' || ipHash)` before the mobile lock (fixed order).
 - L-4: `ICartRepository.GetOrCreateForCustomerForUpdateAsync`: `INSERT … ON CONFLICT (customer_id) WHERE customer_id IS
   NOT NULL DO NOTHING` (the predicate of `ux_cart_customer`), then lock + load; used by cart writes and the sign-in merge.
 
 ## Migrations
 
-(none yet)
+- `20261025153628_AnonymisedMobileNull` (L-5)

@@ -52,13 +52,7 @@ internal sealed class VerifyOtpCommandHandler(
         }
 
         challenge.Consume(now);
-        var customer = await customers.FindByMobileAsync(mobile, ct);
-        if (customer is { IsAnonymised: true })
-        {
-            customer.ReleaseMobile(now);                         // a deleted account never signs in again; the number starts over
-            await uow.SaveChangesAsync(ct);
-            customer = null;
-        }
+        var customer = await customers.FindByMobileAsync(mobile, ct);         // an anonymised donor has no mobile (L-5)
 
         var isNew = customer is null;
         if (customer is null)
@@ -80,7 +74,7 @@ internal sealed class VerifyOtpCommandHandler(
             SessionPolicy.CustomerFamilyLifetime, SessionPolicy.CustomerRefreshLifetime, command.UserAgent, now);
         refreshTokens.Add(refresh);
         var access = issuer.IssueCustomer(customer.Id);
-        var profile = new CustomerSessionResponse(customer.Id, customer.Mobile, customer.FullName, customer.Email, customer.Locale, isNew,
+        var profile = new CustomerSessionResponse(customer.Id, customer.Mobile!, customer.FullName, customer.Email, customer.Locale, isNew,
             !string.IsNullOrWhiteSpace(customer.FullName) && !string.IsNullOrWhiteSpace(customer.Email));
         var body = new SessionResponse(access.Token, access.ExpiresInSeconds, profile, [.. notices.Select(n => new CartNoticeResponse(n.Code, n.LineId))]);
         return new CustomerSession(body, raw, refresh.ExpiresAt);

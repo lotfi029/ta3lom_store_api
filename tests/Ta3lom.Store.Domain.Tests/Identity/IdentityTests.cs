@@ -59,11 +59,7 @@ public sealed class CustomerTests
         customer.FullName.ShouldBeNull();
         customer.Email.ShouldBeNull();
         customer.MarketingOptIn.ShouldBeFalse();
-        customer.Mobile.ShouldNotBe("+966551234567");
-        customer.Mobile.ShouldMatch(@"^\+9665[0-9]{8}$");
-        var placeholder = customer.Mobile;
-        customer.ReleaseMobile(Make.Now);
-        customer.Mobile.ShouldNotBe(placeholder);
+        customer.Mobile.ShouldBeNull();                       // L-5: the number is free for a new sign-up
     }
 
     [Fact]
@@ -76,7 +72,6 @@ public sealed class CustomerTests
         customer.UpdateProfile("", "", null, null, Make.Now);
         (customer.FullName, customer.Email).ShouldBe((null, null));
         Should.Throw<DomainException>(() => customer.UpdateProfile(null, null, "fr", null, Make.Now));
-        Should.Throw<DomainException>(() => customer.ReleaseMobile(Make.Now));
     }
 }
 

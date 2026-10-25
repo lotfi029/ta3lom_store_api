@@ -69,7 +69,7 @@ public sealed class MeTests(ScenarioFactory factory) : IClassFixture<ScenarioFac
 
         deleted.Response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
         (await factory.ScalarAsync<string>($"SELECT status FROM store.customer WHERE id = '{donor.Id}'")).ShouldBe("anonymised");
-        (await factory.ScalarAsync<bool>($"SELECT full_name IS NULL AND email IS NULL AND mobile <> '{ScenarioFactory.E164(donor.Mobile!)}' FROM store.customer WHERE id = '{donor.Id}'"))
+        (await factory.ScalarAsync<bool>($"SELECT full_name IS NULL AND email IS NULL AND mobile IS NULL FROM store.customer WHERE id = '{donor.Id}'"))
             .ShouldBeTrue();
         (await factory.ScalarAsync<string>($"SELECT donor_name || '|' || donor_email || '|' || donor_mobile || '|' || total_amount FROM store.orders WHERE reference = '{reference}'"))
             .ShouldBe("—|deleted@invalid|deleted|8.00");
@@ -77,6 +77,25 @@ public sealed class MeTests(ScenarioFactory factory) : IClassFixture<ScenarioFac
         (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.audit_log WHERE action = 'customer.deleted' AND entity_id = '{donor.Id}'")).ShouldBe(1);
         (await donor.GetAsync("/v1/me")).Response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await donor.SendAsync(HttpMethod.Delete, "/v1/me")).Body.Str("code").ShouldBe(ErrorCodes.AccountBlocked);
+    }
+
+    [Fact]
+    [Rule("D-14")]
+    public async Task After_deletion_the_same_mobile_signs_up_as_a_new_donor_and_admin_search_finds_only_the_new_one()
+    {
+        var (donor, _) = await DonorWithOrderAsync();
+        (await donor.SendAsync(HttpMethod.Delete, "/v1/me")).Response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        (await factory.ScalarAsync<bool>($"SELECT mobile IS NULL FROM store.customer WHERE id = '{donor.Id}'")).ShouldBeTrue();
+
+        var session = await factory.SignInAsync(factory.Browser(), donor.Mobile!);
+
+        session.GetProperty("customer").GetProperty("isNew").GetBoolean().ShouldBeTrue();
+        var newId = session.GetProperty("customer").Str("id");
+        newId.ShouldNotBe(donor.Id.ToString());
+        var admin = await factory.StaffAsync(Ta3lom.Store.Domain.Constants.Roles.Admin);
+        var found = (await admin.GetAsync($"/v1/admin/customers?q={donor.Mobile}")).Body.GetProperty("items").EnumerateArray().Select(c => c.Str("id")).ToList();
+        found.ShouldBe([newId]);
+        (await admin.GetAsync($"/v1/admin/customers/{donor.Id}")).Body.GetProperty("mobile").ValueKind.ShouldBe(System.Text.Json.JsonValueKind.Null);
     }
 
     [Fact]

@@ -14,17 +14,18 @@ internal sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
             t.HasCheckConstraint("ck_customer_mobile", "mobile ~ '^\\+9665[0-9]{8}$'");
             t.HasCheckConstraint("ck_customer_locale", "locale IN ('ar', 'en')");
             t.HasCheckConstraint("ck_customer_status", "status IN ('active', 'blocked', 'anonymised')");
+            t.HasCheckConstraint("ck_customer_mobile_present", "status = 'anonymised' OR mobile IS NOT NULL");
         });
         e.HasKey(x => x.Id).HasName("pk_customer");
         e.Property(x => x.Id).ValueGeneratedNever();
-        e.Property(x => x.Mobile).HasColumnType("text").IsRequired();
+        e.Property(x => x.Mobile).HasColumnType("text");
         e.Property(x => x.FullName).HasColumnType("text");
         e.Property(x => x.Email).HasColumnType("citext");
         e.Property(x => x.Locale).HasColumnType("character(2)").IsRequired();
         e.Property(x => x.MarketingOptIn).HasDefaultValue(false).ValueGeneratedNever();
         e.Property(x => x.Status).HasColumnType("text").IsRequired();
         e.Property(x => x.Version).IsRowVersion();
-        e.HasIndex(x => x.Mobile).IsUnique().HasDatabaseName("ux_customer_mobile");
+        e.HasIndex(x => x.Mobile).IsUnique().HasFilter("mobile IS NOT NULL").HasDatabaseName("ux_customer_mobile");
         e.HasIndex(x => x.Email).HasDatabaseName("ix_customer_email");
     }
 }

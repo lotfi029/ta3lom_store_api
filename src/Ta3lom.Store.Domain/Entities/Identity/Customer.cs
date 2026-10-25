@@ -16,7 +16,8 @@ public sealed class Customer : AggregateRoot
     {
     }
 
-    public string Mobile { get; private set; } = null!;
+    /// E.164; null once the donor is anonymised (L-5), so the number is free for a new sign-up.
+    public string? Mobile { get; private set; }
 
     public string? FullName { get; private set; }
 
@@ -99,26 +100,15 @@ public sealed class Customer : AggregateRoot
         UpdatedAt = now;
     }
 
-    /// PDPL deletion (D-14): personal fields are cleared, the orders keep the id. The mobile becomes a random `+9665`
-    /// placeholder (the CHECK needs the E.164 shape; `status = anonymised` marks it), which frees the number for a new sign-in.
+    /// PDPL deletion (D-14): personal fields are cleared (the mobile too, which frees the number for a new sign-up); the
+    /// orders keep the id.
     public void Anonymise(DateTimeOffset now)
     {
         Status = CustomerStatus.Anonymised;
         FullName = null;
         Email = null;
-        Mobile = RandomPlaceholderMobile();
+        Mobile = null;
         MarketingOptIn = false;
         UpdatedAt = now;
     }
-
-    /// A real person signed in with the placeholder an anonymised account happened to receive: move the placeholder away.
-    public void ReleaseMobile(DateTimeOffset now)
-    {
-        Guard.Against(!IsAnonymised, "customer.not_anonymised");
-        Mobile = RandomPlaceholderMobile();
-        UpdatedAt = now;
-    }
-
-    private static string RandomPlaceholderMobile() =>
-        "+9665" + System.Security.Cryptography.RandomNumberGenerator.GetInt32(0, 100_000_000).ToString("D8", System.Globalization.CultureInfo.InvariantCulture);
 }
