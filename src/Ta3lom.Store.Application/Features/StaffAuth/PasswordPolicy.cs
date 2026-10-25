@@ -10,6 +10,9 @@ public static class PasswordPolicy
 
     private static readonly Lazy<HashSet<string>> Common = new(Load);
 
+    /// Entries of the embedded common-password list (L-8: ≥ 10,000).
+    public static int CommonPasswordCount => Common.Value.Count;
+
     /// The reasons a password is refused (`too_short`, `too_long`, `common`), or an empty list.
     public static IReadOnlyList<string> Check(string password)
     {
@@ -24,7 +27,7 @@ public static class PasswordPolicy
             reasons.Add("too_long");
         }
 
-        if (!string.IsNullOrEmpty(password) && (Common.Value.Contains(password.Trim().ToLowerInvariant()) || password.Distinct().Count() == 1))
+        if (!string.IsNullOrEmpty(password) && (Common.Value.Contains(password.Trim()) || password.Distinct().Count() == 1))
         {
             reasons.Add("common");
         }
@@ -37,6 +40,7 @@ public static class PasswordPolicy
         using var stream = typeof(PasswordPolicy).Assembly.GetManifestResourceStream("StaffAuth.common-passwords.txt")
                            ?? throw new InvalidOperationException("common-passwords resource missing");
         using var reader = new StreamReader(stream, Encoding.UTF8);
-        return [.. reader.ReadToEnd().Split('\n').Select(l => l.Trim().ToLowerInvariant()).Where(l => l.Length > 0 && !l.StartsWith('#'))];
+        return new HashSet<string>(reader.ReadToEnd().Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#')),
+            StringComparer.OrdinalIgnoreCase);
     }
 }

@@ -39,6 +39,7 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
 | F4 4xx then retry | done | Fix L-1, L-2 | `CheckoutTests.A_refused_checkout_releases_its_key_so_the_same_key_works_after_fixing_the_cart` |
 | F4 re-sign-up | done | Fix L-5 | `MeTests.After_deletion_the_same_mobile_signs_up_as_a_new_donor_and_admin_search_finds_only_the_new_one` |
 | F4 migrations | done | Fix L-5 | `MigrationTests.All_migrations_apply_on_an_empty_database_and_leave_no_pending_model_changes` |
+| L-8 | done | Fix L-8 | `Application.Tests PasswordPolicyTests` (≥ 10,000 entries, case-insensitive) |
 | C-1 | done | Fix C-1 | `SiteRebuildTests.A_newer_change_arriving_while_an_older_one_is_handled_still_rebuilds_once`, `…An_older_change_in_retry_backoff_is_absorbed_by_a_newer_due_one`, `…A_burst_of_five_changes_is_one_rebuild` |
 
 ## Decisions
@@ -128,6 +129,11 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
   the mapped admin routes and that the policies on each route grant the same roles. The derived-only theory was removed.
 - F4: two parallel checkouts of one cart with different keys → one 201 and one 409 `checkout.cart_empty` (the cart row
   lock serialises them).
+- **REVIEW** L-8: the list now has 46,168 entries: SecLists `Passwords/Common-Credentials/xato-net-10-million-passwords-1000000.txt`
+  (MIT, Daniel Miessler; source in the file header) filtered to 12–64 printable ASCII characters, lower-cased and
+  de-duplicated, plus the earlier entries. The planned file `10-million-password-list-top-1000000.txt` no longer exists
+  in SecLists (404); the review named the xato list as the alternative. Compared with an OrdinalIgnoreCase set. The
+  embedded resource is about 660 KB.
 - L-3: RequestOtp takes the advisory lock on `hashtextextended('otp-ip:' || ipHash)` before the mobile lock (fixed order).
 - L-4: `ICartRepository.GetOrCreateForCustomerForUpdateAsync`: `INSERT … ON CONFLICT (customer_id) WHERE customer_id IS
   NOT NULL DO NOTHING` (the predicate of `ux_cart_customer`), then lock + load; used by cart writes and the sign-in merge.
