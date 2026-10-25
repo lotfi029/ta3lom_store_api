@@ -10,6 +10,15 @@ internal sealed class CustomerRepository(StoreDbContext db) : GenericRepository<
 {
     public Task<Customer?> FindByMobileAsync(string mobileE164, CancellationToken ct = default) =>
         Set.FirstOrDefaultAsync(c => c.Mobile == mobileE164, ct);
+
+    public async Task LockForUpdateAsync(Guid customerId, CancellationToken ct = default)
+    {
+        await Db.Database.SqlQuery<Guid>($"""SELECT id AS "Value" FROM store.customer WHERE id = {customerId} FOR UPDATE""").ToListAsync(ct);
+        if (Db.ChangeTracker.Entries<Customer>().FirstOrDefault(e => e.Entity.Id == customerId) is { } tracked)
+        {
+            await tracked.ReloadAsync(ct);
+        }
+    }
 }
 
 internal sealed class OtpChallengeRepository(StoreDbContext db) : GenericRepository<OtpChallenge>(db), IOtpChallengeRepository

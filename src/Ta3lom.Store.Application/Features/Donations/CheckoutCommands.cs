@@ -21,6 +21,7 @@ internal sealed class CheckoutCommandHandler(ICustomerRepository customers, ICar
 
     private async Task<Result<CheckoutResponse>> PlaceAsync(CheckoutCommand command, CancellationToken ct)
     {
+        await customers.LockForUpdateAsync(command.CustomerId, ct);          // R12-3: customer → cart
         var customer = await customers.GetByIdAsync(command.CustomerId, ct);
         if (customer is not { IsActive: true })
         {

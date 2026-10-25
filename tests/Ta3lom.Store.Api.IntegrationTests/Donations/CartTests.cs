@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using Npgsql;
 using Ta3lom.Store.Api.IntegrationTests.Infrastructure;
 using Ta3lom.Store.Api.IntegrationTests.Infrastructure.Scenario;
@@ -280,5 +281,76 @@ public sealed class CartTests(ScenarioFactory factory) : IClassFixture<ScenarioF
 
         response.Response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
         (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.cart WHERE customer_id = '{donor.Id}'")).ShouldBe(0);
+    }
+
+    [Fact]
+    [Rule("D-14")]
+    public async Task A_first_cart_write_racing_the_account_deletion_creates_no_cart()
+    {
+        var c = await DonationCatalog.CreateAsync(factory);
+        var donor = await factory.CustomerAsync();
+        var ct = TestContext.Current.CancellationToken;
+
+        // DELETE /v1/me in flight for a donor without a cart: the donor is anonymised, not committed yet.
+        await using var deletion = new NpgsqlConnection(factory.DatabaseConnectionString);
+        await deletion.OpenAsync(ct);
+        await using var tx = await deletion.BeginTransactionAsync(ct);
+        await using (var command = new NpgsqlCommand($"""
+            UPDATE store.customer SET status = 'anonymised', mobile = NULL, full_name = NULL, email = NULL WHERE id = '{donor.Id}';
+            """, deletion, tx))
+        {
+            await command.ExecuteNonQueryAsync(ct);
+        }
+
+        var write = donor.PostAsync("/v1/cart/lines", new { projectId = c.ProjectId, optionId = c.OptionId, quantity = 1 });
+        await Task.Delay(500, ct);
+        await tx.CommitAsync(ct);
+        var response = await write;
+
+        response.Response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);                                              // R12-3
+        (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.cart WHERE customer_id = '{donor.Id}'")).ShouldBe(0);
+    }
+
+    [Fact]
+    [Rule("D-14")]
+    public async Task Parallel_deletion_and_first_cart_write_never_leave_a_cart_for_an_anonymised_donor()
+    {
+        var c = await DonationCatalog.CreateAsync(factory);
+        for (var round = 0; round < 5; round++)
+        {
+            var donor = await factory.CustomerAsync();
+
+            var (delete, write) = (donor.SendAsync(HttpMethod.Delete, "/v1/me"),
+                donor.PostAsync("/v1/cart/lines", new { projectId = c.ProjectId, optionId = c.OptionId, quantity = 1 }));
+            var results = await Task.WhenAll(delete, write);
+
+            results.ShouldAllBe(r => (int)r.Response.StatusCode < 500, $"round {round}");
+            results[0].Response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+            (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.cart WHERE customer_id = '{donor.Id}'")).ShouldBe(0, $"round {round}");
+        }
+    }
+
+    [Fact]
+    public async Task Parallel_sign_in_merge_and_cart_write_of_one_donor_both_succeed()
+    {
+        var c = await DonationCatalog.CreateAsync(factory);
+        var ct = TestContext.Current.CancellationToken;
+        for (var round = 0; round < 5; round++)
+        {
+            var donor = await factory.CustomerAsync();
+            var guest = factory.Browser();
+            await guest.SendJsonAsync(HttpMethod.Post, "/v1/cart/lines", new { categoryId = c.CategoryId, amount = "25.00" });
+            (await guest.PostAsJsonAsync("/v1/auth/otp/request", new { mobile = donor.Mobile }, ct)).StatusCode.ShouldBe(HttpStatusCode.Accepted);
+            var code = System.Text.RegularExpressions.Regex.Match(factory.SmsTo(donor.Mobile!)[0].Body, @"\d{6}").Value;
+
+            var verify = guest.PostAsJsonAsync("/v1/auth/otp/verify", new { mobile = donor.Mobile, code }, ct);
+            var write = donor.PostAsync("/v1/cart/lines", new { categoryId = c.CategoryId, amount = "30.00" });
+            await Task.WhenAll(verify, write);
+
+            (await verify).StatusCode.ShouldBe(HttpStatusCode.OK, $"round {round}");
+            (await write).Response.StatusCode.ShouldBe(HttpStatusCode.OK, $"round {round}");
+            (await factory.ScalarAsync<decimal>($"SELECT coalesce(sum(l.amount), 0) FROM store.cart_line l JOIN store.cart k ON k.id = l.cart_id WHERE k.customer_id = '{donor.Id}'"))
+                .ShouldBe(55.00m, $"round {round}");
+        }
     }
 }
