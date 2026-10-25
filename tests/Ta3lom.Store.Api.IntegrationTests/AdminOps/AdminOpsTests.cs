@@ -152,6 +152,24 @@ public sealed class AdminOpsTests(ScenarioFactory factory) : IClassFixture<Scena
     }
 
     [Fact]
+    public async Task A_staff_member_test_sends_at_most_five_templates_an_hour()
+    {
+        var manager = await factory.StaffAsync(Roles.StoreManager);
+        var other = await factory.StaffAsync(Roles.StoreManager);
+        for (var i = 0; i < 5; i++)
+        {
+            (await manager.PostAsync("/v1/admin/templates/test", new { channel = "email", subject = "s", body = "b" })).Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        }
+
+        var sixth = await manager.PostAsync("/v1/admin/templates/test", new { channel = "email", subject = "s", body = "b" });
+
+        sixth.Response.StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
+        sixth.Body.Str("code").ShouldBe(ErrorCodes.RateLimited);
+        int.Parse(sixth.Response.Headers.GetValues("Retry-After").Single(), System.Globalization.CultureInfo.InvariantCulture).ShouldBeGreaterThan(60);
+        (await other.PostAsync("/v1/admin/templates/test", new { channel = "email", subject = "s", body = "b" })).Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task The_audit_log_is_filtered_and_admin_only()
     {
         var admin = await factory.StaffAsync(Roles.Admin);

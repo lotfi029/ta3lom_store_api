@@ -31,6 +31,8 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
 | L-17 | done | Fix L-16, L-17, L-18, L-19 | `AdminOpsTests.Order_detail_and_cancel_find_the_reference_in_any_case` |
 | L-18 | done (already enforced) | Fix L-16, L-17, L-18, L-19 | `AdminCatalogTests.Reordering_with_a_repeated_category_is_400` |
 | L-19 | done (docs) | Fix L-16, L-17, L-18, L-19 | CLAUDE.md: Down never runs in production; newer Downs keep the extensions; `ux_option_label` owned by raw SQL |
+| D-a | done | Fix D-a, D-b | `CheckoutTests.Checkout_creates_a_pending_order_with_line_snapshots_and_empties_the_cart` (no staff mail, message processed), smoke test |
+| D-b | done | Fix D-a, D-b | `AdminOpsTests.A_staff_member_test_sends_at_most_five_templates_an_hour` |
 | C-1 | done | Fix C-1 | `SiteRebuildTests.A_newer_change_arriving_while_an_older_one_is_handled_still_rebuilds_once`, `…An_older_change_in_retry_backoff_is_absorbed_by_a_newer_due_one`, `…A_burst_of_five_changes_is_one_rebuild` |
 
 ## Decisions
@@ -112,6 +114,10 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
 - L-18: the reorder validator already refused repeated ids (400); a test now pins it.
 - L-19: InitialSchema not edited; CLAUDE.md documents that Down is not used in production and newer Downs keep the
   extensions (both new migrations do).
+- D-a: `OrderPlaced` / `OrderCancelled` handlers only log (reference, amount, line count); the message types stay.
+- D-b: rate-limit policy `template-test` (fixed window, 5 per hour, partitioned by the staff `sub`) on
+  `POST /v1/admin/templates/test` → 429 `http.rate_limited` with `Retry-After`. It replaces the admin policy on that route
+  (one limiter per endpoint). Configurable as `Store:RateLimits:TemplateTest`.
 - L-3: RequestOtp takes the advisory lock on `hashtextextended('otp-ip:' || ipHash)` before the mobile lock (fixed order).
 - L-4: `ICartRepository.GetOrCreateForCustomerForUpdateAsync`: `INSERT … ON CONFLICT (customer_id) WHERE customer_id IS
   NOT NULL DO NOTHING` (the predicate of `ux_cart_customer`), then lock + load; used by cart writes and the sign-in merge.

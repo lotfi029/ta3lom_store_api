@@ -46,7 +46,10 @@ public sealed partial class CheckoutTests(ScenarioFactory factory) : IClassFixtu
         (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.outbox_message WHERE type = 'OrderPlaced' AND payload->>'reference' = '{reference}'")).ShouldBe(1);
 
         await factory.DrainOutboxAsync();
-        (await factory.MailAsync()).ShouldContain(m => m.Subject.Contains(reference, StringComparison.Ordinal));
+        // D-a: until R5-Payments an order is only logged, no staff e-mail; the message is still processed.
+        (await factory.MailAsync()).ShouldNotContain(m => m.Subject.Contains(reference, StringComparison.Ordinal));
+        (await factory.ScalarAsync<bool>($"SELECT processed_at IS NOT NULL FROM store.outbox_message WHERE type = 'OrderPlaced' AND payload->>'reference' = '{reference}'"))
+            .ShouldBeTrue();
     }
 
     [Fact]

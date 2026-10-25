@@ -104,6 +104,9 @@ public sealed class RateLimitSettings
     public WindowSettings Download { get; set; } = new() { PermitLimit = 10, WindowSeconds = 60 };
 
     public WindowSettings Admin { get; set; } = new() { PermitLimit = 300, WindowSeconds = 60 };
+
+    /// D-b: 5 template test sends per staff member per hour.
+    public WindowSettings TemplateTest { get; set; } = new() { PermitLimit = 5, WindowSeconds = 3600 };
 }
 
 public sealed class WindowSettings

@@ -40,7 +40,8 @@ internal sealed class AdminOpsEndpoints : IEndpoint
 
         var templates = admin.MapGroup("/templates").WithTags("Admin · Templates").RequireAuthorization(Policies.StaffTemplates);
         templates.MapGet("/", ListTemplatesAsync).Produces<IReadOnlyList<TemplateResponse>>();
-        templates.MapPost("/test", TestTemplateAsync).Produces<TemplateTestResponse>()
+        templates.MapPost("/test", TestTemplateAsync).RequireRateLimiting(RatePolicies.TemplateTest)   // D-b: 5 per hour per staff member
+            .Produces<TemplateTestResponse>().ProducesProblem(StatusCodes.Status429TooManyRequests)
             .ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status422UnprocessableEntity);
         templates.MapPut("/{key}/{channel}/{locale}", UpdateTemplateAsync).Produces<TemplateResponse>()
             .ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity);

@@ -44,6 +44,7 @@ public static class RateLimitingSetup
             AddSliding(o, RatePolicies.Me, r.Me, SubjectOrClientKey);
             AddFixed(o, RatePolicies.Download, r.Download, SubjectOrClientKey);
             AddSliding(o, RatePolicies.Admin, r.Admin, SubjectOrClientKey);
+            AddFixed(o, RatePolicies.TemplateTest, r.TemplateTest, SubjectOrClientKey);
         });
         return services;
     }
