@@ -9,9 +9,6 @@ public interface IAccessTokenIssuer
 
     /// Short-lived token between password and TOTP (audience `store-staff-mfa`, 5 min).
     AccessToken IssueStaffMfa(Guid staffId);
-
-    /// Validates an MFA token and returns the staff id, or null.
-    Task<Guid?> ReadStaffMfaAsync(string token);
 }
 
 public sealed record AccessToken(string Token, int ExpiresInSeconds);

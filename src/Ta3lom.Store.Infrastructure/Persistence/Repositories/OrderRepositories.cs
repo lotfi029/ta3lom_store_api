@@ -11,9 +11,6 @@ internal sealed class OrderRepository(StoreDbContext db) : GenericRepository<Ord
     public async Task<long> NextReferenceNumberAsync(CancellationToken ct = default) =>
         (await Db.Database.SqlQuery<long>($"SELECT nextval('store.order_ref_seq') AS \"Value\"").ToListAsync(ct)).Single();
 
-    public Task<Order?> FindByReferenceAsync(string reference, CancellationToken ct = default) =>
-        Set.Include(o => o.Lines).FirstOrDefaultAsync(o => o.Reference == reference, ct);
-
     public async Task<Order?> LoadForUpdateAsync(Guid orderId, CancellationToken ct = default)
     {
         // Never compose LINQ over locking SQL (09 §5.3): lock first, then load the graph.

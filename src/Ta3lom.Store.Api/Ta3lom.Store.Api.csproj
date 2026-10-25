@@ -3,6 +3,7 @@
   <PropertyGroup>
     <RootNamespace>Ta3lom.Store.Api</RootNamespace>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <UserSecretsId>03a465c3-0f90-4b36-8396-a273bf1bc4a6</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Ta3lom.Store.Application/Ta3lom.Store.Application.csproj" />

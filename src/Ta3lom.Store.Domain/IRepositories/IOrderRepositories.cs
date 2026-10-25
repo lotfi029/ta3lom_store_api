@@ -7,9 +7,6 @@ public interface IOrderRepository : IGenericRepository<Order>
     /// RUL-28: next value of the gap-tolerant `order_ref_seq`.
     Task<long> NextReferenceNumberAsync(CancellationToken ct = default);
 
-    /// The order with its lines (tracked, not locked).
-    Task<Order?> FindByReferenceAsync(string reference, CancellationToken ct = default);
-
     /// database/01 §4.4: `SELECT … FOR UPDATE` on the order row, then the order with its lines. Serialises settlement,
     /// cancel and expiry per order. Call inside a unit of work.
     Task<Order?> LoadForUpdateAsync(Guid orderId, CancellationToken ct = default);

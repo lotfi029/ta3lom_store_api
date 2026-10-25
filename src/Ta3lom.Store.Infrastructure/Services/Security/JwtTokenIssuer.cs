@@ -32,20 +32,6 @@ internal sealed class JwtTokenIssuer(IOptions<JwtOptions> options, IClock clock)
         Issue(options.Value.StaffMfaAudience, options.Value.StaffSigningKeyBase64, SessionPolicy.StaffMfaLifetime,
             [new(JwtRegisteredClaimNames.Sub, staffId.ToString())]);
 
-    public async Task<Guid?> ReadStaffMfaAsync(string token)
-    {
-        var o = options.Value;
-        var result = await _handler.ValidateTokenAsync(token, new TokenValidationParameters
-        {
-            ValidIssuer = o.Issuer,
-            ValidAudience = o.StaffMfaAudience,
-            IssuerSigningKey = Key(o.StaffSigningKeyBase64, o.KeyId),
-            ClockSkew = TimeSpan.FromSeconds(30),
-            LifetimeValidator = (notBefore, expires, _, _) => expires is null || expires.Value > clock.UtcNow.UtcDateTime.AddSeconds(-30),
-        });
-        return result.IsValid && Guid.TryParse(result.ClaimsIdentity.FindFirst(JwtRegisteredClaimNames.Sub)?.Value, out var id) ? id : null;
-    }
-
     private AccessToken Issue(string audience, string keyBase64, TimeSpan lifetime, IEnumerable<Claim> claims)
     {
         var o = options.Value;

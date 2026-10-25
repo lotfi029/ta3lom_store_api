@@ -32,10 +32,6 @@ public record Error(string Code, string Description, int Status, IReadOnlyDictio
 
     public static Error RateLimited(string code, string description) => new(code, description, 429);
 
-    public static Error Internal(string code, string description) => new(code, description, 500);
-
-    public static Error BadGateway(string code, string description) => new(code, description, 502);
-
     public static Error Unavailable(string code, string description) => new(code, description, 503);
 
     /// 400 `validation.failed` with camelCase field → messages in the `errors` member (11 §1.6).
