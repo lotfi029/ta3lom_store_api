@@ -16,6 +16,16 @@ internal sealed class ListAdminProjectsQueryHandler(IApplicationDbContext db, IC
     {
         var page = new PageRequest(query.Page, query.PageSize);
         var projects = db.Projects.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(query.Q))
+        {
+            // L-11: search, filters and paging in one SQL; the page keeps the search rank.
+            var found = await search.SearchPageAsync(new CatalogSearchRequest(query.Q, query.Status, null, query.CategoryId, ActiveCategoryOnly: false,
+                page.Skip, page.Take), ct);
+            var hits = await Rows(projects.Where(p => found.Ids.Contains(p.Id))).ToListAsync(ct);
+            var rank = found.Ids.Select((id, i) => (id, i)).ToDictionary(x => x.id, x => x.i);
+            return new PagedResult<AdminProjectRow>([.. hits.OrderBy(r => rank[r.Id]).Select(r => r.ToRow())], found.Total, page.SafePage, page.Take);
+        }
+
         if (EnumWire.TryParse<ProjectStatus>(query.Status, out var status))
         {
             projects = projects.Where(p => p.Status == status);
@@ -26,34 +36,56 @@ internal sealed class ListAdminProjectsQueryHandler(IApplicationDbContext db, IC
             projects = projects.Where(p => p.CategoryId == categoryId);
         }
 
-        if (!string.IsNullOrWhiteSpace(query.Q))
-        {
-            var ids = await search.SearchAsync(query.Q, null, ct);
-            projects = projects.Where(p => ids.Contains(p.Id));
-        }
+        var total = await projects.CountAsync(ct);
+        var items = await Rows(projects.OrderByDescending(p => p.UpdatedAt).ThenBy(p => p.Id).Skip(page.Skip).Take(page.Take)).ToListAsync(ct);
+        return new PagedResult<AdminProjectRow>([.. items.OrderByDescending(r => r.UpdatedAt).ThenBy(r => r.Id).Select(r => r.ToRow())], total, page.SafePage, page.Take);
+    }
 
-        var rows =
-            from p in projects
-            join c in db.Categories.AsNoTracking() on p.CategoryId equals c.Id
-            orderby p.UpdatedAt descending, p.Id
-            select new
-            {
-                p.Id,
-                p.Slug,
-                p.Status,
-                p.TitleAr,
-                p.CategoryId,
-                CategoryNameAr = c.NameAr,
-                p.Sort,
-                ActiveOptions = p.Options.Count(o => o.IsActive),
-                p.AllowOpenAmount,
-                p.PublishedAt,
-                p.UpdatedAt,
-            };
-        var total = await rows.CountAsync(ct);
-        var items = await rows.Skip(page.Skip).Take(page.Take).ToListAsync(ct);
-        return new PagedResult<AdminProjectRow>([.. items.Select(r => new AdminProjectRow(r.Id, r.Slug, r.Status.ToWire(), r.TitleAr, r.CategoryId,
-            r.CategoryNameAr, r.Sort, r.ActiveOptions, r.AllowOpenAmount, r.PublishedAt, r.UpdatedAt))], total, page.SafePage, page.Take);
+    private IQueryable<RowData> Rows(IQueryable<Domain.Entities.Catalog.Project> projects) =>
+        from p in projects
+        join c in db.Categories.AsNoTracking() on p.CategoryId equals c.Id
+        select new RowData
+        {
+            Id = p.Id,
+            Slug = p.Slug,
+            Status = p.Status,
+            TitleAr = p.TitleAr,
+            CategoryId = p.CategoryId,
+            CategoryNameAr = c.NameAr,
+            Sort = p.Sort,
+            ActiveOptions = p.Options.Count(o => o.IsActive),
+            AllowOpenAmount = p.AllowOpenAmount,
+            PublishedAt = p.PublishedAt,
+            UpdatedAt = p.UpdatedAt,
+        };
+
+    /// Member-init projection (EF translates it); the enum becomes its wire string after materialisation.
+    private sealed class RowData
+    {
+        public Guid Id { get; init; }
+
+        public string Slug { get; init; } = string.Empty;
+
+        public ProjectStatus Status { get; init; }
+
+        public string TitleAr { get; init; } = string.Empty;
+
+        public Guid CategoryId { get; init; }
+
+        public string CategoryNameAr { get; init; } = string.Empty;
+
+        public int Sort { get; init; }
+
+        public int ActiveOptions { get; init; }
+
+        public bool AllowOpenAmount { get; init; }
+
+        public DateTimeOffset? PublishedAt { get; init; }
+
+        public DateTimeOffset UpdatedAt { get; init; }
+
+        public AdminProjectRow ToRow() =>
+            new(Id, Slug, Status.ToWire(), TitleAr, CategoryId, CategoryNameAr, Sort, ActiveOptions, AllowOpenAmount, PublishedAt, UpdatedAt);
     }
 }
 

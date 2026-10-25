@@ -22,6 +22,8 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
 | L-6 | done | Fix L-6, L-9 | `StaffAdminTests.An_admin_creates_lists_updates_and_resets_staff` (audit `staff.password_reset` / `staff.totp_reset`) |
 | L-9 | done | Fix L-6, L-9 | `KeyRingGuardTests.An_empty_key_ring_path_stops_the_host`, `…An_unwritable_key_ring_path_stops_the_host`, `StaffAuthTests.A_TOTP_secret_that_cannot_be_decrypted_answers_503_alerts_staff_and_keeps_the_enrolment` |
 | L-10 | done | Fix L-10 | `OutboxDispatcherTests.A_message_whose_last_claim_never_finished_is_dead_lettered_once_with_one_alert`, `…A_message_at_the_cap_is_never_claimed_again_while_a_lease_runs`, `…Every_claim_counts_an_attempt` |
+| L-11 | done | Fix L-11, L-12 | `PublicCatalogTests.Search_filters_and_pages_in_one_query_with_a_correct_total` (250 projects, 2 categories, page 2/4, admin list too) |
+| L-12 | done | Fix L-11, L-12 | `PublicCatalogTests.An_old_slug_does_not_redirect_into_an_inactive_category` |
 | C-1 | done | Fix C-1 | `SiteRebuildTests.A_newer_change_arriving_while_an_older_one_is_handled_still_rebuilds_once`, `…An_older_change_in_retry_backoff_is_absorbed_by_a_newer_due_one`, `…A_burst_of_five_changes_is_one_rebuild` |
 
 ## Decisions
@@ -80,6 +82,12 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
 - L-10 / P-3: `attempts` was already incremented in the claim UPDATE (kept); the claim now also requires
   `attempts < MaxAttempts`, and each dispatcher pass first dead-letters rows at the cap whose lease ran out (once each,
   one `outbox_dead_letter` staff alert per row, none for a staff alert itself).
+- L-11: `ICatalogSearch.SearchPageAsync(CatalogSearchRequest)` applies status, category (slug or id), active-category and
+  paging in the matching SQL and returns `(Ids, Total)`; no LIMIT before the filters. Public and admin listings use it
+  (one extra count query only when the page is past the end).
+- **REVIEW** L-11 (owner note): the listing without `q` orders by `sort, created_at, id` (was `sort, published_at desc`);
+  search results order by rank, similarity, then `sort, created_at, id`.
+- L-12: an old slug redirects only to a published project whose category is active; otherwise 404.
 - L-3: RequestOtp takes the advisory lock on `hashtextextended('otp-ip:' || ipHash)` before the mobile lock (fixed order).
 - L-4: `ICartRepository.GetOrCreateForCustomerForUpdateAsync`: `INSERT … ON CONFLICT (customer_id) WHERE customer_id IS
   NOT NULL DO NOTHING` (the predicate of `ux_cart_customer`), then lock + load; used by cart writes and the sign-in merge.

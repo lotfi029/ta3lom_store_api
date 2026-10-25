@@ -133,6 +133,53 @@ public sealed class PublicCatalogTests(ScenarioFactory factory) : IClassFixture<
     }
 
     [Fact]
+    public async Task Search_filters_and_pages_in_one_query_with_a_correct_total()
+    {
+        var (admin, build) = await AdminAsync();
+        var one = await build.CategoryAsync();
+        var two = await build.CategoryAsync();
+        var tag = Guid.NewGuid().ToString("N")[..6];
+        await factory.ExecuteSqlAsync($"""
+            INSERT INTO store.project (id, category_id, slug, status, title_ar, title_en, allow_open_amount, sort, created_at, updated_at, published_at)
+            SELECT gen_random_uuid(), CASE WHEN n <= 150 THEN '{one.Str("id")}'::uuid ELSE '{two.Str("id")}'::uuid END,
+                   'bulk-{tag}-' || n, 'published', 'بئر ماء ' || n, 'well{tag} ' || n, true, n, now(), now(), now()
+              FROM generate_series(1, 250) AS n
+            """);
+
+        var all = (await GetAsync($"/v1/catalog/projects?q=well{tag}&pageSize=100")).Body;
+        all.GetProperty("total").GetInt32().ShouldBe(250);
+        var page1 = (await GetAsync($"/v1/catalog/projects?q=well{tag}&category={one.Str("slug")}&page=1&pageSize=50")).Body;
+        var page2 = (await GetAsync($"/v1/catalog/projects?q=well{tag}&category={one.Str("slug")}&page=2&pageSize=50")).Body;
+        var page4 = (await GetAsync($"/v1/catalog/projects?q=well{tag}&category={one.Str("slug")}&page=4&pageSize=50")).Body;
+
+        page1.GetProperty("total").GetInt32().ShouldBe(150);
+        page2.GetProperty("total").GetInt32().ShouldBe(150);
+        Slugs(page2).Count.ShouldBe(50);
+        Slugs(page1).Intersect(Slugs(page2)).ShouldBeEmpty();
+        Slugs(page4).ShouldBeEmpty();
+        page4.GetProperty("total").GetInt32().ShouldBe(150);
+        (await admin.GetAsync($"/v1/admin/projects?q=well{tag}&category={two.Str("id")}&page=2&pageSize=40")).Body.GetProperty("total").GetInt32().ShouldBe(100);
+    }
+
+    [Fact]
+    public async Task An_old_slug_does_not_redirect_into_an_inactive_category()
+    {
+        var (admin, build) = await AdminAsync();
+        var (category, project) = await build.PublishedAsync();
+        var oldSlug = project.Str("slug");
+        (await admin.SendAsync(HttpMethod.Put, $"/v1/admin/projects/{project.Str("id")}",
+            CatalogBuilder.ProjectBody(Guid.Parse(category.Str("id")), CatalogBuilder.NewSlug("moved"), cover: Guid.Parse(project.Str("coverAssetId")),
+                version: project.GetProperty("version").GetUInt32()))).Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await GetAsync($"/v1/catalog/projects/{oldSlug}")).Body.TryGetProperty("redirectTo", out _).ShouldBeTrue();
+
+        (await admin.SendAsync(HttpMethod.Put, $"/v1/admin/categories/{category.Str("id")}",
+            CatalogBuilder.CategoryBody(category.Str("slug"), isActive: false, version: category.GetProperty("version").GetUInt32())))
+            .Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        (await GetAsync($"/v1/catalog/projects/{oldSlug}")).Response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
     [Rule("D-08")]
     public async Task An_old_slug_of_a_published_project_redirects_and_stays_reserved()
     {
