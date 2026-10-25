@@ -1,19 +1,27 @@
+using System.Globalization;
 using Ta3lom.Store.Application.Features.Outbox;
+using Ta3lom.Store.Domain.Events;
 
 namespace Ta3lom.Store.Application.Features.Notifications;
 
 /// Renders a `message_template` (Arabic fallback) and sends it at most once per outbox message, channel and recipient.
+/// A send whose outcome is unknown (the row is still `sending` when the message comes back: a crash, a lost reply, a
+/// handler past its lease) is never repeated: the row becomes `unknown` and staff get one alert (A-2).
 internal sealed class NotificationDispatch(
     INotificationRepository notifications,
     ITemplateRenderer templates,
     ISmsSender sms,
     IEmailSender email,
     IPseudonymizer pseudonymizer,
+    IOutbox outbox,
     IUnitOfWork uow,
     IClock clock)
 {
+    public const string UnknownOutcomeKind = "notification_unknown";
+
+    /// `alertOnUnknown` is false for the unknown-outcome alert itself, so a lost alert does not alert again.
     public async Task SendOnceAsync(OutboxEnvelope envelope, MessageChannel channel, string recipient, string templateKey, string locale,
-        object model, CancellationToken ct)
+        object model, CancellationToken ct, bool alertOnUnknown = true)
     {
         ArgumentNullException.ThrowIfNull(envelope);
         string recipientHash;
@@ -37,14 +45,26 @@ internal sealed class NotificationDispatch(
             recipientHash = pseudonymizer.HashEmail(recipient);
         }
 
+        var message = await templates.RenderAsync(templateKey, channel, locale, model, ct);       // before the claim: a render error is retried
         var dedupeKey = $"{envelope.Id:N}:{channel.ToWire()}:{recipientHash}";
-        var row = await notifications.TryClaimAsync(dedupeKey, channel, recipientHash, templateKey, clock.UtcNow, ct);
-        if (row is null)
+        var (row, claimed) = await notifications.TryClaimAsync(dedupeKey, channel, recipientHash, templateKey, clock.UtcNow, ct);
+        if (!claimed)
         {
-            return;                                                                      // already sent
+            if (row.Status == NotificationStatus.Sending)
+            {
+                row.MarkUnknown();
+                if (alertOnUnknown)
+                {
+                    outbox.Enqueue(new StaffAlert(UnknownOutcomeKind, null, string.Create(CultureInfo.InvariantCulture,
+                        $"{templateKey} ({channel.ToWire()}) of outbox message {envelope.Id}: delivery outcome unknown, not sent again")));
+                }
+
+                await uow.SaveChangesAsync(ct);
+            }
+
+            return;                                                                      // sent, or never again
         }
 
-        var message = await templates.RenderAsync(templateKey, channel, locale, model, ct);
         var result = channel == MessageChannel.Sms
             ? ToDelivery(await sms.SendAsync(recipient, message.Body, ct))
             : await email.SendAsync(new EmailMessage(recipient, message.Subject ?? templateKey, message.Body, []), ct);

@@ -112,13 +112,26 @@ internal sealed class SmtpEmailSender(IOptions<EmailOptions> options) : IEmailSe
             }
 
             var response = await client.SendAsync(MimeBuilder.Build(o, message), ct);
-            await client.DisconnectAsync(quit: true, ct);
+            await QuitQuietlyAsync(client, ct);
             return DeliveryResult.Ok(response);
         }
         catch (Exception ex) when (ex is SmtpCommandException or SmtpProtocolException or AuthenticationException or SocketException or IOException
                                        or ServiceNotConnectedException)
         {
             return DeliveryResult.Failed(ex.Message);
+        }
+    }
+
+    /// A-2: once the server accepted the message it is sent; a failing QUIT must not turn it into a retry (a second e-mail).
+    private static async Task QuitQuietlyAsync(SmtpClient client, CancellationToken ct)
+    {
+        try
+        {
+            await client.DisconnectAsync(quit: true, ct);
+        }
+        catch (Exception ex) when (ex is SmtpCommandException or SmtpProtocolException or SocketException or IOException or ServiceNotConnectedException)
+        {
+            // the message is already delivered
         }
     }
 }

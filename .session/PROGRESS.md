@@ -6,3 +6,5 @@ A-5 → order.idempotency_key + stale claim (2 min) replays the order; A-7 → I
 
 | Id | Status | Commit | Test |
 |---|---|---|---|
+| A-1 | done | 4db5f6e | OutboxTimeoutTests (handler timeout → retried, batch continues; SMS timeout → failed send) |
+| A-2 | done | (next) | NotificationOnceTests (unknown outcome → once + alert; refused → retried); migration 20261025174608_NotificationSendingStatus |

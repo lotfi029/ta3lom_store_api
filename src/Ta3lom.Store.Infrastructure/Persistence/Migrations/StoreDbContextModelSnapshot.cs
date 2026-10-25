@@ -1158,7 +1158,7 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_notification_channel", "channel IN ('sms', 'email')");
 
-                            t.HasCheckConstraint("ck_notification_status", "status IN ('sent', 'failed')");
+                            t.HasCheckConstraint("ck_notification_status", "status IN ('sent', 'failed', 'sending', 'unknown')");
                         });
                 });
 

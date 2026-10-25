@@ -66,16 +66,18 @@ internal sealed class RefreshTokenRepository(StoreDbContext db) : GenericReposit
 
 internal sealed class NotificationRepository(StoreDbContext db) : GenericRepository<Notification>(db), INotificationRepository
 {
-    public async Task<Notification?> TryClaimAsync(string dedupeKey, MessageChannel channel, string recipientHash, string templateKey,
+    public async Task<NotificationClaim> TryClaimAsync(string dedupeKey, MessageChannel channel, string recipientHash, string templateKey,
         DateTimeOffset now, CancellationToken ct = default)
     {
         var ids = await Db.Database.SqlQuery<Guid>($"""
             INSERT INTO store.notification (id, channel, recipient_hash, template_key, dedupe_key, status, created_at)
-            VALUES ({Guid.CreateVersion7()}, {channel.ToWire()}, {recipientHash}, {templateKey}, {dedupeKey}, 'failed', {now})
-            ON CONFLICT (dedupe_key) DO UPDATE SET created_at = EXCLUDED.created_at WHERE notification.status = 'failed'
+            VALUES ({Guid.CreateVersion7()}, {channel.ToWire()}, {recipientHash}, {templateKey}, {dedupeKey}, 'sending', {now})
+            ON CONFLICT (dedupe_key) DO UPDATE SET status = 'sending', created_at = EXCLUDED.created_at WHERE notification.status = 'failed'
             RETURNING id AS "Value"
             """).ToListAsync(ct);
-        return ids.Count == 0 ? null : await Set.SingleAsync(n => n.Id == ids[0], ct);
+        return ids.Count == 0
+            ? new NotificationClaim(await Set.SingleAsync(n => n.DedupeKey == dedupeKey, ct), Claimed: false)
+            : new NotificationClaim(await Set.SingleAsync(n => n.Id == ids[0], ct), Claimed: true);
     }
 }
 

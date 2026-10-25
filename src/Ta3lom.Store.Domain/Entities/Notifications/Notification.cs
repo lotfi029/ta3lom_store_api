@@ -2,7 +2,8 @@ namespace Ta3lom.Store.Domain.Entities.Notifications;
 
 /// Table `notification`: one row per message the store tried to send. Never holds the body (an OTP code never lands here)
 /// nor the address in clear (`recipient_hash`). The unique `dedupe_key` makes outbox sends at-most-once: the row is claimed
-/// as `failed` (not delivered yet) before the provider call and marked `sent` after it.
+/// as `sending` before the provider call and marked `sent` or `failed` (refused, may be retried) after it; a row still
+/// `sending` when the message comes back has an unknown outcome and becomes `unknown` (never sent again).
 public sealed class Notification : Entity
 {
     public Notification(MessageChannel channel, string recipientHash, string templateKey, string? dedupeKey, DateTimeOffset now)
@@ -41,4 +42,6 @@ public sealed class Notification : Entity
     }
 
     public void MarkFailed() => Status = NotificationStatus.Failed;
+
+    public void MarkUnknown() => Status = NotificationStatus.Unknown;
 }
