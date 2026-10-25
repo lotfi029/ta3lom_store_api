@@ -23,6 +23,10 @@ A-5 → order.idempotency_key + stale claim (2 min) replays the order; A-7 → I
 | L-4 | done | 08243d7 | JobRunTests (one scheduled fire runs once across instances; failed Result logged, no throw); migration 20261025182258_JobRunClaims |
 | L-6 | done | 61848fd | MediaUploadTests (alt text of 301 characters → 400) |
 | L-7 | done | 61848fd | CatalogConsistencyTests.Parallel_setting_updates_cannot_together_break_the_money_rules (5 rounds, one 422 each) |
-| L-8 | done | (next) | CartTests.A_guest_cart_holds_… (2nd write re-issues t3s_cart, Max-Age 2592000) |
-| L-9 | done | (next) | CartTests.A_cart_write_racing_the_account_deletion_leaves_no_cart_behind |
-| L-11 | done | (next) | Domain CartTests.Adding_to_an_option_line_checks_the_total_with_the_line_at_its_new_price, …Merging_into_an_option_line_checks_the_total_at_the_donor_line_price |
+| L-8 | done | 0853121 | CartTests.A_guest_cart_holds_… (2nd write re-issues t3s_cart, Max-Age 2592000) |
+| L-9 | done | 0853121 | CartTests.A_cart_write_racing_the_account_deletion_leaves_no_cart_behind |
+| L-11 | done | 0853121 | Domain CartTests.Adding_to_an_option_line_checks_the_total_with_the_line_at_its_new_price, …Merging_into_an_option_line_checks_the_total_at_the_donor_line_price |
+| F4 last admin race | done | (next) | StaffAuthTests.Two_admins_demoting_each_other_at_once_leave_one_admin |
+| F4 locked refresh | done | (next) | StaffAuthTests.A_locked_account_loses_its_session_family_at_the_next_refresh |
+| F4 merge drop | done | (next) | CartTests.A_guest_line_that_would_break_the_total_limit_is_dropped_at_sign_in_and_reported |
+| F4 dispatch dedupe | done | 913cb0f | NotificationOnceTests (A-2) |

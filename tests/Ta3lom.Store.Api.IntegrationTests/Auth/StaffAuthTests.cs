@@ -372,6 +372,45 @@ public sealed class StaffAuthTests(ScenarioFactory factory) : IClassFixture<Scen
         allowed.Body.GetProperty("roles").EnumerateArray().Select(r => r.GetString()).ShouldBe([Roles.Viewer]);
     }
 
+    [Fact]
+    public async Task Two_admins_demoting_each_other_at_once_leave_one_admin()
+    {
+        await factory.ExecuteSqlAsync("UPDATE store.staff_user SET roles = ARRAY['viewer'] WHERE 'admin' = ANY (roles)");
+        var first = await factory.StaffAsync(Roles.Admin);
+        var second = await factory.StaffAsync(Roles.Admin);
+        async Task<long> VersionAsync(Guid id) => await factory.ScalarAsync<long>($"SELECT xmin::text::bigint FROM store.staff_user WHERE id = '{id}'");
+        var firstVersion = await VersionAsync(first.Id);
+        var secondVersion = await VersionAsync(second.Id);
+
+        var results = await Task.WhenAll(
+            first.SendAsync(HttpMethod.Put, $"/v1/admin/staff/{second.Id}", new { name = "Second", roles = new[] { Roles.Viewer }, isActive = true, version = secondVersion }),
+            second.SendAsync(HttpMethod.Put, $"/v1/admin/staff/{first.Id}", new { name = "First", roles = new[] { Roles.Viewer }, isActive = true, version = firstVersion }));
+
+        results.Count(r => r.Response.StatusCode == HttpStatusCode.OK).ShouldBe(1);
+        results.Single(r => r.Response.StatusCode != HttpStatusCode.OK).Body.Str("code").ShouldBe(ErrorCodes.StaffLastAdmin);
+        (await factory.ScalarAsync<long>("SELECT count(*) FROM store.staff_user WHERE is_active AND 'admin' = ANY (roles)")).ShouldBe(1);
+    }
+
+    [Fact]
+    [Rule("D-12")]
+    public async Task A_locked_account_loses_its_session_family_at_the_next_refresh()
+    {
+        var (_, _, cookie, email) = await SignInNewAccountAsync(Roles.Admin);
+        for (var i = 0; i < 5; i++)
+        {
+            (await LoginAsync(email, "Wrong-Password-" + i)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        }
+
+        using var refresh = new HttpRequestMessage(HttpMethod.Post, "/v1/admin/auth/refresh");
+        refresh.Headers.Add("Cookie", "t3s_srt=" + cookie);
+        (await factory.Browser().SendAsync(refresh, Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+
+        (await factory.ScalarAsync<long>($"""
+            SELECT count(*) FROM store.refresh_token t JOIN store.staff_user s ON s.id = t.subject_id
+             WHERE s.email = '{email}' AND t.revoked_at IS NULL
+            """)).ShouldBe(0);
+    }
+
     /// The v3 format with fewer iterations, as an earlier release wrote it.
     private static string LegacyHash(string password, int iterations)
     {

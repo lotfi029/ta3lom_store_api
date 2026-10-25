@@ -217,6 +217,27 @@ public sealed class CartTests(ScenarioFactory factory) : IClassFixture<ScenarioF
     }
 
     [Fact]
+    [Rule("D-04")]
+    public async Task A_guest_line_that_would_break_the_total_limit_is_dropped_at_sign_in_and_reported()
+    {
+        var c = await DonationCatalog.CreateAsync(factory);
+        var mobile = ScenarioFactory.NewMobile();
+        var browser = factory.Browser();
+        await factory.SignInAsync(browser, mobile);
+        await browser.SendJsonAsync(HttpMethod.Post, "/v1/cart/lines", new { categoryId = c.CategoryId, amount = "99000.00" });
+        await browser.SendJsonAsync(HttpMethod.Post, "/v1/auth/logout");
+
+        var guest = factory.Browser();
+        await guest.SendJsonAsync(HttpMethod.Post, "/v1/cart/lines", new { categoryId = c.CategoryId, amount = "5000.00" });
+        var session = await factory.SignInAsync(guest, mobile);
+
+        session.GetProperty("cartNotices").EnumerateArray().Select(n => n.Str("code")).ShouldBe(["cart.merge_dropped"]);
+        var cart = (await guest.SendJsonAsync(HttpMethod.Get, "/v1/cart")).Body;
+        cart.GetProperty("lineCount").GetInt32().ShouldBe(1);
+        cart.Str("totalAmount").ShouldBe("99000.00");
+    }
+
+    [Fact]
     [Rule("D-13")]
     public async Task A_blocked_donor_cannot_change_the_cart()
     {
