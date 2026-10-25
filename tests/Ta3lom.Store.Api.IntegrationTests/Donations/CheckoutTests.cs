@@ -190,6 +190,27 @@ public sealed partial class CheckoutTests(ScenarioFactory factory) : IClassFixtu
     }
 
     [Fact]
+    public async Task A_stale_claim_is_taken_over_only_by_the_same_body()
+    {
+        var (_, donor) = await DonorWithCartAsync();
+        var body = new { fullName = "D", email = "d@example.com" };
+        var done = HttpJson.Key();
+        (await donor.PostAsync("/v1/checkout", body, done)).Response.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var key = HttpJson.Key();
+        await factory.ExecuteSqlAsync($"""
+            INSERT INTO store.idempotency_key (scope, key, request_hash, status, created_at, expires_at)
+            SELECT scope, '{key["Idempotency-Key"]}', repeat('a', 64), 'in_progress', created_at - interval '5 minutes', now() + interval '1 day'
+              FROM store.idempotency_key WHERE key = '{done["Idempotency-Key"]}'
+            """);
+
+        var other = await donor.PostAsync("/v1/checkout", body, key);
+
+        other.Response.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);                                      // R12-2
+        other.Body.Str("code").ShouldBe(ErrorCodes.IdempotencyKeyReused);
+        (await factory.ScalarAsync<string>($"SELECT request_hash FROM store.idempotency_key WHERE key = '{key["Idempotency-Key"]}'")).ShouldBe(new string('a', 64));
+    }
+
+    [Fact]
     public async Task A_key_still_in_progress_is_409_and_stays_claimed()
     {
         var (_, donor) = await DonorWithCartAsync();
