@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Ta3lom.Store.Application.DTOs.Settings;
 using Ta3lom.Store.Domain.Entities.Settings;
+using Ta3lom.Store.Domain.Events;
 
 namespace Ta3lom.Store.Application.Features.Settings.Commands.UpdateSetting;
 
@@ -11,6 +12,7 @@ public sealed record UpdateSettingCommand(string Key, JsonElement Value) : IComm
 internal sealed class UpdateSettingCommandHandler(
     IGenericRepository<Setting> settings,
     IStoreSettings cache,
+    IOutbox outbox,
     ICurrentActor actor,
     IUnitOfWork uow,
     IClock clock) : ICommandHandler<UpdateSettingCommand, SettingResponse>
@@ -29,6 +31,16 @@ internal sealed class UpdateSettingCommandHandler(
 
         var now = clock.UtcNow;
         var value = SettingRules.Canonical(command.Key, command.Value);
+        if (!SettingRules.IsConsistent(command.Key, value, await cache.GetAsync(ct)))
+        {
+            return SettingErrors.InvalidValue;                                // L-15: would contradict another setting
+        }
+
+        if (SettingRules.SiteVisibleKeys.Contains(command.Key, StringComparer.Ordinal))
+        {
+            outbox.Enqueue(new CatalogChanged("setting", Guid.Empty, command.Key));    // L-14: the static site shows it
+        }
+
         var json = value.GetRawText();
         var setting = await settings.FirstOrDefaultAsync(s => s.Key == command.Key, ct);
         if (setting is null)

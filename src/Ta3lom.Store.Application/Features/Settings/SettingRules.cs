@@ -24,6 +24,40 @@ internal static partial class SettingRules
     [GeneratedRegex(@"^\+9665[0-9]{8}$", RegexOptions.CultureInvariant)]
     private static partial Regex SaudiMobileE164();
 
+    /// Settings the static site shows (L-14): a change queues a rebuild.
+    public static readonly string[] SiteVisibleKeys =
+        [SettingKeys.MinGiftAmount, SettingKeys.AmountPresets, SettingKeys.SiteNameAr, SettingKeys.SiteNameEn, SettingKeys.SupportMobile];
+
+    /// L-15: min_gift_amount ≤ max_line_amount ≤ cart_max_total, and every amount preset ≥ min_gift_amount, checked with
+    /// the new value in place of the current one.
+    public static bool IsConsistent(string key, JsonElement canonical, StoreSettings current)
+    {
+        ArgumentNullException.ThrowIfNull(current);
+        var min = current.MinGiftAmount;
+        var maxLine = current.MaxLineAmount;
+        var maxTotal = current.CartMaxTotal;
+        var presets = current.AmountPresets;
+        switch (key)
+        {
+            case SettingKeys.MinGiftAmount:
+                min = MoneyInput.Parse(canonical.GetString()!);
+                break;
+            case SettingKeys.MaxLineAmount:
+                maxLine = MoneyInput.Parse(canonical.GetString()!);
+                break;
+            case SettingKeys.CartMaxTotal:
+                maxTotal = MoneyInput.Parse(canonical.GetString()!);
+                break;
+            case SettingKeys.AmountPresets:
+                presets = [.. canonical.EnumerateArray().Select(e => MoneyInput.Parse(e.GetString()!))];
+                break;
+            default:
+                return true;
+        }
+
+        return min <= maxLine && maxLine <= maxTotal && presets.All(p => p >= min);
+    }
+
     public static bool IsKnown(string key) => SettingKeys.All.Contains(key, StringComparer.Ordinal);
 
     /// The wire value of a stored setting: money keys are always `"10.00"` strings, whatever the seed stored.

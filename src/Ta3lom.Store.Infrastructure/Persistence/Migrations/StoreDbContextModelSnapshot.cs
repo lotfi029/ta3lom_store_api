@@ -341,9 +341,8 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_project_option");
 
-                    b.HasIndex("ProjectId", "LabelAr")
-                        .IsUnique()
-                        .HasDatabaseName("ux_option_label");
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("ix_option_project");
 
                     b.ToTable("project_option", "store", t =>
                         {

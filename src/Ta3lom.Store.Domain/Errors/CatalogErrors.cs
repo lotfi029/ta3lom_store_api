@@ -20,6 +20,10 @@ public static class CatalogErrors
         Error.Conflict(ErrorCodes.ProjectInvalidTransition, "This status change is not allowed.")
             .With("from", from.ToWire()).With("to", to.ToWire());
 
+    /// L-13: a deactivated option (used in an order) keeps its label, so no other option of the project may take it.
+    public static Error OptionLabelTaken(string label) =>
+        Error.Unprocessable(ErrorCodes.ProjectOptionLabelTaken, "A deactivated option of this project keeps this label.").With("label", label);
+
     /// A cover or category image must be a public image asset.
     public static Error ImageRequired => Error.Unprocessable(ErrorCodes.MediaImageRequired, "The asset is not a public image.");
 }

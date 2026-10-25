@@ -59,6 +59,7 @@ public static class ErrorCodes
     public const string ProjectSlugTaken = "project.slug_taken";
     public const string ProjectPublishIncomplete = "project.publish_incomplete";
     public const string ProjectInvalidTransition = "project.invalid_transition";
+    public const string ProjectOptionLabelTaken = "project.option_label_taken";
     public const string MediaImageRequired = "media.image_required";
 
     // Donation cart (D-01 … D-05)

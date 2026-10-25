@@ -277,6 +277,12 @@
   <data name="project.invalid_transition.detail" xml:space="preserve">
     <value>The project cannot move from its current status to this one.</value>
   </data>
+  <data name="project.option_label_taken" xml:space="preserve">
+    <value>Option label taken</value>
+  </data>
+  <data name="project.option_label_taken.detail" xml:space="preserve">
+    <value>A deactivated option of this project keeps this label because earlier orders use it. Choose another label.</value>
+  </data>
   <data name="media.image_required" xml:space="preserve">
     <value>Image required</value>
   </data>

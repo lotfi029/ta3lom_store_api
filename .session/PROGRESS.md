@@ -24,6 +24,9 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
 | L-10 | done | Fix L-10 | `OutboxDispatcherTests.A_message_whose_last_claim_never_finished_is_dead_lettered_once_with_one_alert`, `…A_message_at_the_cap_is_never_claimed_again_while_a_lease_runs`, `…Every_claim_counts_an_attempt` |
 | L-11 | done | Fix L-11, L-12 | `PublicCatalogTests.Search_filters_and_pages_in_one_query_with_a_correct_total` (250 projects, 2 categories, page 2/4, admin list too) |
 | L-12 | done | Fix L-11, L-12 | `PublicCatalogTests.An_old_slug_does_not_redirect_into_an_inactive_category` |
+| L-13 | done | Fix L-13, L-14, L-15 | `CatalogConsistencyTests.Two_options_swap_their_labels_in_one_save`, `…A_label_kept_by_a_deactivated_option_cannot_be_given_to_another_one` |
+| L-14 | done | Fix L-13, L-14, L-15 | `CatalogConsistencyTests.Alt_text_and_site_visible_settings_queue_a_rebuild` |
+| L-15 | done | Fix L-13, L-14, L-15 | `CatalogConsistencyTests.Money_settings_must_stay_consistent_with_each_other` |
 | C-1 | done | Fix C-1 | `SiteRebuildTests.A_newer_change_arriving_while_an_older_one_is_handled_still_rebuilds_once`, `…An_older_change_in_retry_backoff_is_absorbed_by_a_newer_due_one`, `…A_burst_of_five_changes_is_one_rebuild` |
 
 ## Decisions
@@ -88,6 +91,16 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
 - **REVIEW** L-11 (owner note): the listing without `q` orders by `sort, created_at, id` (was `sort, published_at desc`);
   search results order by rank, similarity, then `sort, created_at, id`.
 - L-12: an old slug redirects only to a published project whose category is active; otherwise 404.
+- **REVIEW** L-13 / P-7: migration `20261025160221_OptionLabelDeferrable` replaces the unique index `ux_option_label` by a DEFERRABLE
+  INITIALLY DEFERRED unique constraint of the same name (raw SQL), so a label swap is one save. EF Core itself blocks the
+  swap while the unique index is in its model (it orders the updates by it and reports a cycle), so the constraint is
+  deliberately NOT in the EF model; the model has a plain `ix_option_project (project_id)` instead. Any later migration
+  touching `project_option` must keep the constraint (raw SQL). Taking the label of a deactivated (used) option that
+  leaves the list → 422 `project.option_label_taken` (new code, ar/en).
+- L-14: `MediaAsset.SetAlt` raises `CatalogChanged("media", id, "alt")`; updating `min_gift_amount`, `amount_presets`,
+  `site_name_ar/en` or `support_mobile` enqueues `CatalogChanged("setting", Guid.Empty, key)`.
+- L-15: a setting update is checked with the new value in place: `min_gift_amount ≤ max_line_amount ≤ cart_max_total` and
+  every preset ≥ `min_gift_amount`, else 422 `setting.invalid_value`.
 - L-3: RequestOtp takes the advisory lock on `hashtextextended('otp-ip:' || ipHash)` before the mobile lock (fixed order).
 - L-4: `ICartRepository.GetOrCreateForCustomerForUpdateAsync`: `INSERT … ON CONFLICT (customer_id) WHERE customer_id IS
   NOT NULL DO NOTHING` (the predicate of `ux_cart_customer`), then lock + load; used by cart writes and the sign-in merge.
@@ -95,3 +108,4 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
 ## Migrations
 
 - `20261025153628_AnonymisedMobileNull` (L-5)
+- `20261025160221_OptionLabelDeferrable` (L-13)

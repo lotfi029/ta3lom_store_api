@@ -117,6 +117,17 @@ public sealed class Project : AggregateRoot
             return CatalogErrors.PublishIncomplete(["amount"]);
         }
 
+        // L-13: options that leave the list but are used in orders stay (deactivated) with their label; a kept option may
+        // not take such a label. Swapping labels between kept options is fine (the uniqueness is checked at commit).
+        var claimed = inputs.Where(i => i.Id is not null).Select(i => i.Id!.Value).ToHashSet();
+        var reusedByLabel = inputs.Where(i => i.Id is null).Select(i => i.LabelAr.Trim()).ToHashSet(StringComparer.Ordinal);
+        var staying = _options.Where(o => !claimed.Contains(o.Id) && !reusedByLabel.Contains(o.LabelAr) && usedInOrders.Contains(o.Id))
+            .Select(o => o.LabelAr).ToHashSet(StringComparer.Ordinal);
+        if (inputs.Where(i => i.Id is not null).Select(i => i.LabelAr.Trim()).FirstOrDefault(staying.Contains) is { } taken)
+        {
+            return CatalogErrors.OptionLabelTaken(taken);
+        }
+
         var kept = new HashSet<Guid>();
         foreach (var input in inputs)
         {

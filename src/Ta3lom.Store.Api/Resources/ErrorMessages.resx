@@ -277,6 +277,12 @@
   <data name="project.invalid_transition.detail" xml:space="preserve">
     <value>لا يمكن نقل المشروع من حالته الحالية إلى هذه الحالة.</value>
   </data>
+  <data name="project.option_label_taken" xml:space="preserve">
+    <value>الاسم مستخدم لخيار موقوف</value>
+  </data>
+  <data name="project.option_label_taken.detail" xml:space="preserve">
+    <value>خيار موقوف في هذا المشروع يحتفظ بهذا الاسم لأنه استُخدم في طلبات سابقة. اختر اسمًا آخر.</value>
+  </data>
   <data name="media.image_required" xml:space="preserve">
     <value>يلزم اختيار صورة</value>
   </data>
