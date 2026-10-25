@@ -33,6 +33,12 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
 | L-19 | done (docs) | Fix L-16, L-17, L-18, L-19 | CLAUDE.md: Down never runs in production; newer Downs keep the extensions; `ux_option_label` owned by raw SQL |
 | D-a | done | Fix D-a, D-b | `CheckoutTests.Checkout_creates_a_pending_order_with_line_snapshots_and_empties_the_cart` (no staff mail, message processed), smoke test |
 | D-b | done | Fix D-a, D-b | `AdminOpsTests.A_staff_member_test_sends_at_most_five_templates_an_hour` |
+| F4 matrix | done | Test gaps F4 | `PolicyMatrixTests.The_literal_table_lists_exactly_the_mapped_admin_routes_and_matches_their_policies`, `…Each_role_reaches_exactly_the_routes_its_policies_allow` (expected roles from the literal table) |
+| F4 parallel checkout | done | Test gaps F4 | `CheckoutTests.Two_parallel_checkouts_of_one_cart_with_different_keys_make_one_order` |
+| F4 parallel adds | done | Fix L-3, L-4 | `CartTests.Parallel_adds_of_the_same_option_are_one_line_with_the_quantities_summed` |
+| F4 4xx then retry | done | Fix L-1, L-2 | `CheckoutTests.A_refused_checkout_releases_its_key_so_the_same_key_works_after_fixing_the_cart` |
+| F4 re-sign-up | done | Fix L-5 | `MeTests.After_deletion_the_same_mobile_signs_up_as_a_new_donor_and_admin_search_finds_only_the_new_one` |
+| F4 migrations | done | Fix L-5 | `MigrationTests.All_migrations_apply_on_an_empty_database_and_leave_no_pending_model_changes` |
 | C-1 | done | Fix C-1 | `SiteRebuildTests.A_newer_change_arriving_while_an_older_one_is_handled_still_rebuilds_once`, `…An_older_change_in_retry_backoff_is_absorbed_by_a_newer_due_one`, `…A_burst_of_five_changes_is_one_rebuild` |
 
 ## Decisions
@@ -118,6 +124,10 @@ Baseline: `main` 0de2bbb. Branch: session branch `claude/youthful-feynman-yr7h4h
 - D-b: rate-limit policy `template-test` (fixed window, 5 per hour, partitioned by the staff `sub`) on
   `POST /v1/admin/templates/test` → 429 `http.rate_limited` with `Retry-After`. It replaces the admin policy on that route
   (one limiter per endpoint). Configurable as `Store:RateLimits:TemplateTest`.
+- F4: the policy matrix expects a literal 36-row table (route → roles); a second test checks that the table lists exactly
+  the mapped admin routes and that the policies on each route grant the same roles. The derived-only theory was removed.
+- F4: two parallel checkouts of one cart with different keys → one 201 and one 409 `checkout.cart_empty` (the cart row
+  lock serialises them).
 - L-3: RequestOtp takes the advisory lock on `hashtextextended('otp-ip:' || ipHash)` before the mobile lock (fixed order).
 - L-4: `ICartRepository.GetOrCreateForCustomerForUpdateAsync`: `INSERT … ON CONFLICT (customer_id) WHERE customer_id IS
   NOT NULL DO NOTHING` (the predicate of `ux_cart_customer`), then lock + load; used by cart writes and the sign-in merge.

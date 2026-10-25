@@ -8,11 +8,62 @@ using Ta3lom.Store.Domain.Constants;
 
 namespace Ta3lom.Store.Api.IntegrationTests.AdminOps;
 
-/// Every `/v1/admin` route (except the sign-in routes under `/v1/admin/auth`) × the four staff roles + anonymous: the
-/// route's policies decide, a role outside them gets 403, anonymous gets 401. New admin routes are picked up from the
-/// endpoint table, so a route without a staff policy fails here.
+/// Every `/v1/admin` route (except the sign-in routes under `/v1/admin/auth`) × the four staff roles + anonymous. The
+/// expected roles are a literal table (F4), not derived from the policies: a role outside the row gets 403, anonymous
+/// 401, and the table must list exactly the routes the API maps, so a new admin route fails here until it is added.
 public sealed class PolicyMatrixTests(ScenarioFactory factory) : IClassFixture<ScenarioFactory>
 {
+    private static readonly string[] All = [Roles.Admin, Roles.StoreManager, Roles.Finance, Roles.Viewer];
+    private static readonly string[] Catalogue = [Roles.Admin, Roles.StoreManager];
+    private static readonly string[] Donors = [Roles.Admin, Roles.StoreManager];
+    private static readonly string[] Orders = [Roles.Admin, Roles.Finance];
+    private static readonly string[] Templates = [Roles.Admin, Roles.StoreManager];
+    private static readonly string[] AdminOnly = [Roles.Admin];
+
+    /// The plan's access table, one row per route.
+    private static readonly Dictionary<string, string[]> Expected = new(StringComparer.Ordinal)
+    {
+        ["GET /v1/admin/me"] = All,
+        ["GET /v1/admin/dashboard"] = All,
+        ["GET /v1/admin/categories"] = All,
+        ["POST /v1/admin/categories"] = Catalogue,
+        ["PUT /v1/admin/categories/order"] = Catalogue,
+        ["PUT /v1/admin/categories/{id}"] = Catalogue,
+        ["GET /v1/admin/projects"] = All,
+        ["POST /v1/admin/projects"] = Catalogue,
+        ["GET /v1/admin/projects/{id}"] = All,
+        ["PUT /v1/admin/projects/{id}"] = Catalogue,
+        ["PUT /v1/admin/projects/{id}/options"] = Catalogue,
+        ["POST /v1/admin/projects/{id}/publish"] = Catalogue,
+        ["POST /v1/admin/projects/{id}/archive"] = Catalogue,
+        ["GET /v1/admin/projects/{id}/preview"] = All,
+        ["GET /v1/admin/media"] = All,
+        ["POST /v1/admin/media"] = Catalogue,
+        ["PATCH /v1/admin/media/{id}"] = Catalogue,
+        ["GET /v1/admin/customers"] = All,
+        ["GET /v1/admin/customers/{id}"] = All,
+        ["POST /v1/admin/customers/{id}/block"] = Donors,
+        ["POST /v1/admin/customers/{id}/unblock"] = Donors,
+        ["GET /v1/admin/orders"] = All,
+        ["GET /v1/admin/orders/{reference}"] = All,
+        ["POST /v1/admin/orders/{reference}/cancel"] = Orders,
+        ["GET /v1/admin/templates"] = Templates,
+        ["POST /v1/admin/templates/test"] = Templates,
+        ["PUT /v1/admin/templates/{key}/{channel}/{locale}"] = Templates,
+        ["GET /v1/admin/settings"] = AdminOnly,
+        ["PUT /v1/admin/settings/{key}"] = AdminOnly,
+        ["GET /v1/admin/audit"] = AdminOnly,
+        ["GET /v1/admin/staff"] = AdminOnly,
+        ["POST /v1/admin/staff"] = AdminOnly,
+        ["PUT /v1/admin/staff/{id}"] = AdminOnly,
+        ["POST /v1/admin/staff/{id}/reset-password"] = AdminOnly,
+        ["POST /v1/admin/staff/{id}/reset-totp"] = AdminOnly,
+        ["POST /v1/admin/staff/{id}/unlock"] = AdminOnly,
+    };
+
+    private static string Key(AdminRoute route) =>
+        $"{route.Method} {System.Text.RegularExpressions.Regex.Replace(route.Pattern, ":[a-z]+", "").TrimEnd('/')}";
+
     private sealed record AdminRoute(string Method, string Pattern, IReadOnlyList<string> Policies);
 
     private IReadOnlyList<AdminRoute> AdminRoutes()
@@ -26,8 +77,19 @@ public sealed class PolicyMatrixTests(ScenarioFactory factory) : IClassFixture<S
             .OrderBy(r => r.Pattern).ThenBy(r => r.Method)];
     }
 
-    private static IReadOnlyList<string> AllowedRoles(AdminRoute route) =>
+    /// What the policies on the route allow (only to compare with the literal table).
+    private static IReadOnlyList<string> PolicyRoles(AdminRoute route) =>
         [.. Roles.All.Where(role => route.Policies.All(p => !Policies.StaffRoles.TryGetValue(p, out var roles) || roles.Contains(role)))];
+
+    [Fact]
+    public void The_literal_table_lists_exactly_the_mapped_admin_routes_and_matches_their_policies()
+    {
+        var routes = AdminRoutes();
+
+        routes.Select(Key).OrderBy(k => k, StringComparer.Ordinal).ShouldBe(Expected.Keys.OrderBy(k => k, StringComparer.Ordinal));
+        routes.Where(r => !PolicyRoles(r).OrderBy(x => x).SequenceEqual(Expected[Key(r)].OrderBy(x => x)))
+            .Select(r => $"{Key(r)}: policies allow {string.Join(",", PolicyRoles(r))}").ShouldBeEmpty();
+    }
 
     private static string Concrete(string pattern) => System.Text.RegularExpressions.Regex.Replace(pattern, @"\{(\w+)(:[^}]*)?\}", m => m.Groups[1].Value switch
     {
@@ -62,7 +124,7 @@ public sealed class PolicyMatrixTests(ScenarioFactory factory) : IClassFixture<S
         foreach (var route in AdminRoutes())
         {
             var path = Concrete(route.Pattern);
-            var allowed = AllowedRoles(route);
+            var allowed = Expected[Key(route)];
             foreach (var (role, client) in clients)
             {
                 var status = await SendAsync(client, route.Method, path);
@@ -81,21 +143,6 @@ public sealed class PolicyMatrixTests(ScenarioFactory factory) : IClassFixture<S
         }
 
         wrong.ShouldBeEmpty();
-    }
-
-    [Theory]
-    [InlineData("POST", "/v1/admin/customers/{id}/block", new[] { Roles.Admin, Roles.StoreManager })]
-    [InlineData("POST", "/v1/admin/orders/{reference}/cancel", new[] { Roles.Admin, Roles.Finance })]
-    [InlineData("PUT", "/v1/admin/templates/{key}/{channel}/{locale}", new[] { Roles.Admin, Roles.StoreManager })]
-    [InlineData("GET", "/v1/admin/audit", new[] { Roles.Admin })]
-    [InlineData("GET", "/v1/admin/settings", new[] { Roles.Admin })]
-    [InlineData("GET", "/v1/admin/dashboard", new[] { Roles.Admin, Roles.StoreManager, Roles.Finance, Roles.Viewer })]
-    [InlineData("POST", "/v1/admin/projects", new[] { Roles.Admin, Roles.StoreManager })]
-    public void The_matrix_matches_the_plan(string method, string pattern, string[] roles)
-    {
-        var route = AdminRoutes().Single(r => r.Method == method && System.Text.RegularExpressions.Regex.Replace(r.Pattern, ":[a-z]+", "").TrimEnd('/') == pattern);
-
-        AllowedRoles(route).ShouldBe(roles, ignoreOrder: true);
     }
 
     private static async Task<HttpStatusCode> SendAsync(HttpClient client, string method, string path)

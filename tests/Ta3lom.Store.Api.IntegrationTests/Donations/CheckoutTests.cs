@@ -129,6 +129,21 @@ public sealed partial class CheckoutTests(ScenarioFactory factory) : IClassFixtu
     }
 
     [Fact]
+    [Rule("D-09")]
+    public async Task Two_parallel_checkouts_of_one_cart_with_different_keys_make_one_order()
+    {
+        var (_, donor) = await DonorWithCartAsync();
+        var body = new { fullName = "D", email = "d@example.com" };
+
+        var responses = await Task.WhenAll(donor.PostAsync("/v1/checkout", body, HttpJson.Key()), donor.PostAsync("/v1/checkout", body, HttpJson.Key()));
+
+        // The cart row lock serialises them: the first places the order and empties the cart, the second finds it empty.
+        responses.Select(r => (int)r.Response.StatusCode).OrderBy(s => s).ShouldBe([201, 409]);
+        responses.Single(r => r.Response.StatusCode == HttpStatusCode.Conflict).Body.Str("code").ShouldBe(ErrorCodes.CheckoutCartEmpty);
+        (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.orders WHERE customer_id = '{donor.Id}'")).ShouldBe(1);
+    }
+
+    [Fact]
     public async Task A_key_still_in_progress_is_409_and_stays_claimed()
     {
         var (_, donor) = await DonorWithCartAsync();
