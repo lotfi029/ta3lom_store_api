@@ -110,6 +110,7 @@ public sealed partial class CheckoutTests(ScenarioFactory factory) : IClassFixtu
         stored.ShouldBeEmpty();
         replay.Response.Headers.GetValues("Idempotent-Replayed").ShouldBe(["true"]);
         replay.Body.Str("statusToken").ShouldBe(first.Body.Str("statusToken"));
+        replay.Response.Headers.Location.ShouldBe(first.Response.Headers.Location);                                   // L-12
         var status = await factory.Anonymous().SendJsonAsync(HttpMethod.Get, $"/v1/orders/{replay.Body.Str("reference")}/status?t={replay.Body.Str("statusToken")}");
         status.Response.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
@@ -141,6 +142,51 @@ public sealed partial class CheckoutTests(ScenarioFactory factory) : IClassFixtu
         responses.Select(r => (int)r.Response.StatusCode).OrderBy(s => s).ShouldBe([201, 409]);
         responses.Single(r => r.Response.StatusCode == HttpStatusCode.Conflict).Body.Str("code").ShouldBe(ErrorCodes.CheckoutCartEmpty);
         (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.orders WHERE customer_id = '{donor.Id}'")).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task A_claim_left_in_progress_after_the_order_committed_replays_that_order()
+    {
+        var (_, donor) = await DonorWithCartAsync();
+        var key = HttpJson.Key();
+        var body = new { fullName = "D", email = "d@example.com" };
+        var first = await donor.PostAsync("/v1/checkout", body, key);
+        first.Response.StatusCode.ShouldBe(HttpStatusCode.Created);
+        // A crash between the checkout commit and storing the response: the claim stays in progress.
+        await factory.ExecuteSqlAsync($"""
+            UPDATE store.idempotency_key SET status = 'in_progress', response_status = NULL, response_body = NULL, created_at = created_at - interval '5 minutes'
+             WHERE key = '{key["Idempotency-Key"]}'
+            """);
+
+        var retry = await donor.PostAsync("/v1/checkout", body, key);
+
+        retry.Response.StatusCode.ShouldBe(HttpStatusCode.Created);
+        retry.Body.Str("reference").ShouldBe(first.Body.Str("reference"));
+        retry.Body.Str("statusToken").ShouldBe(first.Body.Str("statusToken"));
+        retry.Response.Headers.Location.ShouldBe(first.Response.Headers.Location);
+        (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.orders WHERE customer_id = '{donor.Id}'")).ShouldBe(1);
+        (await factory.ScalarAsync<string>($"SELECT status FROM store.idempotency_key WHERE key = '{key["Idempotency-Key"]}'")).ShouldBe("completed");
+    }
+
+    [Fact]
+    public async Task A_claim_left_in_progress_before_any_order_lets_the_retry_check_out()
+    {
+        var (c, donor) = await DonorWithCartAsync();
+        var body = new { fullName = "D", email = "d@example.com" };
+        var done = HttpJson.Key();
+        (await donor.PostAsync("/v1/checkout", body, done)).Response.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var key = HttpJson.Key();
+        await factory.ExecuteSqlAsync($"""
+            INSERT INTO store.idempotency_key (scope, key, request_hash, status, created_at, expires_at)
+            SELECT scope, '{key["Idempotency-Key"]}', request_hash, 'in_progress', created_at - interval '5 minutes', now() + interval '1 day'
+              FROM store.idempotency_key WHERE key = '{done["Idempotency-Key"]}'
+            """);
+        await donor.PostAsync("/v1/cart/lines", new { projectId = c.ProjectId, optionId = c.OptionId, quantity = 1 });
+
+        var retry = await donor.PostAsync("/v1/checkout", body, key);
+
+        retry.Response.StatusCode.ShouldBe(HttpStatusCode.Created);
+        (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.orders WHERE customer_id = '{donor.Id}'")).ShouldBe(2);
     }
 
     [Fact]

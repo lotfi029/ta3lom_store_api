@@ -39,4 +39,7 @@ internal sealed class OrderRepository(StoreDbContext db) : GenericRepository<Ord
 
     public async Task<IReadOnlyList<Order>> ForCustomerAsync(Guid customerId, CancellationToken ct = default) =>
         await Set.Where(o => o.CustomerId == customerId).ToListAsync(ct);
+
+    public Task<Order?> FindByIdempotencyKeyAsync(Guid customerId, string idempotencyKey, CancellationToken ct = default) =>
+        Set.FirstOrDefaultAsync(o => o.CustomerId == customerId && o.IdempotencyKey == idempotencyKey, ct);
 }

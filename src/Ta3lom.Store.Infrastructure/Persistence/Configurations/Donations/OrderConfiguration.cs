@@ -31,8 +31,10 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         e.Property(x => x.StatusTokenHash).HasColumnType("character(64)").IsRequired();
         e.Property(x => x.PaymentDueAt).IsRequired();
         e.Property(x => x.CancelledBy).HasColumnType("text");
+        e.Property(x => x.IdempotencyKey).HasColumnType("text").HasMaxLength(64);
         e.Property(x => x.Version).IsRowVersion();
         e.HasIndex(x => x.Reference).IsUnique().HasDatabaseName("ux_orders_reference");
+        e.HasIndex(x => new { x.CustomerId, x.IdempotencyKey }).IsUnique().HasFilter("idempotency_key IS NOT NULL").HasDatabaseName("ux_orders_idempotency");
         e.HasIndex(x => new { x.CustomerId, x.CreatedAt }).IsDescending(false, true).HasDatabaseName("ix_orders_customer");
         e.HasIndex(x => new { x.Status, x.PaymentDueAt }).HasDatabaseName("ix_orders_status");
         e.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).HasConstraintName("fk_orders_customer").OnDelete(DeleteBehavior.Restrict);

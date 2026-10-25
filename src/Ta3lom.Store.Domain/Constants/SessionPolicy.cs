@@ -28,5 +28,8 @@ public static class SessionPolicy
     public static readonly TimeSpan RefreshRaceGrace = TimeSpan.FromSeconds(20);
 
     public static readonly TimeSpan IdempotencyRetention = TimeSpan.FromHours(24);
+
+    /// A-5: an `in_progress` claim older than this was left by a crash; the next request with the key takes it over.
+    public static readonly TimeSpan IdempotencyStaleClaim = TimeSpan.FromMinutes(2);
     public static readonly TimeSpan GuestCartIdle = TimeSpan.FromDays(30);
 }

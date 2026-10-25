@@ -84,9 +84,10 @@ internal sealed class DonationEndpoints : IEndpoint
         (await handler.HandleAsync(new QuoteCheckoutQuery(Owner(http, cookie)), ct)).ToHttp();
 
     private static async Task<IResult> CheckoutAsync([FromBody] CheckoutRequest request, ClaimsPrincipal user,
+        [FromHeader(Name = IdempotencyFilter.Header)] string? idempotencyKey,
         [FromServices] ICommandHandler<CheckoutCommand, CheckoutResponse> handler, CancellationToken ct) =>
-        (await handler.HandleAsync(new CheckoutCommand(user.SubjectId(), request), ct))
-            .ToHttp(o => TypedResults.Created($"/v1/orders/{o.Reference}/status", o));
+        (await handler.HandleAsync(new CheckoutCommand(user.SubjectId(), request, idempotencyKey), ct))
+            .ToHttp(o => TypedResults.Created(CheckoutReplay.Location(o.Reference), o));
 
     private static async Task<IResult> OrderStatusAsync(string reference, ClaimsPrincipal user,
         [FromServices] IQueryHandler<GetOrderStatusQuery, OrderStatusResponse> handler, CancellationToken ct, string? t = null) =>
@@ -142,12 +143,16 @@ internal sealed class CheckoutReplay : IIdempotentResponseShaper
 {
     public static readonly CheckoutReplay Instance = new();
 
+    public static string Location(string reference) => $"/v1/orders/{reference}/status";
+
     public object ForStorage(object value) => value is CheckoutResponse r ? r with { StatusToken = string.Empty } : value;
 
-    public string ForReplay(string storedJson, System.Text.Json.JsonSerializerOptions json, IServiceProvider services)
+    /// L-12: the replay carries the same `Location` as the original 201.
+    public string ForReplay(string storedJson, System.Text.Json.JsonSerializerOptions json, HttpContext http)
     {
         var stored = System.Text.Json.JsonSerializer.Deserialize<CheckoutResponse>(storedJson, json)!;
-        var token = services.GetRequiredService<Ta3lom.Store.Application.Interfaces.IOrderStatusTokens>().Create(stored.Reference).Token;
+        var token = http.RequestServices.GetRequiredService<Ta3lom.Store.Application.Interfaces.IOrderStatusTokens>().Create(stored.Reference).Token;
+        http.Response.Headers.Location = Location(stored.Reference);
         return System.Text.Json.JsonSerializer.Serialize(stored with { StatusToken = token }, json);
     }
 }

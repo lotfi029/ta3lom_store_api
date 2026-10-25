@@ -11,7 +11,7 @@ namespace Ta3lom.Store.Api.Extensions;
 
 /// `Idempotency-Key`: scope `{prefix}:{sub}`; the hash covers the canonical JSON of the bound body.
 /// Same key + same body → the stored response (`Idempotent-Replayed: true`); another body → 422; still running → 409
-/// `idempotency.in_progress` (from the claim state). Only a 2xx response is stored (L-1): any other outcome — a business
+/// `idempotency.in_progress` (from the claim state; a claim left by a crash is taken over after 2 minutes). Only a 2xx response is stored (L-1): any other outcome — a business
 /// 4xx/409 or a 5xx — releases the key, so the client may retry with the same key once the problem is fixed. An optional
 /// shaper keeps secrets out of the stored copy and restores them on replay.
 internal sealed class IdempotencyFilter(string scopePrefix, bool required, IIdempotentResponseShaper? shaper) : IEndpointFilter
@@ -49,7 +49,7 @@ internal sealed class IdempotencyFilter(string scopePrefix, bool required, IIdem
             case IdempotencyClaimStatus.Replay:
                 http.Response.Headers["Idempotent-Replayed"] = "true";
                 var stored = claim.ResponseJson ?? "null";
-                return Results.Text(shaper?.ForReplay(stored, json, http.RequestServices) ?? stored, "application/json", Encoding.UTF8,
+                return Results.Text(shaper?.ForReplay(stored, json, http) ?? stored, "application/json", Encoding.UTF8,
                     claim.StatusCode ?? StatusCodes.Status200OK);
         }
 
@@ -85,7 +85,7 @@ internal interface IIdempotentResponseShaper
 {
     object ForStorage(object value);
 
-    string ForReplay(string storedJson, JsonSerializerOptions json, IServiceProvider services);
+    string ForReplay(string storedJson, JsonSerializerOptions json, HttpContext http);
 }
 
 public static class IdempotencyExtensions
