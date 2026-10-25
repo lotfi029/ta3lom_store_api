@@ -13,4 +13,6 @@ A-5 → order.idempotency_key + stale claim (2 min) replays the order; A-7 → I
 | A-4 | done | f802287 | Domain ProjectTests.An_option_claimed_by_id_is_not_reused_by_label_for_another_input, …Option_ids_in_one_replacement_are_unique; AdminCatalogTests duplicate ids → 400 |
 | A-5 | done | b656db9 | CheckoutTests.A_claim_left_in_progress_after_the_order_committed_replays_that_order, …A_claim_left_in_progress_before_any_order_lets_the_retry_check_out; migration 20261025180041_OrderIdempotencyKey |
 | L-12 | done | b656db9 | CheckoutTests.The_stored_replay_… (replay Location = original) |
-| A-6 | done | (next) | RefreshTokenRaceTests.Revoking_all_tokens_during_a_rotation_also_revokes_the_successor |
+| A-6 | done | 718c291 | RefreshTokenRaceTests.Revoking_all_tokens_during_a_rotation_also_revokes_the_successor |
+| A-7 | done | (next) | CustomerAuthTests.IPv6_addresses_of_one_64_prefix_share_the_per_IP_limit, ClientNetworkTests |
+| L-10 | done | (next) | OtpVolumeTests.Parallel_requests_crossing_half_the_daily_cap_alert_staff_once (was 10 alerts) |

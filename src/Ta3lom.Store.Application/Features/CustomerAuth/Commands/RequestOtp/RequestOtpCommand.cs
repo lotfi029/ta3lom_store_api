@@ -85,6 +85,7 @@ internal sealed class RequestOtpCommandHandler(
         }
 
         var dayStart = RiyadhDayStart(now);
+        await otps.LockDayAsync(dayStart, ct);                                               // L-10: cap and alert one at a time
         var today = await otps.CountIssuedSinceAsync(dayStart, ct);
         if (today >= SessionPolicy.OtpDailyGlobalCap)
         {

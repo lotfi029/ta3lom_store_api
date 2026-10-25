@@ -11,6 +11,10 @@ public interface IOtpChallengeRepository : IGenericRepository<OtpChallenge>
     /// are counted one after the other. Always taken before the mobile lock (fixed order, no deadlock).
     Task LockIpAsync(string ipHash, CancellationToken ct = default);
 
+    /// L-10: transaction-scoped advisory lock on the Riyadh day, so the daily cap and the half-cap alert are checked one
+    /// request at a time. Taken last (after the IP and mobile locks), held only while the challenge is written.
+    Task LockDayAsync(DateTimeOffset riyadhDayStart, CancellationToken ct = default);
+
     /// Codes issued to <paramref name="mobileE164"/> since <paramref name="since"/>, oldest first (D-10: 3 per 15 min).
     Task<IReadOnlyList<DateTimeOffset>> IssuedForMobileSinceAsync(string mobileE164, DateTimeOffset since, CancellationToken ct = default);
 

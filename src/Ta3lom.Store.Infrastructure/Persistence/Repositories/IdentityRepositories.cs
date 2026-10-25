@@ -20,6 +20,9 @@ internal sealed class OtpChallengeRepository(StoreDbContext db) : GenericReposit
     public Task LockIpAsync(string ipHash, CancellationToken ct = default) =>
         Db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtextextended({"otp-ip:" + ipHash}, 0))", ct);
 
+    public Task LockDayAsync(DateTimeOffset riyadhDayStart, CancellationToken ct = default) =>
+        Db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtextextended({"otp-day:" + riyadhDayStart.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture)}, 0))", ct);
+
     public async Task<IReadOnlyList<DateTimeOffset>> IssuedForMobileSinceAsync(string mobileE164, DateTimeOffset since, CancellationToken ct = default) =>
         await Set.AsNoTracking().Where(o => o.Mobile == mobileE164 && o.CreatedAt >= since)
             .OrderBy(o => o.CreatedAt).Select(o => o.CreatedAt).ToListAsync(ct);
