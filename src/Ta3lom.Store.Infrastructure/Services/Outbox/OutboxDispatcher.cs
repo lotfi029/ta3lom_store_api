@@ -80,7 +80,7 @@ internal sealed partial class OutboxDispatcher(
                 }
                 while (claimed == BatchSize);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex) when (ex is not OperationCanceledException || !stoppingToken.IsCancellationRequested)
             {
                 LogLoopFailed(logger, ex);                                               // e.g. database down: try again next tick
             }
@@ -182,7 +182,8 @@ internal sealed partial class OutboxDispatcher(
                 UPDATE store.outbox_message SET processed_at = {done}, claimed_until = NULL, last_error = NULL WHERE id = {row.Id}
                 """, ct);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        // A-1: an HTTP client timeout is a TaskCanceledException too; only a cancellation of the dispatcher itself ends here.
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
             var deadLetter = row.Attempts >= MaxAttempts;
             var error = ex.Message.Length > 2000 ? ex.Message[..2000] : ex.Message;
