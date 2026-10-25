@@ -77,11 +77,20 @@ public sealed class StaffUser : AggregateRoot
 
     public bool HasRole(string role) => Roles.Contains(role, StringComparer.Ordinal);
 
-    /// A wrong password or TOTP code (D-12). Returns true when this failure locked the account.
-    public bool RecordFailure(DateTimeOffset now)
+    /// A wrong password or TOTP code (D-12), applied to the row as it is now (callers lock it first). Five failures within
+    /// 15 minutes lock the account for one hour. While locked a failure is counted but does not extend the lock; the
+    /// first failure after the lock has run out starts a new window.
+    public FailureOutcome RecordFailure(DateTimeOffset now)
     {
-        if (FirstFailedAt is not { } first || now - first > FailureWindow)
+        if (IsLocked(now))
         {
+            FailedCount++;
+            return FailureOutcome.WhileLocked;
+        }
+
+        if (LockedUntil is not null || FirstFailedAt is not { } first || now - first > FailureWindow)
+        {
+            LockedUntil = null;
             FirstFailedAt = now;
             FailedCount = 0;
         }
@@ -89,13 +98,11 @@ public sealed class StaffUser : AggregateRoot
         FailedCount++;
         if (FailedCount < MaxFailures)
         {
-            return false;
+            return FailureOutcome.Counted;
         }
 
         LockedUntil = now + LockoutDuration;
-        FailedCount = 0;
-        FirstFailedAt = null;
-        return true;
+        return FailureOutcome.LockedNow;
     }
 
     /// Password and TOTP both passed.
@@ -175,4 +182,17 @@ public sealed class StaffUser : AggregateRoot
         Guard.Against(distinct.Any(r => !Constants.Roles.IsValid(r)), "staff.role_invalid");
         Roles = distinct;
     }
+}
+
+/// What one recorded failure did (D-12).
+public enum FailureOutcome
+{
+    /// Counted inside the 15-minute window; not locked.
+    Counted,
+
+    /// This failure reached the limit and locked the account.
+    LockedNow,
+
+    /// The account was already locked: counted, the lock is not extended.
+    WhileLocked,
 }

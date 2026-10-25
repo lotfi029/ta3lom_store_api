@@ -12,11 +12,16 @@ internal sealed class VerifyTotpCommandHandler(
     ITotpService totp,
     IUsedTokenStore usedTokens,
     StaffSessions sessions,
+    StaffFailures failures,
     IAuditTrail audit,
     IUnitOfWork uow,
     IClock clock) : ICommandHandler<VerifyTotpCommand, StaffSession>
 {
-    public async Task<Result<StaffSession>> HandleAsync(VerifyTotpCommand command, CancellationToken ct = default)
+    /// The whole step runs on the locked row (A-1): parallel codes serialise, so failures add up and a time step is used once.
+    public Task<Result<StaffSession>> HandleAsync(VerifyTotpCommand command, CancellationToken ct = default) =>
+        uow.ExecuteInTransactionAsync(token => VerifyAsync(command, token), commitOnFailure: true, ct);
+
+    private async Task<Result<StaffSession>> VerifyAsync(VerifyTotpCommand command, CancellationToken ct)
     {
         var now = clock.UtcNow;
         var user = await staff.GetByIdAsync(command.StaffId, ct);
@@ -24,6 +29,8 @@ internal sealed class VerifyTotpCommandHandler(
         {
             return StaffErrors.TotpRequired;
         }
+
+        await staff.LockForUpdateAsync(user, ct);
 
         if (user.IsLocked(now))
         {
@@ -38,15 +45,8 @@ internal sealed class VerifyTotpCommandHandler(
         var step = totp.VerifyStep(user.TotpSecretEnc, command.Code);
         if (step is null || !user.AcceptTotpStep(step.Value))
         {
-            var locked = user.RecordFailure(now);
-            audit.Record(AuditActions.StaffTotpFailed, "staff_user", user.Id.ToString(), user.Email, new { reason = step is null ? "wrong_code" : "replayed_step" });
-            if (locked)
-            {
-                audit.Record(AuditActions.StaffLocked, "staff_user", user.Id.ToString(), user.Email, new { until = user.LockedUntil });
-            }
-
-            await uow.SaveChangesAsync(ct);
-            return locked ? StaffErrors.AccountLocked(user.LockedUntil!.Value) : StaffErrors.TotpInvalid;
+            var outcome = await failures.RecordAsync(user, AuditActions.StaffTotpFailed, step is null ? "wrong_code" : "replayed_step", ct);
+            return outcome == Domain.Entities.Identity.FailureOutcome.LockedNow ? StaffErrors.AccountLocked(user.LockedUntil!.Value) : StaffErrors.TotpInvalid;
         }
 
         if (!usedTokens.TryUse(command.MfaTokenId, command.MfaExpiresAt))
@@ -57,7 +57,6 @@ internal sealed class VerifyTotpCommandHandler(
         user.RecordLogin(now);
         var session = sessions.Start(user, command.UserAgent, now);
         audit.Record(AuditActions.StaffLoginSucceeded, "staff_user", user.Id.ToString(), user.Email);
-        await uow.SaveChangesAsync(ct);
         return session;
     }
 }

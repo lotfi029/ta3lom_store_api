@@ -91,14 +91,38 @@ public sealed class StaffUserTests
         var staff = Staff();
         for (var i = 0; i < 4; i++)
         {
-            staff.RecordFailure(Make.Now.AddMinutes(i * 3)).ShouldBeFalse();
+            staff.RecordFailure(Make.Now.AddMinutes(i * 3)).ShouldBe(FailureOutcome.Counted);
         }
 
-        staff.RecordFailure(Make.Now.AddMinutes(14)).ShouldBeTrue();
+        staff.RecordFailure(Make.Now.AddMinutes(14)).ShouldBe(FailureOutcome.LockedNow);
 
         staff.IsLocked(Make.Now.AddMinutes(14)).ShouldBeTrue();
         staff.LockedUntil.ShouldBe(Make.Now.AddMinutes(74));
         staff.IsLocked(Make.Now.AddMinutes(75)).ShouldBeFalse();
+    }
+
+    [Fact]
+    [Rule("D-12")]
+    public void Failures_while_locked_count_without_extending_and_the_window_restarts_after_the_lock()
+    {
+        var staff = Staff();
+        for (var i = 0; i < 5; i++)
+        {
+            staff.RecordFailure(Make.Now);
+        }
+
+        for (var i = 0; i < 3; i++)
+        {
+            staff.RecordFailure(Make.Now.AddMinutes(10 + i)).ShouldBe(FailureOutcome.WhileLocked);
+        }
+
+        staff.FailedCount.ShouldBe(8);
+        staff.LockedUntil.ShouldBe(Make.Now.AddHours(1));
+
+        staff.RecordFailure(Make.Now.AddMinutes(61)).ShouldBe(FailureOutcome.Counted);
+
+        staff.IsLocked(Make.Now.AddMinutes(61)).ShouldBeFalse();
+        (staff.FailedCount, staff.FirstFailedAt, staff.LockedUntil).ShouldBe((1, (DateTimeOffset?)Make.Now.AddMinutes(61), (DateTimeOffset?)null));
     }
 
     [Fact]
@@ -111,7 +135,7 @@ public sealed class StaffUserTests
             staff.RecordFailure(Make.Now);
         }
 
-        staff.RecordFailure(Make.Now.AddMinutes(16)).ShouldBeFalse();
+        staff.RecordFailure(Make.Now.AddMinutes(16)).ShouldBe(FailureOutcome.Counted);
 
         staff.FailedCount.ShouldBe(1);
         staff.FirstFailedAt.ShouldBe(Make.Now.AddMinutes(16));

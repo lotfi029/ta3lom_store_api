@@ -17,6 +17,9 @@ public static class AuditActions
     public const string StaffLocked = "staff.locked";
     public const string StaffTotpFailed = "staff.totp_failed";
     public const string StaffPasswordChanged = "staff.password_changed";
+    public const string StaffPasswordChangeFailed = "staff.password_change_failed";
+    public const string StaffPasswordReset = "staff.password_reset";
+    public const string StaffTotpReset = "staff.totp_reset";
     public const string TokenReuseDetected = "token.reuse_detected";
     public const string CustomerBlocked = "customer.blocked";
     public const string CustomerUnblocked = "customer.unblocked";

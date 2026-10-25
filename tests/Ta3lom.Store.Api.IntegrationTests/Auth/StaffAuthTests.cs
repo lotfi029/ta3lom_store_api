@@ -110,6 +110,8 @@ public sealed class StaffAuthTests(ScenarioFactory factory) : IClassFixture<Scen
         (await shortOne.ReadProblemAsync()).GetProperty("reasons").EnumerateArray().Select(r => r.GetString()).ShouldContain("too_short");
         var wrong = await Bearer(access).PostAsJsonAsync("/v1/admin/auth/password", new { currentPassword = "not-the-password", newPassword = NewPassword }, Ct);
         (await wrong.ReadProblemAsync()).Str("code").ShouldBe(ErrorCodes.CurrentPasswordInvalid);
+        (await factory.ScalarAsync<int>($"SELECT failed_count FROM store.staff_user WHERE email = '{email}'")).ShouldBe(1);           // L-7
+        (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.audit_log WHERE action = 'staff.password_change_failed' AND actor = '{email}'")).ShouldBe(1);
 
         var changed = await Bearer(access).PostAsJsonAsync("/v1/admin/auth/password", new { currentPassword = oneTime, newPassword = NewPassword }, Ct);
 
@@ -161,7 +163,7 @@ public sealed class StaffAuthTests(ScenarioFactory factory) : IClassFixture<Scen
 
     [Fact]
     [Rule("D-12")]
-    public async Task Five_wrong_passwords_lock_and_a_locked_account_does_not_reveal_itself_to_a_wrong_password()
+    public async Task Five_wrong_passwords_lock_and_a_locked_account_does_not_reveal_whether_the_password_is_right()
     {
         var (id, email, oneTime) = await factory.NewStaffAccountAsync(Roles.Finance);
         for (var i = 0; i < 5; i++)
@@ -169,18 +171,73 @@ public sealed class StaffAuthTests(ScenarioFactory factory) : IClassFixture<Scen
             (await LoginAsync(email, "wrong-password-" + i)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
         }
 
-        var locked = await LoginAsync(email, oneTime);
-        locked.StatusCode.ShouldBe((HttpStatusCode)423);
-        (await locked.ReadProblemAsync()).Str("code").ShouldBe(ErrorCodes.AccountLocked);
+        var rightWhileLocked = await LoginAsync(email, oneTime);
+        rightWhileLocked.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        (await rightWhileLocked.ReadProblemAsync()).Str("code").ShouldBe(ErrorCodes.InvalidCredentials);
         var wrongWhileLocked = await LoginAsync(email, "wrong-password-x");
         wrongWhileLocked.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
         (await wrongWhileLocked.ReadProblemAsync()).Str("code").ShouldBe(ErrorCodes.InvalidCredentials);
         (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.audit_log WHERE action = 'staff.locked' AND entity_id = '{id}'")).ShouldBe(1);
         (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.audit_log WHERE action = 'staff.login_failed' AND entity_id = '{id}'")).ShouldBe(7);
+        (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.audit_log WHERE action = 'staff.login_failed' AND entity_id = '{id}' AND diff->>'reason' = 'locked'"))
+            .ShouldBe(2);
 
         var admin = await factory.StaffAsync(Roles.Admin);
         (await admin.PostAsync($"/v1/admin/staff/{id}/unlock")).Response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
         (await LoginAsync(email, oneTime)).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    [Rule("D-12")]
+    public async Task After_the_lock_runs_out_the_right_password_gets_an_MFA_token()
+    {
+        var (id, email, oneTime) = await factory.NewStaffAccountAsync(Roles.Viewer);
+        for (var i = 0; i < 5; i++)
+        {
+            await LoginAsync(email, "wrong-password-" + i);
+        }
+
+        (await LoginAsync(email, oneTime)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        await factory.ExecuteSqlAsync($"UPDATE store.staff_user SET locked_until = now() - interval '1 minute' WHERE id = '{id}'");
+
+        var login = await LoginAsync(email, oneTime);
+
+        login.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await JsonAsync(login)).GetProperty("mfaToken").GetString().ShouldNotBeNullOrEmpty();
+    }
+
+    [Fact]
+    [Rule("D-12")]
+    public async Task Parallel_wrong_passwords_are_all_counted_and_lock_the_account()
+    {
+        var (id, email, _) = await factory.NewStaffAccountAsync(Roles.Viewer);
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, 6).Select(i => LoginAsync(email, "parallel-wrong-" + i)));
+
+        responses.Select(r => r.StatusCode).ShouldAllBe(s => s == HttpStatusCode.Unauthorized);
+        (await factory.ScalarAsync<int>($"SELECT failed_count FROM store.staff_user WHERE id = '{id}'")).ShouldBe(6);
+        (await factory.ScalarAsync<bool>($"SELECT locked_until > now() FROM store.staff_user WHERE id = '{id}'")).ShouldBeTrue();
+        (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.audit_log WHERE action = 'staff.login_failed' AND entity_id = '{id}'")).ShouldBe(6);
+        (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.audit_log WHERE action = 'staff.locked' AND entity_id = '{id}'")).ShouldBe(1);
+    }
+
+    [Fact]
+    [Rule("D-12")]
+    public async Task Parallel_wrong_TOTP_codes_are_all_counted_and_lock_the_account()
+    {
+        var (id, email, oneTime) = await factory.NewStaffAccountAsync(Roles.Viewer);
+        var mfa = await MfaTokenAsync(email, oneTime);
+        var secret = await EnrolAsync(mfa);
+        var right = Code(secret);
+        var wrong = right == "000000" ? "111111" : "000000";
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, 6).Select(_ => VerifyAsync(mfa, wrong)));
+
+        // Serialised on the row: four wrong codes, the fifth locks (423), the sixth meets the lock before its code is checked.
+        responses.Select(r => (int)r.StatusCode).OrderBy(s => s).ShouldBe([401, 401, 401, 401, 423, 423]);
+        (await factory.ScalarAsync<int>($"SELECT failed_count FROM store.staff_user WHERE id = '{id}'")).ShouldBe(5);
+        (await factory.ScalarAsync<bool>($"SELECT locked_until > now() FROM store.staff_user WHERE id = '{id}'")).ShouldBeTrue();
+        (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.audit_log WHERE action = 'staff.totp_failed' AND entity_id = '{id}'")).ShouldBe(5);
     }
 
     [Fact]

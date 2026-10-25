@@ -82,6 +82,13 @@ internal sealed class StaffUserRepository(StoreDbContext db) : GenericRepository
     public Task<StaffUser?> FindByEmailAsync(string email, CancellationToken ct = default) =>
         Set.FirstOrDefaultAsync(s => s.Email == email, ct);
 
+    public async Task LockForUpdateAsync(StaffUser user, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        await Db.Database.SqlQuery<Guid>($"""SELECT id AS "Value" FROM store.staff_user WHERE id = {user.Id} FOR UPDATE""").ToListAsync(ct);
+        await Db.Entry(user).ReloadAsync(ct);
+    }
+
     public async Task<IReadOnlyList<Guid>> LockActiveAdminIdsAsync(CancellationToken ct = default) =>
         await Db.Database.SqlQuery<Guid>($"""
             SELECT id AS "Value" FROM store.staff_user WHERE is_active AND 'admin' = ANY (roles) ORDER BY id FOR UPDATE

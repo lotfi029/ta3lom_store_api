@@ -12,12 +12,14 @@ internal sealed class ChangePasswordCommandHandler(
     IRefreshTokenRepository refreshTokens,
     IPasswordHasher hasher,
     StaffSessions sessions,
+    StaffFailures failures,
     IAuditTrail audit,
     IUnitOfWork uow,
     IClock clock) : ICommandHandler<ChangePasswordCommand, StaffSession>
 {
+    /// A wrong current password counts towards the lockout and is audited (L-7), so the failure is committed.
     public Task<Result<StaffSession>> HandleAsync(ChangePasswordCommand command, CancellationToken ct = default) =>
-        uow.ExecuteInTransactionAsync(token => ChangeAsync(command, token), ct);
+        uow.ExecuteInTransactionAsync(token => ChangeAsync(command, token), commitOnFailure: true, ct);
 
     private async Task<Result<StaffSession>> ChangeAsync(ChangePasswordCommand command, CancellationToken ct)
     {
@@ -29,6 +31,7 @@ internal sealed class ChangePasswordCommandHandler(
 
         if (!hasher.Verify(user.PassHash, command.CurrentPassword))
         {
+            await failures.RecordAsync(user, AuditActions.StaffPasswordChangeFailed, "current_password", ct);
             return StaffErrors.CurrentPasswordInvalid;
         }
 
