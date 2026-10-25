@@ -6,11 +6,12 @@ using Ta3lom.Store.Domain.Events;
 namespace Ta3lom.Store.Application.Features.Settings.Commands.UpdateSetting;
 
 /// `PUT /v1/admin/settings/{key}` : typed per key; the 60-second settings cache is invalidated and
-/// the change is audited (staff actor).
+/// the change is audited (staff actor). L-7: under the settings lock the new value is checked against the committed
+/// values of the other settings (not the cache), so two parallel updates cannot together break the money rules.
 public sealed record UpdateSettingCommand(string Key, JsonElement Value) : ICommand<SettingResponse>;
 
 internal sealed class UpdateSettingCommandHandler(
-    IGenericRepository<Setting> settings,
+    ISettingRepository settings,
     IStoreSettings cache,
     IOutbox outbox,
     ICurrentActor actor,
@@ -29,9 +30,17 @@ internal sealed class UpdateSettingCommandHandler(
             return SettingErrors.InvalidValue;
         }
 
+        var result = await uow.ExecuteInTransactionAsync(token => SaveAsync(command, token), ct);
+        cache.Invalidate();                                                   // after the commit
+        return result;
+    }
+
+    private async Task<Result<SettingResponse>> SaveAsync(UpdateSettingCommand command, CancellationToken ct)
+    {
+        await settings.LockAsync(ct);
         var now = clock.UtcNow;
         var value = SettingRules.Canonical(command.Key, command.Value);
-        if (!SettingRules.IsConsistent(command.Key, value, await cache.GetAsync(ct)))
+        if (!SettingRules.IsConsistent(command.Key, value, await cache.GetFreshAsync(ct)))
         {
             return SettingErrors.InvalidValue;                                // L-15: would contradict another setting
         }
@@ -51,7 +60,6 @@ internal sealed class UpdateSettingCommandHandler(
 
         setting.SetValue(json, actor.Name, now);
         await uow.SaveChangesAsync(ct);
-        cache.Invalidate();
         return new SettingResponse(setting.Key, value, setting.UpdatedAt, setting.UpdatedBy);
     }
 }

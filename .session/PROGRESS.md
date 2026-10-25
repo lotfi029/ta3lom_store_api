@@ -18,6 +18,8 @@ A-5 → order.idempotency_key + stale claim (2 min) replays the order; A-7 → I
 | L-10 | done | 851614f | OtpVolumeTests.Parallel_requests_crossing_half_the_daily_cap_alert_staff_once (was 10 alerts) |
 | A-8 | done | cf4956a | StartupGuardTests: Production without Sms AppSid/SenderId, sink SMS, without SMTP password, sink e-mail → host stops |
 | L-1 | done | cf4956a | StartupGuardTests: DEV ONLY key + "\n", another DEV ONLY key → host stops |
-| L-2 | done | (next) | LogRedactionTests (X-Forwarded-For / X-Real-IP masked) |
-| L-3 | done | (next) | OutboxHealthTests.A_dead_lettered_or_overdue_message_makes_the_outbox_degraded |
-| L-4 | done | (next) | JobRunTests (one scheduled fire runs once across instances; failed Result logged, no throw); migration 20261025182258_JobRunClaims |
+| L-2 | done | 08243d7 | LogRedactionTests (X-Forwarded-For / X-Real-IP masked) |
+| L-3 | done | 08243d7 | OutboxHealthTests.A_dead_lettered_or_overdue_message_makes_the_outbox_degraded |
+| L-4 | done | 08243d7 | JobRunTests (one scheduled fire runs once across instances; failed Result logged, no throw); migration 20261025182258_JobRunClaims |
+| L-6 | done | (next) | MediaUploadTests (alt text of 301 characters → 400) |
+| L-7 | done | (next) | CatalogConsistencyTests.Parallel_setting_updates_cannot_together_break_the_money_rules (5 rounds, one 422 each) |

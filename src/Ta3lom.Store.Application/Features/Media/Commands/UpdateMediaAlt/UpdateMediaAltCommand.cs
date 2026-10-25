@@ -1,3 +1,4 @@
+using FluentValidation;
 using Ta3lom.Store.Application.DTOs.Media;
 using Ta3lom.Store.Domain.Entities.Media;
 
@@ -25,5 +26,15 @@ internal sealed class UpdateMediaAltCommandHandler(IGenericRepository<MediaAsset
         asset.SetAlt(command.AltAr, command.AltEn);
         await uow.SaveChangesAsync(ct);
         return MediaMapping.ToResponse(asset, urls);
+    }
+}
+
+/// L-6: the same caps as the upload (the alt text is served in public catalogue responses).
+internal sealed class UpdateMediaAltCommandValidator : AbstractValidator<UpdateMediaAltCommand>
+{
+    public UpdateMediaAltCommandValidator()
+    {
+        RuleFor(c => c.AltAr).MaximumLength(300);
+        RuleFor(c => c.AltEn).MaximumLength(300);
     }
 }

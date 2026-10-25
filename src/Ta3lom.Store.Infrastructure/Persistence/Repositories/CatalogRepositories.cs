@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Ta3lom.Store.Domain.Entities.Catalog;
+using Ta3lom.Store.Domain.Entities.Settings;
 using Ta3lom.Store.Domain.IRepositories;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Repositories;
@@ -22,4 +23,10 @@ internal sealed class ProjectRepository(StoreDbContext db) : GenericRepository<P
     public async Task<IReadOnlySet<Guid>> OptionIdsUsedInOrdersAsync(Guid projectId, CancellationToken ct = default) =>
         (await Db.OrderLines.AsNoTracking().Where(l => l.ProjectId == projectId && l.OptionId != null)
             .Select(l => l.OptionId!.Value).Distinct().ToListAsync(ct)).ToHashSet();
+}
+
+internal sealed class SettingRepository(StoreDbContext db) : GenericRepository<Setting>(db), ISettingRepository
+{
+    public Task LockAsync(CancellationToken ct = default) =>
+        Db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtextextended('settings', 0))", ct);
 }

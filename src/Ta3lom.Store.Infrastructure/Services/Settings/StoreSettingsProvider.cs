@@ -18,6 +18,7 @@ internal sealed class StoreSettingsProvider(IServiceScopeFactory scopes, IClock 
     private static readonly TimeSpan Lifetime = TimeSpan.FromSeconds(60);
     private readonly SemaphoreSlim _gate = new(1, 1);
     private (StoreSettings Value, DateTimeOffset LoadedAt)? _cache;
+    private int _generation;                                     // L-7: a load that overlaps an Invalidate is not cached
 
     public async Task<StoreSettings> GetAsync(CancellationToken ct = default)
     {
@@ -34,12 +35,13 @@ internal sealed class StoreSettingsProvider(IServiceScopeFactory scopes, IClock 
                 return again.Value;
             }
 
-            await using var scope = scopes.CreateAsyncScope();
-            var db = scope.ServiceProvider.GetRequiredService<StoreDbContext>();
-            var rows = await db.Settings.AsNoTracking().Select(s => new { s.Key, s.Value }).ToListAsync(ct);
-            var raw = rows.ToDictionary(r => r.Key, r => JsonDocument.Parse(r.Value).RootElement.Clone(), StringComparer.Ordinal);
-            var value = Parse(raw);
-            _cache = (value, clock.UtcNow);
+            var generation = Volatile.Read(ref _generation);
+            var value = await LoadAsync(ct);
+            if (generation == Volatile.Read(ref _generation))
+            {
+                _cache = (value, clock.UtcNow);
+            }
+
             return value;
         }
         finally
@@ -48,7 +50,22 @@ internal sealed class StoreSettingsProvider(IServiceScopeFactory scopes, IClock 
         }
     }
 
-    public void Invalidate() => _cache = null;
+    public Task<StoreSettings> GetFreshAsync(CancellationToken ct = default) => LoadAsync(ct);
+
+    public void Invalidate()
+    {
+        Interlocked.Increment(ref _generation);
+        _cache = null;
+    }
+
+    private async Task<StoreSettings> LoadAsync(CancellationToken ct)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<StoreDbContext>();
+        var rows = await db.Settings.AsNoTracking().Select(s => new { s.Key, s.Value }).ToListAsync(ct);
+        var raw = rows.ToDictionary(r => r.Key, r => JsonDocument.Parse(r.Value).RootElement.Clone(), StringComparer.Ordinal);
+        return Parse(raw);
+    }
 
     public void Dispose() => _gate.Dispose();
 
