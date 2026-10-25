@@ -162,6 +162,33 @@ public sealed class PublicCatalogTests(ScenarioFactory factory) : IClassFixture<
     }
 
     [Fact]
+    public async Task The_default_listing_orders_by_sort_then_newest_published_then_id()
+    {
+        var (_, build) = await AdminAsync();
+        var category = await build.CategoryAsync();
+        var categoryId = Guid.Parse(category.Str("id"));
+        var ids = new List<string>();
+        for (var i = 0; i < 4; i++)
+        {
+            ids.Add((await build.PublishAsync(await build.DraftAsync(categoryId))).Str("id"));
+        }
+
+        // Created in the order 0..3; published newest first for 2, 1 and 0; 3 shares 0's publish time and sorts later.
+        await factory.ExecuteSqlAsync($"""
+            UPDATE store.project SET sort = 1, created_at = '2026-01-01'::timestamptz + (array_position(ARRAY['{ids[0]}','{ids[1]}','{ids[2]}','{ids[3]}']::uuid[], id) * interval '1 day'),
+                   published_at = CASE id WHEN '{ids[0]}' THEN '2026-02-01'::timestamptz WHEN '{ids[1]}' THEN '2026-02-02'::timestamptz
+                                          WHEN '{ids[2]}' THEN '2026-02-03'::timestamptz ELSE '2026-02-01'::timestamptz END
+             WHERE id IN ('{ids[0]}', '{ids[1]}', '{ids[2]}', '{ids[3]}')
+            """);
+        var sameTime = new[] { ids[0], ids[3] }.Order(StringComparer.Ordinal).ToArray();          // uuid order = text order of the hex form
+
+        var listed = (await GetAsync($"/v1/catalog/projects?category={category.Str("slug")}")).Body
+            .GetProperty("items").EnumerateArray().Select(i => i.Str("id")).ToList();
+
+        listed.ShouldBe([ids[2], ids[1], sameTime[0], sameTime[1]]);                                   // R11-3
+    }
+
+    [Fact]
     public async Task An_old_slug_does_not_redirect_into_an_inactive_category()
     {
         var (admin, build) = await AdminAsync();
