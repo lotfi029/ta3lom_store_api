@@ -4,7 +4,7 @@ using Ta3lom.Store.Application.Interfaces;
 
 namespace Ta3lom.Store.Infrastructure.Services.Files;
 
-/// Files under `Store:Files:Root` (09 §4.3): `public/{key}` is served at `/files/public`, `private/{key}` never is.
+/// Files under `Store:Files:Root`: `public/{key}` is served at `/files/public`, `private/{key}` never is.
 /// Keys are relative; any attempt to leave the root is refused.
 internal sealed class LocalFileStorage(IOptions<FileStorageOptions> options, IHostEnvironment environment) : IFileStorage
 {

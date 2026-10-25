@@ -1,6 +1,6 @@
 namespace Ta3lom.Store.Domain.Entities.Settings;
 
-/// Table `setting` (db/reference/001_store_schema.sql). State only in S-02; behaviour arrives with its session.
+/// Table `setting`: one JSON value per key, validated by the typed allow-list before it is written.
 public sealed class Setting
 {
     public Setting(string key, string value, DateTimeOffset now)

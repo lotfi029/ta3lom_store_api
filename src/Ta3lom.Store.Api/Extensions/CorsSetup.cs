@@ -4,7 +4,7 @@ using Ta3lom.Store.Api.Options;
 
 namespace Ta3lom.Store.Api.Extensions;
 
-/// Browser access from ta3lom.sa (08 §3.1, 11 §1.2). Applied to the /v1 group only:
+/// Browser access from ta3lom.sa. Applied to the /v1 group only:
 /// never to /health/* or (later) to payment webhooks.
 public static class CorsSetup
 {

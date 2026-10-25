@@ -7,7 +7,7 @@ public interface IEndpoint
     void MapEndpoint(IEndpointRouteBuilder app);
 }
 
-/// Development/Staging-only routes (`/dev/*`, plan 14 §4.3). Never mapped in Production.
+/// Development-only routes (`/dev/*`). Never mapped in any other environment.
 public interface IDevEndpoint
 {
     void MapEndpoint(IEndpointRouteBuilder app);

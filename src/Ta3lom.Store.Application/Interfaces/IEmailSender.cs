@@ -1,14 +1,10 @@
 namespace Ta3lom.Store.Application.Interfaces;
 
-/// Outgoing e-mail (09 §4.3 fakes table): `SinkEmailSender` (`.eml` files in `artifacts/mail`, `GET /dev/mail`) outside
-/// Production, `SmtpEmailSender` (MailKit) when `Store:Email:Mode = smtp`.
+/// Outgoing e-mail: `SinkEmailSender` (`.eml` files, `GET /dev/mail`) unless `Store:Email:Mode = smtp` (`SmtpEmailSender`, MailKit).
 public interface IEmailSender
 {
     /// The staff alert mailbox (`Store:Email:StaffAlerts`).
     string StaffAlertsAddress { get; }
-
-    /// The manager's mailbox for escalations (`Store:Email:ManagerAlerts`; the staff mailbox when empty, RUL-49).
-    string ManagerAlertsAddress { get; }
 
     Task<DeliveryResult> SendAsync(EmailMessage message, CancellationToken ct = default);
 }

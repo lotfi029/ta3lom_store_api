@@ -1,10 +1,10 @@
 using System.Text.Json;
-using Ta3lom.Store.Application.DTOs.AdminCatalog;
+using Ta3lom.Store.Application.DTOs.Settings;
 using Ta3lom.Store.Domain.Entities.Settings;
 
 namespace Ta3lom.Store.Application.Features.Settings.Commands.UpdateSetting;
 
-/// `PUT /v1/admin/settings/{key}` (#119, FR-S76): typed per key; the 60-second settings cache is invalidated and
+/// `PUT /v1/admin/settings/{key}` : typed per key; the 60-second settings cache is invalidated and
 /// the change is audited (staff actor).
 public sealed record UpdateSettingCommand(string Key, JsonElement Value) : ICommand<SettingResponse>;
 
@@ -19,12 +19,12 @@ internal sealed class UpdateSettingCommandHandler(
     {
         if (!SettingRules.IsKnown(command.Key))
         {
-            return AdminCatalogErrors.SettingUnknownKey;
+            return SettingErrors.UnknownKey;
         }
 
         if (!SettingRules.IsValid(command.Key, command.Value))
         {
-            return AdminCatalogErrors.SettingInvalidValue;
+            return SettingErrors.InvalidValue;
         }
 
         var now = clock.UtcNow;

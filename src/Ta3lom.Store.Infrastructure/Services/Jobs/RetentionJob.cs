@@ -1,10 +1,10 @@
 using Quartz;
 using Ta3lom.Store.Application.Abstractions.Messaging;
-using Ta3lom.Store.Application.Features.AdminOps.Commands;
+using Ta3lom.Store.Application.Features.Operations;
 
 namespace Ta3lom.Store.Infrastructure.Services.Jobs;
 
-/// `0 30 4 ? * FRI` (09 §6) — Fridays 04:30: database/03 §7 retention (payload scrub, notification/outbox/download_log deletes, beneficiary PII).
+/// `0 30 4 ? * FRI` — Fridays 04:30: retention (old notifications and processed outbox rows).
 [DisallowConcurrentExecution]
 internal sealed class RetentionJob(ICommandHandler<RetentionCommand, int> handler) : IJob
 {

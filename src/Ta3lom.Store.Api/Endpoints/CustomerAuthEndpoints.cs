@@ -14,7 +14,7 @@ using Ta3lom.Store.Domain.Errors;
 
 namespace Ta3lom.Store.Api.Endpoints;
 
-/// `/v1/auth` — customer OTP sign-in and sessions (11 §4, endpoints #16–#20; RUL-60, RUL-61, FR-S21, FR-S28).
+/// `/v1/auth` — donor OTP sign-in and sessions (BR-A09, D-10, D-11, D-13).
 internal sealed class CustomerAuthEndpoints : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
@@ -22,12 +22,14 @@ internal sealed class CustomerAuthEndpoints : IEndpoint
         var group = app.MapGroup("/auth").WithTags("Auth").RequireSameOrigin();
 
         group.MapPost("/otp/request", RequestOtpAsync)
+            .AllowAnonymous()
             .RequireRateLimiting(RatePolicies.OtpRequest)
             .Produces<OtpRequestedResponse>(StatusCodes.Status202Accepted)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         group.MapPost("/otp/verify", VerifyOtpAsync)
+            .AllowAnonymous()
             .RequireRateLimiting(RatePolicies.OtpVerify)
             .Produces<SessionResponse>()
             .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -35,12 +37,14 @@ internal sealed class CustomerAuthEndpoints : IEndpoint
             .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         group.MapPost("/refresh", RefreshAsync)
+            .AllowAnonymous()
             .RequireRateLimiting(RatePolicies.AuthRefresh)
             .Produces<AccessTokenResponse>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         group.MapPost("/logout", LogoutAsync)
+            .AllowAnonymous()
             .RequireRateLimiting(RatePolicies.AuthRefresh)
             .Produces(StatusCodes.Status204NoContent);
 
@@ -68,7 +72,7 @@ internal sealed class CustomerAuthEndpoints : IEndpoint
         [FromServices] IClock clock,
         CancellationToken ct)
     {
-        // The guest cart (t3s_cart) is merged into the customer's cart (RUL-17), then the cookie is dropped.
+        // The guest cart (t3s_cart) is merged into the donor's cart (BR-A07), then the cookie is dropped.
         var command = new VerifyOtpCommand(request.Mobile, request.Code, cartCookie.Read(http.Request), http.Request.Headers.UserAgent.ToString());
         var result = await handler.HandleAsync(command, ct);
         return result.ToHttp(session =>

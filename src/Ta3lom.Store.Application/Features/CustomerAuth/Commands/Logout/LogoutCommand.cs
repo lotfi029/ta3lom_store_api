@@ -1,6 +1,6 @@
 namespace Ta3lom.Store.Application.Features.CustomerAuth.Commands.Logout;
 
-/// Revokes the current refresh token (FR-S28). Always succeeds so a stale cookie can still be cleared.
+/// Revokes the current refresh token (customer or staff). Always succeeds so a stale cookie can still be cleared.
 public sealed record LogoutCommand(string? RefreshToken) : ICommand;
 
 internal sealed class LogoutCommandHandler(

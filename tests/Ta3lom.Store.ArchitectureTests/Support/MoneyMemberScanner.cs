@@ -2,7 +2,7 @@ using System.Reflection;
 
 namespace Ta3lom.Store.ArchitectureTests.Support;
 
-/// Finds money-like members (price, amount, total, fee, balance, money) typed as double or float (RUL-31).
+/// Finds money-like members (price, amount, total, fee, balance, money) typed as double or float.
 public static class MoneyMemberScanner
 {
     private static readonly string[] MoneyWords = ["price", "amount", "total", "fee", "balance", "money"];

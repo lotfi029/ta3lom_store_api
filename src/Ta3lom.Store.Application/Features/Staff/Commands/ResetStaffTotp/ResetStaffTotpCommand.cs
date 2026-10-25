@@ -1,6 +1,6 @@
 namespace Ta3lom.Store.Application.Features.Staff.Commands.ResetStaffTotp;
 
-/// `POST /v1/admin/staff/{id}/reset-totp` (#127): the next login re-enrols; sessions revoked.
+/// `POST /v1/admin/staff/{id}/reset-totp`: the next sign-in enrols a new authenticator; every session is revoked.
 public sealed record ResetStaffTotpCommand(Guid Id) : ICommand;
 
 internal sealed class ResetStaffTotpCommandHandler(

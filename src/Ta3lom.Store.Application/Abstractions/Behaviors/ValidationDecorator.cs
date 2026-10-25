@@ -3,7 +3,7 @@ using FluentValidation.Results;
 
 namespace Ta3lom.Store.Application.Abstractions.Behaviors;
 
-/// Runs every FluentValidation validator of the command before the handler (shape validation, 09 §3.3).
+/// Runs every FluentValidation validator of the command before the handler (shape validation).
 /// Failures become 400 `validation.failed` with camelCase field names in `errors` (DMS nested-class style).
 internal static class ValidationDecorator
 {
@@ -63,7 +63,7 @@ internal static class ValidationDecorator
             .GroupBy(f => ToCamelCase(f.PropertyName), StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.Select(f => f.ErrorMessage).Distinct(StringComparer.Ordinal).ToArray(), StringComparer.Ordinal));
 
-    /// `Input.SeatPrice` → `seatPrice`: the wrapper property of a command (`Input`, `Request`) is not a body field (11 §1.6).
+    /// `Input.SeatPrice` → `seatPrice`: the wrapper property of a command (`Input`, `Request`) is not a body field.
     private static string ToCamelCase(string propertyPath)
     {
         var parts = propertyPath.Split('.');

@@ -1,9 +1,9 @@
 namespace Ta3lom.Store.Domain.Errors;
 
-/// Sessions and account state (RUL-60, RUL-61, RUL-62; 11 §1.6).
+/// Sessions and account state (D-11, D-13).
 public static class AuthErrors
 {
-    public static Error AccountBlocked => Error.Forbidden(ErrorCodes.AccountBlocked, "The customer account is blocked.");
+    public static Error AccountBlocked => Error.Forbidden(ErrorCodes.AccountBlocked, "The donor account cannot be used.");
 
     public static Error RefreshInvalid => Error.Unauthorized(ErrorCodes.RefreshInvalid, "Unknown refresh token.");
 

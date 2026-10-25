@@ -2,7 +2,8 @@ using Ta3lom.Store.Application.DTOs.Staff;
 
 namespace Ta3lom.Store.Application.Features.Staff.Commands.ResetStaffPassword;
 
-/// `POST /v1/admin/staff/{id}/reset-password` (#126): new one-time password, sessions revoked.
+/// `POST /v1/admin/staff/{id}/reset-password`: a new one-time password (shown once, must be changed at the next sign-in);
+/// every session of the member is revoked.
 public sealed record ResetStaffPasswordCommand(Guid Id) : ICommand<OneTimePasswordResponse>;
 
 internal sealed class ResetStaffPasswordCommandHandler(
@@ -21,7 +22,7 @@ internal sealed class ResetStaffPasswordCommandHandler(
         }
 
         var password = hasher.GenerateOneTimePassword();
-        user.ChangePasswordHash(hasher.Hash(password));
+        user.ResetPassword(hasher.Hash(password), clock.UtcNow);
         await uow.SaveChangesAsync(ct);
         await refreshTokens.RevokeAllForSubjectAsync(TokenSubjectType.Staff, user.Id, clock.UtcNow, ct);
         return new OneTimePasswordResponse(password);

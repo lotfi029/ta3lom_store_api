@@ -9,7 +9,7 @@ using Ta3lom.Store.SharedKernel;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Infrastructure;
 
-/// Test-only /v1 endpoint module (A1, now a DMS IEndpoint registered by the test factory): exercise CORS, rate limiting, Result mapping, exceptions and log redaction.
+/// Test-only /v1 endpoint module (a DMS IEndpoint registered by the test factory): exercise CORS, rate limiting, Result mapping, exceptions and log redaction.
 public sealed partial class ProbeEndpoints : IEndpoint
 {
     public const string SecretPassword = "hunter2-password-value";
@@ -22,20 +22,20 @@ public sealed partial class ProbeEndpoints : IEndpoint
     {
         app.MapGet("/__test/ping", () => TypedResults.Ok(new { pong = true }))
           .RequireRateLimiting(RatePolicies.Public)
-          .ExcludeFromDescription();
+          .ExcludeFromDescription().AllowAnonymous();
 
         app.MapGet("/__test/error/{status:int}", (int status) =>
                 Result.Failure<string>(new Error("test.code", "Developer message", status,
                     new Dictionary<string, object?> { ["max"] = "50" })).ToHttp())
-          .ExcludeFromDescription();
+          .ExcludeFromDescription().AllowAnonymous();
 
-        app.MapGet("/__test/ok", () => Result.Success("fine").ToHttp()).ExcludeFromDescription();
+        app.MapGet("/__test/ok", () => Result.Success("fine").ToHttp()).ExcludeFromDescription().AllowAnonymous();
 
         app.MapGet("/__test/throw/domain", IResult () => throw new DomainException("unit.invalid_transition", "internal detail"))
-          .ExcludeFromDescription();
+          .ExcludeFromDescription().AllowAnonymous();
 
         app.MapGet("/__test/throw/crash", IResult () => throw new InvalidOperationException("secret internals at Ta3lom.Store"))
-          .ExcludeFromDescription();
+          .ExcludeFromDescription().AllowAnonymous();
 
         app.MapGet("/__test/log", (HttpContext http, ILoggerFactory loggers) =>
         {
@@ -44,7 +44,7 @@ public sealed partial class ProbeEndpoints : IEndpoint
             LogCredentials(logger, new Credentials("visible-name", SecretApiToken));
             http.Response.Headers.SetCookie = SetCookieValue;
             return TypedResults.Ok();
-        }).ExcludeFromDescription();
+        }).ExcludeFromDescription().AllowAnonymous();
     }
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Probe {Password} {ClientSecret} {RefreshToken} {Safe}")]

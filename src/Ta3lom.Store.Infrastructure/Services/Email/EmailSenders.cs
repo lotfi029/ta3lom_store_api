@@ -10,7 +10,7 @@ using Ta3lom.Store.Application.Interfaces;
 
 namespace Ta3lom.Store.Infrastructure.Services.Email;
 
-/// `Store:Email` (09 §11). `Mode = sink` writes `.eml` files (Development/Staging); `smtp` sends with MailKit
+/// `Store:Email`. `Mode = sink` writes `.eml` files (Development, tests); `smtp` sends with MailKit
 /// (Hostinger: port 465, implicit TLS). The password comes from the environment, never the repo.
 public sealed class EmailOptions
 {
@@ -35,9 +35,6 @@ public sealed class EmailOptions
 
     public string StaffAlerts { get; set; } = "store-alerts@ta3lom.sa";
 
-    /// RUL-49 escalations; empty = `StaffAlerts`.
-    public string ManagerAlerts { get; set; } = string.Empty;
-
     /// Sink folder; relative paths resolve against the content root.
     public string SinkFolder { get; set; } = "../../artifacts/mail";
 }
@@ -61,12 +58,10 @@ internal static class MimeBuilder
     }
 }
 
-/// Development/Staging: every e-mail becomes an `.eml` file (readable with `GET /dev/mail` or any mail client).
+/// Development and tests: every e-mail becomes an `.eml` file (readable with `GET /dev/mail` or any mail client).
 internal sealed class SinkEmailSender(IOptions<EmailOptions> options, IHostEnvironment environment, IClock clock) : IEmailSender, IDevMailInbox
 {
     public string StaffAlertsAddress => options.Value.StaffAlerts;
-
-    public string ManagerAlertsAddress => string.IsNullOrWhiteSpace(options.Value.ManagerAlerts) ? options.Value.StaffAlerts : options.Value.ManagerAlerts;
 
     private string Folder => Path.GetFullPath(Path.Combine(environment.ContentRootPath, options.Value.SinkFolder));
 
@@ -102,8 +97,6 @@ internal sealed class SinkEmailSender(IOptions<EmailOptions> options, IHostEnvir
 internal sealed class SmtpEmailSender(IOptions<EmailOptions> options) : IEmailSender
 {
     public string StaffAlertsAddress => options.Value.StaffAlerts;
-
-    public string ManagerAlertsAddress => string.IsNullOrWhiteSpace(options.Value.ManagerAlerts) ? options.Value.StaffAlerts : options.Value.ManagerAlerts;
 
     public async Task<DeliveryResult> SendAsync(EmailMessage message, CancellationToken ct = default)
     {

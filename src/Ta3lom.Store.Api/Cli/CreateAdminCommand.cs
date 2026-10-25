@@ -11,9 +11,9 @@ using Ta3lom.Store.Infrastructure;
 
 namespace Ta3lom.Store.Api.Cli;
 
-/// `dotnet Ta3lom.Store.Api.dll create-admin --email … --name …` (database/03 §3, RUL-62): creates the first
-/// `admin` without starting the web host, prints a one-time password once; TOTP enrolment is forced at the
-/// first login (no secret yet). Audited as actor `cli:create-admin`.
+/// `dotnet Ta3lom.Store.Api.dll create-admin --email … --name …`: creates the first `admin` without starting the web host
+/// and prints a one-time password once. The first sign-in must change it and enrol an authenticator. Audited as actor
+/// `cli:create-admin`.
 internal static class CreateAdminCommand
 {
     public const string Verb = "create-admin";
@@ -47,8 +47,7 @@ internal static class CreateAdminCommand
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
         builder.Services.AddInfrastructure(builder.Configuration).AddApplication().AddDomain();
         builder.Services.AddSingleton<ICurrentActor, CliActor>();
-        // Outbox handlers in the Application layer need the storefront links; without them the Development host's
-        // service validation refuses to build.
+        // Application services need the web links; without them the Development host's service validation refuses to build.
         builder.Services.AddOptions<StoreOptions>().BindConfiguration(StoreOptions.Section);
         builder.Services.AddSingleton<IWebLinks, WebLinks>();
 
@@ -64,7 +63,7 @@ internal static class CreateAdminCommand
 
         await output.WriteLineAsync($"Admin {result.Value.Staff.Email} created (id {result.Value.Staff.Id}).");
         await output.WriteLineAsync($"One-time password (shown once): {result.Value.OneTimePassword}");
-        await output.WriteLineAsync("TOTP enrolment is required at the first login (/v1/admin/auth/totp/enrol).");
+        await output.WriteLineAsync("At the first sign-in: enrol an authenticator (/v1/admin/auth/totp/enrol), then change the password (/v1/admin/auth/password).");
         return 0;
     }
 

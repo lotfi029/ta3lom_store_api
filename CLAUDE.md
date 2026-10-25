@@ -1,151 +1,94 @@
 # CLAUDE.md — ta3lom store API
 
-.NET backend for the store of ta3lom.sa (E-Learning Association, Riyadh): courses, books, seat
-sponsorships and donation products. Every session reads this file first. Work is built session by
-session from plan 14; payment processing is a separate service (plan 14 §0, doc 15).
+.NET backend of the ta3lom.sa donations store: catalogue of donation projects and categories, donation cart, donor
+sign-in by SMS code, checkout into `pending_payment` orders, donor account, staff admin. Read this file first.
 
-## Source of truth — reading order
+## Scope
 
-All docs live in `store/` in this repo.
-
-1. `store/14-backend-implementation-plan.md` — **the plan**: §0 scope (no payments), §4 working method,
-   quality gates and definition of done, §13 coverage maps, then the section of the current session.
-2. `store/03-business-rules.md` — RUL-01…RUL-63. Rules are never invented and never "fixed" in code.
-3. `store/09-backend-dotnet.md` — code shape, patterns, sketches (r2: Application → Domain only).
-4. `store/11-api-contract.md` — endpoints (index §12), DTOs, error codes (§1.6).
-5. `store/database/01-database-design.md` and the reference DDL in `db/reference/` — the master copy of the
-   reference SQL lives in this repo (from S-02).
-6. `store/15-payment-service-handoff.md` — the payment boundary: only the contracts named there.
-
-**Precedence when docs disagree:** 03 > 11 > database/ > 09. Report every conflict; never choose silently.
+- In: catalogue, media, cart, checkout (orders in `pending_payment`, `payment: null`), order status, donor account (export,
+  delete = anonymise), staff auth (password + TOTP), admin operations, outbox, jobs.
+- Out until **R5-Payments**: payment gateway, webhook, payment tables, settlement (`paid`), receipts/PDF, giving totals,
+  reconciliation, unpaid-order expiry, refunds, finance reports. **Keep `IPaymentInitiator` absent**: no payment port,
+  client or table is added before that release.
+- Business rules D-01 … D-14 are never invented or "fixed" in code. A rule that is missing or ambiguous → stop and ask.
 
 ## Platform
 
-- **.NET 10 LTS** (`net10.0`), ASP.NET Core Minimal APIs, EF Core 10 + Npgsql (from S-02), PostgreSQL 18.
-  The move to .NET 11 happens at GA as **its own PR** (TFM, `global.json`, package majors; doc 17).
-- `LangVersion` is not pinned (TFM default). `global.json` rolls forward to the latest feature band.
-- Current idioms: primary constructors, collection expressions, records, file-scoped namespaces,
-  `TimeProvider` behind `IClock`, `Guid.CreateVersion7()`, `TypedResults`, built-in OpenAPI + Scalar,
-  built-in rate limiter.
-- Central package management (`Directory.Packages.props`), nullable, warnings as errors, analyzers on,
-  `Ta3lom.Store.slnx`. Tests run on Microsoft.Testing.Platform (xUnit v3).
+- .NET 10 (`net10.0`), ASP.NET Core Minimal APIs, EF Core 10 + Npgsql, PostgreSQL 18, `Ta3lom.Store.slnx`.
+- Central package versions (`Directory.Packages.props`), nullable, warnings as errors, analyzers on. Ask before adding a
+  dependency.
+- Idioms: primary constructors, collection expressions, records, file-scoped namespaces, `TimeProvider` behind `IClock`,
+  `Guid.CreateVersion7()`, `TypedResults`, built-in OpenAPI + Scalar (Development only), built-in rate limiter.
+- Tests: xUnit v3 on Microsoft.Testing.Platform, Shouldly, Testcontainers `postgres:18`. No MediatR, AutoMapper or
+  FluentAssertions.
 
-## Architecture — DMS + store (K) exceptions, enforced by `tests/Ta3lom.Store.ArchitectureTests`
-
-The layout follows the owner's DMS repo (github.com/lotfi029/DMS) as mapped in
-`store/sessions/Architecture-alignment-DMS.md`; the (K) rules there override DMS where they differ.
+## Architecture (enforced by `tests/Ta3lom.Store.ArchitectureTests`)
 
 | Project | References | Never |
 |---|---|---|
-| `Ta3lom.Store.SharedKernel` | BCL only | anything else |
-| `Ta3lom.Store.Domain` | SharedKernel (+ DI abstractions for `AddDomain` only) | EF Core (K-b), ASP.NET Core, any outer project |
-| `Ta3lom.Store.Application` | Domain, SharedKernel (+ FluentValidation, Mapster, Scrutor, EF Core **abstractions** for read queries, K-c) | Npgsql, EF Relational, raw SQL, ASP.NET Core, adapter SDKs |
-| `Ta3lom.Store.Infrastructure` | Application, Domain, SharedKernel | Api, the ASP.NET Core web stack |
-| `Ta3lom.Store.Api` | all (composition root) | business logic, DTO types |
-
-Where a use case lives (Cloud-build-plan §3.2):
+| `SharedKernel` | BCL only | anything else |
+| `Domain` | SharedKernel (+ DI abstractions for `AddDomain`) | EF Core, ASP.NET Core, outer projects |
+| `Application` | Domain, SharedKernel, FluentValidation, Mapster, Scrutor, EF Core abstractions (read queries) | Npgsql, EF Relational, raw SQL, ASP.NET Core |
+| `Infrastructure` | Application, Domain, SharedKernel | Api, the ASP.NET Core web stack |
+| `Api` | all (composition root) | business logic, DTO types |
 
 | Piece | Path |
 |---|---|
-| Entity / aggregate behaviour | `Domain/Entities/<Module>/` · enums `Domain/Enums/` · `Money` in `Domain/ValueObjects/` |
-| Error catalogue | `Domain/Errors/ErrorCodes.cs` (flat list of 11 §1.6 codes) + `Domain/Errors/<Aggregate>Errors.cs` |
-| Repository port / unit of work | `Domain/IRepositories/` (`IGenericRepository<T>`, `IUnitOfWork` = `SaveChangesAsync` + `ExecuteInTransactionAsync`, no EF types) |
-| Command / query + handler (one file) + validator | `Application/Features/<Module>/{Commands,Queries}/<UseCase>/` |
-| Request / response DTOs | `Application/DTOs/<Module>/` (sealed records; money as `"350.00"` strings, enums as DDL strings) |
-| Mapping | `Application/Mapping/<Module>MappingConfig : IRegister` (Mapster, explicit for money and enums) |
+| Entities and aggregates | `Domain/Entities/<Module>/` · enums `Domain/Enums/` · `Money`, `Slug`, `SaudiMobile` in `Domain/ValueObjects/` |
+| Errors | `Domain/Errors/ErrorCodes.cs` + `Domain/Errors/<Area>Errors.cs` |
+| Repository ports, unit of work | `Domain/IRepositories/` (no EF types) |
+| Commands, queries, handlers, validators | `Application/Features/<Module>/` |
+| DTOs | `Application/DTOs/<Module>/` (sealed records; money as `"50.00"` strings, enums as wire strings) |
 | Ports for external services | `Application/Interfaces/` |
-| Settlement effects | `Application/Features/Settlement/Effects/` |
-| Repository / service implementations | `Infrastructure/Persistence/Repositories/`, `Infrastructure/Services/<Area>/` (row locks only here) |
-| Jobs | `Infrastructure/Services/Jobs/<Name>Job.cs` — thin shell calling one Application command |
-| Endpoints | `Api/Endpoints/<Module>Endpoints.cs : IEndpoint` (mapped on `/v1`); `/dev/*` via `IDevEndpoint` |
-| Error texts | `Api/Resources/ErrorMessages.resx` + `.en.resx` |
+| Outbox handlers | `Application/Features/Outbox/Handlers/` |
+| Repositories, row locks, raw SQL | `Infrastructure/Persistence/Repositories/`, `Infrastructure/Services/<Area>/` |
+| Jobs | `Infrastructure/Services/Jobs/<Name>Job.cs` — thin shell over one Application command |
+| Endpoints | `Api/Endpoints/<Module>Endpoints.cs : IEndpoint` on `/v1`; `/dev/*` via `IDevEndpoint` (Development only) |
+| Error texts | `Api/Resources/ErrorMessages.resx` (ar) + `ErrorMessages.en.resx` |
 
-- Handlers return SharedKernel `Result` / `Result<T>`; failures are `Error(Code, Description, Status)` whose
-  code is an 11 §1.6 value. `CustomResults.ToHttp()`/`ToProblem()` keep the 11 §1.6 problem body (K-d).
-- Endpoints: bind → call one handler → `ToHttp()`. No logic, no DbContext. Test-only routes are an
-  `IEndpoint` registered by the test factory; no probe route in production code.
-- No catch-all in handlers (K-i); transactions only through `IUnitOfWork.ExecuteInTransactionAsync` (retrying
-  execution strategy). No startup migrations (K-a). `created_at`/time only from `IClock` (K-e).
-- Aggregates protect invariants; private setters; state changes through methods named after the business
-  action (`Order.MarkPaid`, `Cart.AddLine`). One transaction per use case; outbox rows in that transaction;
-  no external call inside a transaction.
+## Conventions
 
-## Non-negotiables (09 §12, adapted)
-
-1. **03 is the source of truth.** Read the RUL before touching its code. Code vs rule → stop and ask.
-2. **Never float money.** `decimal`/`Money` only, two decimals, `MidpointRounding.AwayFromZero`; JSON money
-   is a string (`"350.00"`). Guards: `BannedSymbols.Money.txt` (double/float members in Domain and
-   SharedKernel) + the `No_money_as_floating_point` architecture test (money-named declarations).
-3. **Payments are out of scope.** Only `IOrderSettlement` sets an order `paid` (S-16). No gateway,
-   webhook, reconciliation, retry or refund code here (doc 15).
-4. **Settlement, pooling and allocation are one transaction each**, with the row locks of database/01 §4.
-   External calls (SMS, email, LMS, PDF) happen from the outbox, after commit.
-5. **No business logic in endpoints.**
-6. **Every implemented RUL has a test** tagged `[Rule("RUL-nn")]` (`Ta3lom.Store.Testing.RuleAttribute`).
-   Append the session's rules to `tests/Ta3lom.Store.ArchitectureTests/ImplementedRules.txt`.
-7. **No MediatR, no AutoMapper, no FluentAssertions.** Plain handler interfaces, Scrutor, Shouldly.
-8. **No `Database.Migrate()`** (banned). A merged migration is never edited; changes go in a new migration. Migrations ship as the idempotent script run by the deploy job;
-   schema changes are expand → migrate → contract.
-9. **DDL names are fixed** (`db/reference/001_store_schema.sql`, including PostgreSQL's constraint names).
-   After a migration, edit 001 by hand until `SchemaParityTests` passes and regenerate the data dictionary.
-   Every column keeps its SQL default, but EF properties are `ValueGeneratedNever()`: the domain sets values.
-   **jsonb columns** are raw JSON strings in S-02. Each becomes a typed owned JSON type (`OwnsOne(...).ToJson()`)
-   in the session that first uses it: `cart_line.dedication` → S-13, `orders.shipping_address` and
-   `shipment.address` → S-15/S-21, `setting.value` → S-09. The column type stays `jsonb`.
-10. **Personal data stays protected.** Beneficiary PII only through the protector, never logged, never in
-    a donor DTO; reveal is audited; mobiles masked in logs. `RedactingEnricher` masks
-    authorization/cookie/password/secret/token properties and headers.
-11. **Idempotency wherever money moves** (checkout by `Idempotency-Key`, outbox handlers at-most-once).
-12. **Use `IClock`.** `DateTime.Now/UtcNow/Today`, `DateTimeOffset.Now/UtcNow` are banned in `src/`.
-    Business dates are Asia/Riyadh.
-13. **DTOs are the API.** A change to `Application/DTOs` updates `openapi/v1.json` in the same PR
-    (`UPDATE_OPENAPI_SNAPSHOT=1 dotnet test`) and 11 if needed; every new error code goes into 11 §1.6,
-    `ErrorCodes` and both `ErrorMessages*.resx` files.
-14. **Ask before adding a dependency.** Versions only in `Directory.Packages.props`.
-15. **Secrets never in the repo or the chat.** Only `*.env.example` files are committed.
-
-## Working method (plan 14 §4)
-
-- One session = one branch = one PR; the PR title starts with `S-nn` (in cloud sessions, use the branch
-  the session names).
-- Test-first: failing `[Rule]` test per RUL, then the code. Layer by layer: Domain → Application →
-  Infrastructure → Api (DTOs in Application).
-- Extend the shared tests each session: `ImplementedRules.txt`, the role × endpoint policy matrix (S-05+),
-  the architecture tests.
-- **Stop and ask** when a rule is missing or ambiguous, docs conflict, a session will exceed 1.5× its
-  estimate, or a decision belongs to the owner (versions, licensed packages, security trade-offs).
+- Endpoints: bind → one handler → `ToHttp()`. No logic, no DbContext. Every route declares a policy or `AllowAnonymous`
+  (the fallback policy denies anything else). Admin routes go into the policy matrix automatically; keep it green.
+- Handlers return `Result` / `Result<T>`; failures are `Error(Code, Description, Status)` with a code from `ErrorCodes`.
+  Aggregates return `Result` for business outcomes and throw `DomainException` only for broken invariants (→ 409).
+- Aggregates protect invariants: private setters, methods named after the business action (`Cart.AddOptionLine`,
+  `Order.Cancel`). One transaction per use case through `IUnitOfWork.ExecuteInTransactionAsync`; outbox rows are written
+  in that transaction; no external call inside it.
+- Concurrency: `xmin` row version + `version` in update bodies → 409 `concurrency.conflict`. Cart writes and checkout
+  lock the cart row (`FOR UPDATE`); locks and SQL live in Infrastructure only.
+- Money: `decimal`/`Money` only, `numeric(12,2)`, two decimals, `MidpointRounding.AwayFromZero`, JSON strings. No
+  float or double in Domain or SharedKernel.
+- Time only from `IClock` (`DateTime.Now`/`UtcNow` are banned in `src/`); business dates are Asia/Riyadh; timestamps
+  are written to PostgreSQL in UTC.
+- Ids: `Guid.CreateVersion7()`, set by the domain (`ValueGeneratedNever`).
+- Every new error code: `ErrorCodes` + both `.resx` files (a test checks it).
+- Every rule D-01 … D-14 keeps at least one test tagged `[Rule("D-xx")]`.
+- Personal data: no names, mobiles, e-mails or tokens in logs (`RedactingEnricher`); donor PII never in another donor's
+  response; deletion anonymises and keeps the orders.
+- Idempotency where orders are created (`Idempotency-Key`, scope = the donor); outbox handlers are at-most-once per
+  recipient (`notification.dedupe_key`).
+- Secrets never in the repository or the chat. Non-Development environments refuse missing or DEV ONLY keys.
+- Migrations: one schema history from `InitialSchema`; a merged migration is never edited; no `Database.Migrate()`;
+  deployments run the idempotent script. Expand → migrate → contract for schema changes.
 
 ## Commands
 
 ```bash
 dotnet build Ta3lom.Store.slnx -warnaserror
 dotnet format Ta3lom.Store.slnx --verify-no-changes
-dotnet test --solution Ta3lom.Store.slnx                                   # Testcontainers postgres:18 (needs Docker)
-STORE_TEST_DB=external STORE_TEST_DB_CONNECTION="Host=localhost;Username=postgres;Password=…" \
-  dotnet test --solution Ta3lom.Store.slnx                                 # a running PostgreSQL (16 gets a uuidv7() shim)
+dotnet test --solution Ta3lom.Store.slnx                       # Testcontainers postgres:18 (needs Docker)
 dotnet ef migrations add <Intent> -p src/Ta3lom.Store.Infrastructure -s src/Ta3lom.Store.Infrastructure -o Persistence/Migrations
-tools/scripts/migrate-script.sh              # artifacts/migrate.sql (idempotent; what the deploy job runs)
-tools/scripts/regenerate-data-dictionary.sh  # after a migration (PG* env vars); also edit db/reference/001 by hand
-UPDATE_OPENAPI_SNAPSHOT=1 dotnet test --project tests/Ta3lom.Store.Api.IntegrationTests   # accept an OpenAPI change
-ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/Ta3lom.Store.Api          # Scalar UI at /docs
+dotnet ef migrations has-pending-model-changes -p src/Ta3lom.Store.Infrastructure -s src/Ta3lom.Store.Infrastructure
+ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/Ta3lom.Store.Api   # Scalar UI at /docs
 ```
 
-## Environment notes (cloud sessions)
+## Quality gates (every PR)
 
-- Only the .NET 10 SDK is installable (`apt-get install -y dotnet-sdk-10.0`); NuGet is reachable.
-- No Docker daemon → Testcontainers cannot run here. Integration tests use `STORE_TEST_DB=external`
-  against the local PostgreSQL 16 (`pg_ctlcluster 16 main start`); the test fixture creates a `uuidv7()`
-  shim, migrations never do. Testcontainers `postgres:18` is the default and the CI path (doc 16 §2-F).
-  The schema-parity test must pass on both.
-
-## Definition of done (plan 14 §4.5)
-
-- [ ] Layer rules respected; endpoints bind → handler → `Result` mapping only.
-- [ ] Every RUL of the session has a failing-then-passing `[Rule]` test and is listed in `ImplementedRules.txt`.
-- [ ] Every endpoint has integration tests: success, 400, 401/403, and at least one business error `code`.
-- [ ] Migration added if the model changed; idempotent script generated; reference DDL and data dictionary regenerated.
-- [ ] `openapi/v1.json` updated and matching 11; deviations fixed in 11 in the same PR.
-- [ ] Logs carry no PII (masked mobile, no names, no tokens) — log-redaction test green.
-- [ ] `dotnet build -warnaserror`, `dotnet format --verify-no-changes`, all tests green.
-- [ ] Deployed to staging and the session's *Done when* verified there (from S-03).
-- [ ] PR lists RUL / FR / endpoint numbers covered and open questions.
+- [ ] Layer rules and architecture tests green; endpoints bind → handler → `Result` mapping only.
+- [ ] `dotnet build -warnaserror`, `dotnet format --verify-no-changes`, all tests green on `postgres:18`.
+- [ ] Line coverage: Domain ≥ 90 %, Application ≥ 80 % (CI gate).
+- [ ] No High/Critical vulnerable packages.
+- [ ] New endpoints: success, 400, 401/403 and a business error `code` tested; admin routes in the policy matrix.
+- [ ] Migration added when the model changed; `has-pending-model-changes` reports none.
+- [ ] Logs carry no PII.

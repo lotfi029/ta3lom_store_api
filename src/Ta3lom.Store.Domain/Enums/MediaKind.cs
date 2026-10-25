@@ -5,5 +5,4 @@ public enum MediaKind
 {
     Image,
     Pdf,
-    BookFile,
 }

@@ -1,10 +1,10 @@
 namespace Ta3lom.Store.Application.Interfaces;
 
-/// Hook called by VerifyOtp to merge the guest cart into the customer's cart (RUL-17).
+/// Called by VerifyOtp inside its transaction to merge the guest cart into the donor's cart (BR-A07).
 public interface ICartMergeHook
 {
     Task<IReadOnlyList<CartMergeNotice>> MergeGuestCartAsync(Guid? guestCartId, Guid customerId, CancellationToken ct = default);
 }
 
-/// `cart.merge_dropped_owned_course`, `cart.merge_combined` … (11 §4.2).
-public sealed record CartMergeNotice(string Code, string Slug);
+/// What the merge changed, e.g. `cart.merge_combined` or `cart.merge_dropped` (a line over a limit).
+public sealed record CartMergeNotice(string Code, Guid? LineId);

@@ -2,8 +2,8 @@ using Ta3lom.Store.Application.DTOs.Staff;
 
 namespace Ta3lom.Store.Application.Features.StaffAuth.Commands.EnrolTotp;
 
-/// TOTP enrolment (RUL-62): allowed while no authenticator is enrolled, or while the enrolment was never
-/// confirmed by a first successful login. Returns the otpauth URI and the base32 secret once.
+/// TOTP enrolment with the MFA token (D-12): allowed while no authenticator is enrolled, and again until the enrolment has
+/// been confirmed by a first accepted code. Returns the otpauth URI and the base32 secret once.
 public sealed record EnrolTotpCommand(Guid StaffId) : ICommand<TotpEnrolResponse>;
 
 internal sealed class EnrolTotpCommandHandler(
@@ -25,9 +25,9 @@ internal sealed class EnrolTotpCommandHandler(
             return StaffErrors.AccountLocked(user.LockedUntil!.Value);
         }
 
-        if (user.TotpEnrolled && user.LastLoginAt is not null)
+        if (user.TotpVerified)
         {
-            return AuthErrors.Forbidden;
+            return StaffErrors.TotpAlreadyEnrolled;
         }
 
         var enrolment = totp.CreateEnrolment(user.Email);

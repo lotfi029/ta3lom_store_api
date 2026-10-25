@@ -19,20 +19,16 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("store")
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "citext");
-            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "store", "citext");
-            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "store", "pg_trgm");
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "pg_trgm");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.HasSequence("beneficiary_code_seq");
+            modelBuilder.HasSequence("order_ref_seq");
 
-            modelBuilder.HasSequence("order_ref_seq")
-                .StartsAt(1000L);
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Auditing.AuditLogEntry", b =>
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Auditing.AuditLogEntry", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -53,8 +49,7 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTimeOffset>("At")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("at")
-                        .HasDefaultValueSql("now()");
+                        .HasColumnName("at");
 
                     b.Property<string>("Diff")
                         .HasColumnType("jsonb")
@@ -74,7 +69,10 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         .HasColumnName("ip_hash");
 
                     b.HasKey("Id")
-                        .HasName("audit_log_pkey");
+                        .HasName("pk_audit_log");
+
+                    b.HasIndex("Action")
+                        .HasDatabaseName("ix_audit_action");
 
                     b.HasIndex("At")
                         .IsDescending()
@@ -86,279 +84,37 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                     b.ToTable("audit_log", "store");
                 });
 
-            modelBuilder.Entity("Ta3lom.Store.Domain.Carts.Cart", b =>
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Catalog.Category", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AcceptsGeneralGifts")
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("accepts_general_gifts");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
+                        .HasColumnName("created_at");
 
-                    b.Property<Guid?>("CustomerId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("customer_id");
-
-                    b.Property<DateTimeOffset?>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("expires_at");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
+                    b.Property<string>("DescriptionAr")
                         .HasColumnType("text")
-                        .HasColumnName("status")
-                        .HasDefaultValueSql("'active'::text");
+                        .HasColumnName("description_ar");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.HasKey("Id")
-                        .HasName("cart_pkey");
-
-                    b.HasIndex("CustomerId")
-                        .IsUnique()
-                        .HasDatabaseName("ux_cart_customer_active")
-                        .HasFilter("((status = 'active'::text) AND (customer_id IS NOT NULL))");
-
-                    b.ToTable("cart", "store", t =>
-                        {
-                            t.HasCheckConstraint("cart_status_check", "(status = ANY (ARRAY['active'::text, 'converted'::text, 'merged'::text, 'expired'::text]))");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Carts.CartLine", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
-
-                    b.Property<DateTimeOffset>("AddedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("added_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("amount");
-
-                    b.Property<Guid?>("BookFormatId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("book_format_id");
-
-                    b.Property<Guid>("CartId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("cart_id");
-
-                    b.Property<string>("Dedication")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("dedication");
-
-                    b.Property<string>("Intent")
+                    b.Property<string>("DescriptionEn")
                         .HasColumnType("text")
-                        .HasColumnName("intent");
+                        .HasColumnName("description_en");
 
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("kind");
-
-                    b.Property<string>("Mode")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("mode");
-
-                    b.Property<Guid>("ProductId")
+                    b.Property<Guid?>("ImageAssetId")
                         .HasColumnType("uuid")
-                        .HasColumnName("product_id");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer")
-                        .HasColumnName("quantity")
-                        .HasDefaultValueSql("1");
-
-                    b.Property<decimal>("UnitPrice")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("unit_price");
-
-                    b.HasKey("Id")
-                        .HasName("cart_line_pkey");
-
-                    b.HasIndex("CartId")
-                        .HasDatabaseName("ix_cart_line_cart");
-
-                    b.ToTable("cart_line", "store", t =>
-                        {
-                            t.HasCheckConstraint("cart_line_amount_check", "(amount > (0)::numeric)");
-
-                            t.HasCheckConstraint("cart_line_intent_check", "(intent = ANY (ARRAY['sadaqa'::text, 'zakat'::text]))");
-
-                            t.HasCheckConstraint("cart_line_kind_check", "(kind = ANY (ARRAY['buy'::text, 'sponsor'::text, 'donate'::text]))");
-
-                            t.HasCheckConstraint("cart_line_mode_check", "(mode = ANY (ARRAY['units'::text, 'amount'::text]))");
-
-                            t.HasCheckConstraint("cart_line_quantity_check", "((quantity >= 1) AND (quantity <= 999))");
-
-                            t.HasCheckConstraint("cart_line_unit_price_check", "(unit_price >= (0)::numeric)");
-
-                            t.HasCheckConstraint("ck_cart_amount_qty", "((mode <> 'amount'::text) OR (quantity = 1))");
-
-                            t.HasCheckConstraint("ck_cart_buy_nointent", "((kind <> 'buy'::text) OR ((intent IS NULL) AND (dedication IS NULL)))");
-
-                            t.HasCheckConstraint("ck_cart_buy_units", "((kind <> 'buy'::text) OR (mode = 'units'::text))");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Catalog.BookDetail", b =>
-                {
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("product_id");
-
-                    b.Property<string>("AuthorAr")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("author_ar");
-
-                    b.Property<string>("AuthorEn")
-                        .HasColumnType("text")
-                        .HasColumnName("author_en");
-
-                    b.Property<string>("Isbn")
-                        .HasColumnType("text")
-                        .HasColumnName("isbn");
-
-                    b.Property<int?>("Pages")
-                        .HasColumnType("integer")
-                        .HasColumnName("pages");
-
-                    b.Property<int?>("PublishedYear")
-                        .HasColumnType("integer")
-                        .HasColumnName("published_year");
-
-                    b.HasKey("ProductId")
-                        .HasName("book_detail_pkey");
-
-                    b.ToTable("book_detail", "store", t =>
-                        {
-                            t.HasCheckConstraint("book_detail_pages_check", "(pages > 0)");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Catalog.BookFormat", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
-
-                    b.Property<decimal?>("CompareAtPrice")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("compare_at_price");
-
-                    b.Property<Guid?>("FileAssetId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("file_asset_id");
+                        .HasColumnName("image_asset_id");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")
-                        .HasColumnName("is_active")
-                        .HasDefaultValueSql("true");
-
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("kind");
-
-                    b.Property<int?>("LowStockThreshold")
-                        .HasColumnType("integer")
-                        .HasColumnName("low_stock_threshold");
-
-                    b.Property<decimal>("Price")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("price");
-
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("product_id");
-
-                    b.Property<string>("Sku")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("sku");
-
-                    b.Property<int?>("StockOnHand")
-                        .HasColumnType("integer")
-                        .HasColumnName("stock_on_hand");
-
-                    b.Property<int>("StockReserved")
-                        .HasColumnType("integer")
-                        .HasColumnName("stock_reserved")
-                        .HasDefaultValueSql("0");
-
-                    b.Property<int?>("WeightGrams")
-                        .HasColumnType("integer")
-                        .HasColumnName("weight_grams");
-
-                    b.Property<uint>("xmin")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
-
-                    b.HasKey("Id")
-                        .HasName("book_format_pkey");
-
-                    b.HasIndex("Sku")
-                        .IsUnique()
-                        .HasDatabaseName("book_format_sku_key");
-
-                    b.HasIndex("ProductId", "Kind")
-                        .IsUnique()
-                        .HasDatabaseName("book_format_product_id_kind_key");
-
-                    b.ToTable("book_format", "store", t =>
-                        {
-                            t.HasCheckConstraint("book_format_check", "((compare_at_price IS NULL) OR (compare_at_price > price))");
-
-                            t.HasCheckConstraint("book_format_kind_check", "(kind = ANY (ARRAY['print'::text, 'digital'::text]))");
-
-                            t.HasCheckConstraint("book_format_low_stock_threshold_check", "(low_stock_threshold >= 0)");
-
-                            t.HasCheckConstraint("book_format_price_check", "(price >= (0)::numeric)");
-
-                            t.HasCheckConstraint("book_format_stock_on_hand_check", "(stock_on_hand >= 0)");
-
-                            t.HasCheckConstraint("book_format_stock_reserved_check", "(stock_reserved >= 0)");
-
-                            t.HasCheckConstraint("ck_format_digital", "((kind <> 'digital'::text) OR (file_asset_id IS NOT NULL))");
-
-                            t.HasCheckConstraint("ck_format_print", "((kind <> 'print'::text) OR (stock_on_hand IS NOT NULL))");
-
-                            t.HasCheckConstraint("ck_format_reserve", "(stock_reserved <= COALESCE(stock_on_hand, 0))");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Catalog.Category", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_active")
-                        .HasDefaultValueSql("true");
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
 
                     b.Property<string>("NameAr")
                         .IsRequired()
@@ -376,353 +132,48 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("Sort")
                         .HasColumnType("integer")
-                        .HasColumnName("sort")
-                        .HasDefaultValueSql("0");
-
-                    b.HasKey("Id")
-                        .HasName("category_pkey");
-
-                    b.HasIndex("Slug")
-                        .IsUnique()
-                        .HasDatabaseName("category_slug_key");
-
-                    b.ToTable("category", "store", t =>
-                        {
-                            t.HasCheckConstraint("category_slug_check", "(slug ~ '^[a-z0-9-]{2,60}$'::text)");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Catalog.CauseDetail", b =>
-                {
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("product_id");
-
-                    b.Property<bool>("AllowCustomAmount")
-                        .HasColumnType("boolean")
-                        .HasColumnName("allow_custom_amount")
-                        .HasDefaultValueSql("true");
-
-                    b.Property<string>("BeneficiariesAr")
-                        .HasColumnType("text")
-                        .HasColumnName("beneficiaries_ar");
-
-                    b.Property<string>("BeneficiariesEn")
-                        .HasColumnType("text")
-                        .HasColumnName("beneficiaries_en");
-
-                    b.Property<bool>("CloseOnTarget")
-                        .HasColumnType("boolean")
-                        .HasColumnName("close_on_target")
-                        .HasDefaultValueSql("false");
-
-                    b.Property<DateTimeOffset?>("EndsAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("ends_at");
-
-                    b.Property<bool>("IsGeneralFund")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_general_fund")
-                        .HasDefaultValueSql("false");
-
-                    b.Property<decimal>("MinAmount")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("min_amount")
-                        .HasDefaultValueSql("10");
-
-                    b.Property<DateTimeOffset>("StartsAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("starts_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<decimal>("TargetAmount")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(14,2)")
-                        .HasColumnName("target_amount");
-
-                    b.Property<decimal?>("UnitAmount")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("unit_amount");
-
-                    b.Property<string>("UnitLabelAr")
-                        .HasColumnType("text")
-                        .HasColumnName("unit_label_ar");
-
-                    b.Property<string>("UnitLabelEn")
-                        .HasColumnType("text")
-                        .HasColumnName("unit_label_en");
-
-                    b.Property<bool>("ZakatEligible")
-                        .HasColumnType("boolean")
-                        .HasColumnName("zakat_eligible")
-                        .HasDefaultValueSql("false");
-
-                    b.HasKey("ProductId")
-                        .HasName("cause_detail_pkey");
-
-                    b.ToTable("cause_detail", "store", t =>
-                        {
-                            t.HasCheckConstraint("cause_detail_min_amount_check", "(min_amount > (0)::numeric)");
-
-                            t.HasCheckConstraint("cause_detail_target_amount_check", "(target_amount > (0)::numeric)");
-
-                            t.HasCheckConstraint("cause_detail_unit_amount_check", "((unit_amount IS NULL) OR (unit_amount > (0)::numeric))");
-
-                            t.HasCheckConstraint("ck_cause_label", "((unit_amount IS NULL) OR (unit_label_ar IS NOT NULL))");
-
-                            t.HasCheckConstraint("ck_cause_mode", "((unit_amount IS NOT NULL) OR allow_custom_amount)");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Catalog.CourseDetail", b =>
-                {
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("product_id");
-
-                    b.Property<int?>("AccessDays")
-                        .HasColumnType("integer")
-                        .HasColumnName("access_days");
-
-                    b.Property<decimal?>("CompareAtPrice")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("compare_at_price");
-
-                    b.Property<int>("DurationMinutes")
-                        .HasColumnType("integer")
-                        .HasColumnName("duration_minutes")
-                        .HasDefaultValueSql("0");
-
-                    b.Property<string>("InstructorAr")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("instructor_ar");
-
-                    b.Property<string>("InstructorEn")
-                        .HasColumnType("text")
-                        .HasColumnName("instructor_en");
-
-                    b.Property<int>("LearnerCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("learner_count")
-                        .HasDefaultValueSql("0");
-
-                    b.Property<int>("Lessons")
-                        .HasColumnType("integer")
-                        .HasColumnName("lessons")
-                        .HasDefaultValueSql("0");
-
-                    b.Property<string>("LevelAr")
-                        .HasColumnType("text")
-                        .HasColumnName("level_ar");
-
-                    b.Property<string>("LevelEn")
-                        .HasColumnType("text")
-                        .HasColumnName("level_en");
-
-                    b.Property<string>("LmsCourseRef")
-                        .HasColumnType("text")
-                        .HasColumnName("lms_course_ref");
-
-                    b.Property<decimal>("Price")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("price");
-
-                    b.HasKey("ProductId")
-                        .HasName("course_detail_pkey");
-
-                    b.ToTable("course_detail", "store", t =>
-                        {
-                            t.HasCheckConstraint("course_detail_access_days_check", "((access_days IS NULL) OR (access_days > 0))");
-
-                            t.HasCheckConstraint("course_detail_check", "((compare_at_price IS NULL) OR (compare_at_price > price))");
-
-                            t.HasCheckConstraint("course_detail_duration_minutes_check", "(duration_minutes >= 0)");
-
-                            t.HasCheckConstraint("course_detail_lessons_check", "(lessons >= 0)");
-
-                            t.HasCheckConstraint("course_detail_price_check", "(price >= (0)::numeric)");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Catalog.CourseModule", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
-
-                    b.Property<int>("DurationSeconds")
-                        .HasColumnType("integer")
-                        .HasColumnName("duration_seconds")
-                        .HasDefaultValueSql("0");
-
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("product_id");
-
-                    b.Property<int>("Sort")
-                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
                         .HasColumnName("sort");
-
-                    b.Property<string>("TitleAr")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("title_ar");
-
-                    b.Property<string>("TitleEn")
-                        .HasColumnType("text")
-                        .HasColumnName("title_en");
-
-                    b.HasKey("Id")
-                        .HasName("course_module_pkey");
-
-                    b.HasIndex("ProductId", "Sort")
-                        .IsUnique()
-                        .HasDatabaseName("course_module_product_id_sort_key");
-
-                    b.ToTable("course_module", "store");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Catalog.GoalAdjustment", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<long>("Id"));
-
-                    b.Property<string>("Actor")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("actor");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("amount");
-
-                    b.Property<DateTimeOffset>("At")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("kind");
-
-                    b.Property<string>("Note")
-                        .HasColumnType("text")
-                        .HasColumnName("note");
-
-                    b.Property<Guid?>("PairId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("pair_id");
-
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("product_id");
-
-                    b.Property<Guid?>("SponsorshipOfferId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("sponsorship_offer_id");
-
-                    b.Property<int>("Units")
-                        .HasColumnType("integer")
-                        .HasColumnName("units")
-                        .HasDefaultValueSql("0");
-
-                    b.HasKey("Id")
-                        .HasName("goal_adjustment_pkey");
-
-                    b.HasIndex("ProductId")
-                        .HasDatabaseName("ix_goal_adjustment_product");
-
-                    b.ToTable("goal_adjustment", "store", t =>
-                        {
-                            t.HasCheckConstraint("goal_adjustment_check", "((amount <> (0)::numeric) OR (units <> 0))");
-
-                            t.HasCheckConstraint("goal_adjustment_kind_check", "(kind = ANY (ARRAY['pool_sweep_out'::text, 'pool_sweep_in'::text, 'correction'::text]))");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Catalog.GoalProgress", b =>
-                {
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("product_id");
-
-                    b.Property<int>("DonorCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("donor_count")
-                        .HasDefaultValueSql("0");
-
-                    b.Property<int>("FundedUnits")
-                        .HasColumnType("integer")
-                        .HasColumnName("funded_units")
-                        .HasDefaultValueSql("0");
-
-                    b.Property<DateTimeOffset?>("LastGiftAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_gift_at");
-
-                    b.Property<decimal>("RaisedAmount")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(14,2)")
-                        .HasColumnName("raised_amount")
-                        .HasDefaultValueSql("0");
-
-                    b.Property<int>("SeedDonors")
-                        .HasColumnType("integer")
-                        .HasColumnName("seed_donors")
-                        .HasDefaultValueSql("0");
-
-                    b.Property<decimal>("SeedRaised")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(14,2)")
-                        .HasColumnName("seed_raised")
-                        .HasDefaultValueSql("0");
-
-                    b.Property<int>("SeedUnits")
-                        .HasColumnType("integer")
-                        .HasColumnName("seed_units")
-                        .HasDefaultValueSql("0");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("now()");
+                        .HasColumnName("updated_at");
 
-                    b.Property<decimal>("ZakatAmount")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(14,2)")
-                        .HasColumnName("zakat_amount")
-                        .HasDefaultValueSql("0");
-
-                    b.Property<uint>("xmin")
+                    b.Property<uint>("Version")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("xid")
                         .HasColumnName("xmin");
 
-                    b.HasKey("ProductId")
-                        .HasName("goal_progress_pkey");
+                    b.HasKey("Id")
+                        .HasName("pk_category");
 
-                    b.ToTable("goal_progress", "store");
+                    b.HasIndex("ImageAssetId")
+                        .HasDatabaseName("ix_category_image");
+
+                    b.HasIndex("Slug")
+                        .IsUnique()
+                        .HasDatabaseName("ux_category_slug");
+
+                    b.HasIndex("IsActive", "Sort")
+                        .HasDatabaseName("ix_category_sort");
+
+                    b.ToTable("category", "store", t =>
+                        {
+                            t.HasCheckConstraint("ck_category_slug", "slug ~ '^[a-z0-9-]{2,60}$'");
+                        });
                 });
 
-            modelBuilder.Entity("Ta3lom.Store.Domain.Catalog.Product", b =>
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Catalog.Project", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AllowOpenAmount")
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("allow_open_amount");
 
                     b.Property<string>("Badge")
                         .HasColumnType("text")
@@ -736,7 +187,7 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("body_en");
 
-                    b.Property<Guid?>("CategoryId")
+                    b.Property<Guid>("CategoryId")
                         .HasColumnType("uuid")
                         .HasColumnName("category_id");
 
@@ -746,8 +197,12 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
+                        .HasColumnName("created_at");
+
+                    b.Property<decimal?>("MinAmount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("min_amount");
 
                     b.Property<DateTimeOffset?>("PublishedAt")
                         .HasColumnType("timestamp with time zone")
@@ -757,7 +212,7 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("tsvector")
                         .HasColumnName("search_vector")
-                        .HasComputedColumnSql("to_tsvector('simple'::regconfig, ar_normalize(((((((COALESCE(title_ar, ''::text) || ' '::text) || COALESCE(title_en, ''::text)) || ' '::text) || COALESCE(summary_ar, ''::text)) || ' '::text) || COALESCE(summary_en, ''::text))))", true);
+                        .HasComputedColumnSql("to_tsvector('simple', store.ar_normalize(coalesce(title_ar, '') || ' ' || coalesce(title_en, '') || ' ' || coalesce(summary_ar, '') || ' ' || coalesce(summary_en, '')))", true);
 
                     b.Property<string>("SeoDescAr")
                         .HasColumnType("text")
@@ -782,17 +237,15 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("Sort")
                         .HasColumnType("integer")
-                        .HasColumnName("sort")
-                        .HasDefaultValueSql("0");
+                        .HasDefaultValue(0)
+                        .HasColumnName("sort");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("status")
-                        .HasDefaultValueSql("'draft'::text");
+                        .HasColumnName("status");
 
                     b.Property<string>("SummaryAr")
-                        .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("summary_ar");
 
@@ -809,387 +262,98 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("title_en");
 
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("type");
-
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("now()");
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
-                        .HasName("product_pkey");
+                        .HasName("pk_project");
 
-                    b.HasIndex("SearchVector")
-                        .HasDatabaseName("ix_product_search");
+                    b.HasIndex("CategoryId")
+                        .HasDatabaseName("ix_project_category");
 
-                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("SearchVector"), "gin");
+                    b.HasIndex("CoverAssetId")
+                        .HasDatabaseName("ix_project_cover");
 
                     b.HasIndex("Slug")
                         .IsUnique()
-                        .HasDatabaseName("product_slug_key");
+                        .HasDatabaseName("ux_project_slug");
 
-                    b.HasIndex("Type", "Status", "Sort")
-                        .HasDatabaseName("ix_product_listing");
+                    b.HasIndex("Status", "CategoryId", "Sort")
+                        .HasDatabaseName("ix_project_listing");
 
-                    b.ToTable("product", "store", t =>
+                    b.ToTable("project", "store", t =>
                         {
-                            t.HasCheckConstraint("product_badge_check", "(badge = ANY (ARRAY['best'::text, 'new'::text, 'urgent'::text]))");
+                            t.HasCheckConstraint("ck_project_badge", "badge IS NULL OR badge IN ('new', 'urgent')");
 
-                            t.HasCheckConstraint("product_slug_check", "(slug ~ '^[a-z0-9-]{2,80}$'::text)");
+                            t.HasCheckConstraint("ck_project_min", "min_amount IS NULL OR min_amount > 0");
 
-                            t.HasCheckConstraint("product_status_check", "(status = ANY (ARRAY['draft'::text, 'published'::text, 'archived'::text]))");
+                            t.HasCheckConstraint("ck_project_slug", "slug ~ '^[a-z0-9-]{2,80}$'");
 
-                            t.HasCheckConstraint("product_title_ar_check", "((length(title_ar) >= 2) AND (length(title_ar) <= 160))");
+                            t.HasCheckConstraint("ck_project_status", "status IN ('draft', 'published', 'archived')");
 
-                            t.HasCheckConstraint("product_type_check", "(type = ANY (ARRAY['course'::text, 'book'::text, 'cause'::text]))");
+                            t.HasCheckConstraint("ck_project_summary", "summary_ar IS NULL OR char_length(summary_ar) <= 300");
+
+                            t.HasCheckConstraint("ck_project_title", "char_length(title_ar) BETWEEN 2 AND 160");
                         });
                 });
 
-            modelBuilder.Entity("Ta3lom.Store.Domain.Catalog.SponsorshipOffer", b =>
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Catalog.ProjectOption", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
+                        .HasColumnName("id");
 
-                    b.Property<bool>("AllowPartial")
-                        .HasColumnType("boolean")
-                        .HasColumnName("allow_partial")
-                        .HasDefaultValueSql("true");
-
-                    b.Property<string>("BeneficiaryGroup")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("beneficiary_group");
-
-                    b.Property<bool>("CloseOnTarget")
-                        .HasColumnType("boolean")
-                        .HasColumnName("close_on_target")
-                        .HasDefaultValueSql("false");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<DateTimeOffset>("EndsAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("ends_at");
-
-                    b.Property<string>("GroupLabelAr")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("group_label_ar");
-
-                    b.Property<string>("GroupLabelEn")
-                        .HasColumnType("text")
-                        .HasColumnName("group_label_en");
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("amount");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")
-                        .HasColumnName("is_active")
-                        .HasDefaultValueSql("true");
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
 
-                    b.Property<Guid>("ProductId")
+                    b.Property<string>("LabelAr")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("label_ar");
+
+                    b.Property<string>("LabelEn")
+                        .HasColumnType("text")
+                        .HasColumnName("label_en");
+
+                    b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid")
-                        .HasColumnName("product_id");
+                        .HasColumnName("project_id");
 
-                    b.Property<decimal>("SeatPrice")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("seat_price");
-
-                    b.Property<DateTimeOffset>("StartsAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("starts_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<int>("TargetUnits")
+                    b.Property<int>("Sort")
                         .HasColumnType("integer")
-                        .HasColumnName("target_units");
-
-                    b.Property<string>("UnitLabelAr")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("unit_label_ar")
-                        .HasDefaultValueSql("'مقعد'::text");
-
-                    b.Property<string>("UnitLabelEn")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("unit_label_en")
-                        .HasDefaultValueSql("'seat'::text");
-
-                    b.Property<bool>("ZakatEligible")
-                        .HasColumnType("boolean")
-                        .HasColumnName("zakat_eligible")
-                        .HasDefaultValueSql("false");
+                        .HasDefaultValue(0)
+                        .HasColumnName("sort");
 
                     b.HasKey("Id")
-                        .HasName("sponsorship_offer_pkey");
+                        .HasName("pk_project_option");
 
-                    b.HasIndex("ProductId")
+                    b.HasIndex("ProjectId", "LabelAr")
                         .IsUnique()
-                        .HasDatabaseName("ux_offer_one_active")
-                        .HasFilter("is_active");
+                        .HasDatabaseName("ux_option_label");
 
-                    b.ToTable("sponsorship_offer", "store", t =>
+                    b.ToTable("project_option", "store", t =>
                         {
-                            t.HasCheckConstraint("sponsorship_offer_check", "(ends_at > starts_at)");
+                            t.HasCheckConstraint("ck_option_amount", "amount > 0");
 
-                            t.HasCheckConstraint("sponsorship_offer_seat_price_check", "(seat_price > (0)::numeric)");
-
-                            t.HasCheckConstraint("sponsorship_offer_target_units_check", "(target_units > 0)");
+                            t.HasCheckConstraint("ck_option_label", "char_length(label_ar) BETWEEN 2 AND 60");
                         });
                 });
 
-            modelBuilder.Entity("Ta3lom.Store.Domain.Documents.DocumentCounter", b =>
-                {
-                    b.Property<string>("Series")
-                        .HasColumnType("text")
-                        .HasColumnName("series");
-
-                    b.Property<int>("Year")
-                        .HasColumnType("integer")
-                        .HasColumnName("year");
-
-                    b.Property<int>("LastValue")
-                        .HasColumnType("integer")
-                        .HasColumnName("last_value")
-                        .HasDefaultValueSql("0");
-
-                    b.HasKey("Series", "Year")
-                        .HasName("document_counter_pkey");
-
-                    b.ToTable("document_counter", "store", t =>
-                        {
-                            t.HasCheckConstraint("document_counter_series_check", "(series = ANY (ARRAY['INV'::text, 'CN'::text, 'DR'::text, 'DRC'::text]))");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Documents.DonationReceipt", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
-
-                    b.Property<string>("DonorName")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("donor_name");
-
-                    b.Property<DateTimeOffset>("IssuedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("issued_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("kind")
-                        .HasDefaultValueSql("'receipt'::text");
-
-                    b.Property<string>("Number")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("number");
-
-                    b.Property<Guid>("OrderId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("order_id");
-
-                    b.Property<Guid?>("PdfAssetId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("pdf_asset_id");
-
-                    b.Property<Guid?>("ReferencesReceiptId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("references_receipt_id");
-
-                    b.Property<decimal>("TotalAmount")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("total_amount");
-
-                    b.Property<decimal>("ZakatAmount")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("zakat_amount")
-                        .HasDefaultValueSql("0");
-
-                    b.HasKey("Id")
-                        .HasName("donation_receipt_pkey");
-
-                    b.HasIndex("Number")
-                        .IsUnique()
-                        .HasDatabaseName("donation_receipt_number_key");
-
-                    b.HasIndex("OrderId")
-                        .HasDatabaseName("ix_receipt_order");
-
-                    b.ToTable("donation_receipt", "store", t =>
-                        {
-                            t.HasCheckConstraint("donation_receipt_kind_check", "(kind = ANY (ARRAY['receipt'::text, 'cancellation'::text]))");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Documents.Invoice", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
-
-                    b.Property<decimal>("GrossTotal")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("gross_total");
-
-                    b.Property<bool>("IsTaxInvoice")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_tax_invoice");
-
-                    b.Property<DateTimeOffset>("IssuedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("issued_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("kind");
-
-                    b.Property<decimal>("NetTotal")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("net_total");
-
-                    b.Property<string>("Number")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("number");
-
-                    b.Property<Guid>("OrderId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("order_id");
-
-                    b.Property<Guid?>("PdfAssetId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("pdf_asset_id");
-
-                    b.Property<Guid?>("ReferencesInvoiceId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("references_invoice_id");
-
-                    b.Property<string>("SellerVatNo")
-                        .HasColumnType("text")
-                        .HasColumnName("seller_vat_no");
-
-                    b.Property<decimal>("VatTotal")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("vat_total");
-
-                    b.Property<string>("ZatcaHash")
-                        .HasColumnType("text")
-                        .HasColumnName("zatca_hash");
-
-                    b.Property<long?>("ZatcaIcv")
-                        .HasColumnType("bigint")
-                        .HasColumnName("zatca_icv");
-
-                    b.Property<string>("ZatcaPih")
-                        .HasColumnType("text")
-                        .HasColumnName("zatca_pih");
-
-                    b.Property<string>("ZatcaQr")
-                        .HasColumnType("text")
-                        .HasColumnName("zatca_qr");
-
-                    b.Property<string>("ZatcaStatus")
-                        .HasColumnType("text")
-                        .HasColumnName("zatca_status");
-
-                    b.Property<Guid?>("ZatcaUuid")
-                        .HasColumnType("uuid")
-                        .HasColumnName("zatca_uuid");
-
-                    b.HasKey("Id")
-                        .HasName("invoice_pkey");
-
-                    b.HasIndex("Number")
-                        .IsUnique()
-                        .HasDatabaseName("invoice_number_key");
-
-                    b.HasIndex("OrderId")
-                        .HasDatabaseName("ix_invoice_order");
-
-                    b.ToTable("invoice", "store", t =>
-                        {
-                            t.HasCheckConstraint("invoice_check", "(gross_total = (net_total + vat_total))");
-
-                            t.HasCheckConstraint("invoice_kind_check", "(kind = ANY (ARRAY['invoice'::text, 'credit_note'::text]))");
-
-                            t.HasCheckConstraint("invoice_zatca_status_check", "(zatca_status = ANY (ARRAY['not_required'::text, 'pending'::text, 'reported'::text, 'cleared'::text, 'rejected'::text]))");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Fulfilment.DownloadGrant", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
-
-                    b.Property<Guid>("BookFormatId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("book_format_id");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<Guid>("CustomerId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("customer_id");
-
-                    b.Property<int>("DownloadCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("download_count")
-                        .HasDefaultValueSql("0");
-
-                    b.Property<int>("MaxDownloads")
-                        .HasColumnType("integer")
-                        .HasColumnName("max_downloads")
-                        .HasDefaultValueSql("5");
-
-                    b.Property<Guid>("OrderLineId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("order_line_id");
-
-                    b.Property<DateTimeOffset?>("RevokedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("revoked_at");
-
-                    b.HasKey("Id")
-                        .HasName("download_grant_pkey");
-
-                    b.HasIndex("OrderLineId")
-                        .IsUnique()
-                        .HasDatabaseName("download_grant_order_line_id_key");
-
-                    b.ToTable("download_grant", "store", t =>
-                        {
-                            t.HasCheckConstraint("download_grant_check", "(download_count <= max_downloads)");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Fulfilment.DownloadLogEntry", b =>
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Catalog.ProjectSlugHistory", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -1198,41 +362,43 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<long>("Id"));
 
-                    b.Property<DateTimeOffset>("At")
+                    b.Property<DateTimeOffset>("ChangedAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("at")
-                        .HasDefaultValueSql("now()");
+                        .HasColumnName("changed_at");
 
-                    b.Property<Guid>("GrantId")
+                    b.Property<string>("OldSlug")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("old_slug");
+
+                    b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid")
-                        .HasColumnName("grant_id");
-
-                    b.Property<string>("IpHash")
-                        .HasColumnType("character(64)")
-                        .HasColumnName("ip_hash");
+                        .HasColumnName("project_id");
 
                     b.HasKey("Id")
-                        .HasName("download_log_pkey");
+                        .HasName("pk_project_slug_history");
 
-                    b.ToTable("download_log", "store");
+                    b.HasIndex("OldSlug")
+                        .IsUnique()
+                        .HasDatabaseName("ux_slug_history_old");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("ix_slug_history_project");
+
+                    b.ToTable("project_slug_history", "store");
                 });
 
-            modelBuilder.Entity("Ta3lom.Store.Domain.Fulfilment.Enrolment", b =>
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Donations.Cart", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
+                        .HasColumnName("id");
 
-                    b.Property<string>("CertificateNo")
-                        .HasColumnType("text")
-                        .HasColumnName("certificate_no");
-
-                    b.Property<DateTimeOffset?>("CompletedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("completed_at");
+                        .HasColumnName("created_at");
 
-                    b.Property<Guid>("CustomerId")
+                    b.Property<Guid?>("CustomerId")
                         .HasColumnType("uuid")
                         .HasColumnName("customer_id");
 
@@ -1240,374 +406,251 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("expires_at");
 
-                    b.Property<DateTimeOffset>("GrantedAt")
+                    b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("granted_at")
-                        .HasDefaultValueSql("now()");
+                        .HasColumnName("updated_at");
 
-                    b.Property<string>("LmsEnrolmentRef")
-                        .HasColumnType("text")
-                        .HasColumnName("lms_enrolment_ref");
+                    b.HasKey("Id")
+                        .HasName("pk_cart");
 
-                    b.Property<Guid?>("OrderLineId")
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("ix_cart_guest_expiry")
+                        .HasFilter("customer_id IS NULL");
+
+                    b.ToTable("cart", "store");
+                });
+
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Donations.CartLine", b =>
+                {
+                    b.Property<Guid>("Id")
                         .HasColumnType("uuid")
-                        .HasColumnName("order_line_id");
+                        .HasColumnName("id");
 
-                    b.Property<Guid>("ProductId")
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<Guid>("CartId")
                         .HasColumnType("uuid")
-                        .HasColumnName("product_id");
+                        .HasColumnName("cart_id");
 
-                    b.Property<short>("ProgressPct")
-                        .HasColumnType("smallint")
-                        .HasColumnName("progress_pct")
-                        .HasDefaultValueSql("0");
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("category_id");
 
-                    b.Property<string>("Source")
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("OptionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("option_id");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer")
+                        .HasColumnName("quantity");
+
+                    b.Property<string>("TargetKind")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("source");
+                        .HasColumnName("target_kind");
 
-                    b.Property<Guid?>("SponsoredUnitId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("sponsored_unit_id");
+                    b.Property<decimal>("UnitAmount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("unit_amount");
 
-                    b.Property<DateTimeOffset?>("StartedAt")
+                    b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("started_at");
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_cart_line");
+
+                    b.HasIndex("CartId")
+                        .HasDatabaseName("ix_cart_line_cart");
+
+                    b.HasIndex("CategoryId")
+                        .HasDatabaseName("ix_cart_line_category");
+
+                    b.HasIndex("OptionId")
+                        .HasDatabaseName("ix_cart_line_option");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("ix_cart_line_project");
+
+                    b.ToTable("cart_line", "store", t =>
+                        {
+                            t.HasCheckConstraint("ck_line_amount", "amount = unit_amount * quantity AND quantity BETWEEN 1 AND 999 AND unit_amount > 0");
+
+                            t.HasCheckConstraint("ck_line_kind", "target_kind IN ('project', 'category')");
+
+                            t.HasCheckConstraint("ck_line_target", "(target_kind = 'project' AND project_id IS NOT NULL AND category_id IS NULL) OR (target_kind = 'category' AND category_id IS NOT NULL AND project_id IS NULL AND option_id IS NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Donations.Order", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelled_at");
+
+                    b.Property<string>("CancelledBy")
+                        .HasColumnType("text")
+                        .HasColumnName("cancelled_by");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<string>("DonorEmail")
+                        .IsRequired()
+                        .HasColumnType("citext")
+                        .HasColumnName("donor_email");
+
+                    b.Property<string>("DonorMobile")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("donor_mobile");
+
+                    b.Property<string>("DonorName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("donor_name");
+
+                    b.Property<int>("LineCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("line_count");
+
+                    b.Property<string>("Locale")
+                        .IsRequired()
+                        .HasColumnType("character(2)")
+                        .HasColumnName("locale");
+
+                    b.Property<DateTimeOffset?>("PaidAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("paid_at");
+
+                    b.Property<DateTimeOffset>("PaymentDueAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("payment_due_at");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("reference");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("status")
-                        .HasDefaultValueSql("'active'::text");
+                        .HasColumnName("status");
+
+                    b.Property<string>("StatusTokenHash")
+                        .IsRequired()
+                        .HasColumnType("character(64)")
+                        .HasColumnName("status_token_hash");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("total_amount");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
-                        .HasName("enrolment_pkey");
+                        .HasName("pk_orders");
 
-                    b.HasIndex("CertificateNo")
+                    b.HasIndex("Reference")
                         .IsUnique()
-                        .HasDatabaseName("enrolment_certificate_no_key");
+                        .HasDatabaseName("ux_orders_reference");
 
-                    b.HasIndex("CustomerId", "ProductId")
-                        .IsUnique()
-                        .HasDatabaseName("ux_enrolment_live")
-                        .HasFilter("(status = ANY (ARRAY['pending_sync'::text, 'active'::text, 'completed'::text]))");
+                    b.HasIndex("CustomerId", "CreatedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_orders_customer");
 
-                    b.ToTable("enrolment", "store", t =>
+                    b.HasIndex("Status", "PaymentDueAt")
+                        .HasDatabaseName("ix_orders_status");
+
+                    b.ToTable("orders", "store", t =>
                         {
-                            t.HasCheckConstraint("ck_enrol_source", "(((source = 'purchase'::text) AND (order_line_id IS NOT NULL)) OR ((source = 'sponsored'::text) AND (sponsored_unit_id IS NOT NULL)) OR (source = 'manual'::text))");
+                            t.HasCheckConstraint("ck_orders_locale", "locale IN ('ar', 'en')");
 
-                            t.HasCheckConstraint("enrolment_progress_pct_check", "((progress_pct >= 0) AND (progress_pct <= 100))");
+                            t.HasCheckConstraint("ck_orders_reference", "reference ~ '^T3-[0-9]{2}-[0-9]{6,}$'");
 
-                            t.HasCheckConstraint("enrolment_source_check", "(source = ANY (ARRAY['purchase'::text, 'sponsored'::text, 'manual'::text]))");
+                            t.HasCheckConstraint("ck_orders_status", "status IN ('pending_payment', 'paid', 'payment_review', 'cancelled', 'expired')");
 
-                            t.HasCheckConstraint("enrolment_status_check", "(status = ANY (ARRAY['pending_sync'::text, 'active'::text, 'completed'::text, 'revoked'::text, 'expired'::text]))");
+                            t.HasCheckConstraint("ck_orders_total", "total_amount > 0 AND line_count > 0");
                         });
                 });
 
-            modelBuilder.Entity("Ta3lom.Store.Domain.Fulfilment.Shipment", b =>
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Donations.OrderLine", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
+                        .HasColumnName("id");
 
-                    b.Property<string>("Address")
-                        .IsRequired()
-                        .HasColumnType("jsonb")
-                        .HasColumnName("address");
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("amount");
 
-                    b.Property<string>("Carrier")
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("category_id");
+
+                    b.Property<short>("LineNo")
+                        .HasColumnType("smallint")
+                        .HasColumnName("line_no");
+
+                    b.Property<Guid?>("OptionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("option_id");
+
+                    b.Property<string>("OptionLabelAr")
                         .HasColumnType("text")
-                        .HasColumnName("carrier");
+                        .HasColumnName("option_label_ar");
 
-                    b.Property<DateTimeOffset?>("DeliveredAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("delivered_at");
+                    b.Property<string>("OptionLabelEn")
+                        .HasColumnType("text")
+                        .HasColumnName("option_label_en");
 
                     b.Property<Guid>("OrderId")
                         .HasColumnType("uuid")
                         .HasColumnName("order_id");
 
-                    b.Property<DateTimeOffset?>("ShippedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("shipped_at");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("status")
-                        .HasDefaultValueSql("'preparing'::text");
-
-                    b.Property<string>("TrackingNo")
-                        .HasColumnType("text")
-                        .HasColumnName("tracking_no");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("text")
-                        .HasColumnName("updated_by");
-
-                    b.HasKey("Id")
-                        .HasName("shipment_pkey");
-
-                    b.HasIndex("OrderId")
-                        .IsUnique()
-                        .HasDatabaseName("shipment_order_id_key");
-
-                    b.ToTable("shipment", "store", t =>
-                        {
-                            t.HasCheckConstraint("shipment_status_check", "(status = ANY (ARRAY['preparing'::text, 'shipped'::text, 'delivered'::text, 'returned'::text]))");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Fulfilment.StockMovement", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<long>("Id"));
-
-                    b.Property<string>("Actor")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("actor");
-
-                    b.Property<DateTimeOffset>("At")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<Guid>("BookFormatId")
+                    b.Property<Guid?>("ProjectId")
                         .HasColumnType("uuid")
-                        .HasColumnName("book_format_id");
+                        .HasColumnName("project_id");
 
-                    b.Property<int>("Delta")
+                    b.Property<int>("Quantity")
                         .HasColumnType("integer")
-                        .HasColumnName("delta");
+                        .HasColumnName("quantity");
 
-                    b.Property<string>("Note")
-                        .HasColumnType("text")
-                        .HasColumnName("note");
-
-                    b.Property<string>("Reason")
+                    b.Property<string>("TargetKind")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("reason");
-
-                    b.Property<string>("RefId")
-                        .HasColumnType("text")
-                        .HasColumnName("ref_id");
-
-                    b.Property<string>("RefType")
-                        .HasColumnType("text")
-                        .HasColumnName("ref_type");
-
-                    b.HasKey("Id")
-                        .HasName("stock_movement_pkey");
-
-                    b.HasIndex("BookFormatId", "At")
-                        .IsDescending(false, true)
-                        .HasDatabaseName("ix_stock_movement_format");
-
-                    b.ToTable("stock_movement", "store", t =>
-                        {
-                            t.HasCheckConstraint("stock_movement_delta_check", "(delta <> 0)");
-
-                            t.HasCheckConstraint("stock_movement_reason_check", "(reason = ANY (ARRAY['restock'::text, 'sale'::text, 'return'::text, 'sponsor_distribution'::text, 'adjustment'::text]))");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Giving.AllocationBatch", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("created_by");
-
-                    b.Property<string>("Note")
-                        .HasColumnType("text")
-                        .HasColumnName("note");
-
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("product_id");
-
-                    b.HasKey("Id")
-                        .HasName("allocation_batch_pkey");
-
-                    b.ToTable("allocation_batch", "store");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Giving.Beneficiary", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
-
-                    b.Property<string>("BeneficiaryGroup")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("beneficiary_group");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("code");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("created_by");
-
-                    b.Property<Guid?>("CustomerId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("customer_id");
-
-                    b.Property<string>("EligibilityNotes")
-                        .HasColumnType("text")
-                        .HasColumnName("eligibility_notes");
-
-                    b.Property<string>("EligibilityStatus")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("eligibility_status")
-                        .HasDefaultValueSql("'pending'::text");
-
-                    b.Property<byte[]>("FullName")
-                        .IsRequired()
-                        .HasColumnType("bytea")
-                        .HasColumnName("full_name_enc");
-
-                    b.Property<byte[]>("GuardianName")
-                        .HasColumnType("bytea")
-                        .HasColumnName("guardian_name_enc");
-
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("kind");
-
-                    b.Property<byte[]>("Mobile")
-                        .HasColumnType("bytea")
-                        .HasColumnName("mobile_enc");
-
-                    b.Property<string>("MobileHash")
-                        .HasColumnType("character(64)")
-                        .HasColumnName("mobile_hash");
-
-                    b.Property<string>("OrganisationName")
-                        .HasColumnType("text")
-                        .HasColumnName("organisation_name");
-
-                    b.Property<string>("Region")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("region");
-
-                    b.Property<DateTimeOffset?>("VerifiedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("verified_at");
-
-                    b.Property<string>("VerifiedBy")
-                        .HasColumnType("text")
-                        .HasColumnName("verified_by");
-
-                    b.Property<bool>("ZakatEligible")
-                        .HasColumnType("boolean")
-                        .HasColumnName("zakat_eligible")
-                        .HasDefaultValueSql("false");
-
-                    b.HasKey("Id")
-                        .HasName("beneficiary_pkey");
-
-                    b.HasIndex("Code")
-                        .IsUnique()
-                        .HasDatabaseName("beneficiary_code_key");
-
-                    b.HasIndex("MobileHash")
-                        .IsUnique()
-                        .HasDatabaseName("ux_beneficiary_mobile")
-                        .HasFilter("(mobile_hash IS NOT NULL)");
-
-                    b.HasIndex("BeneficiaryGroup", "EligibilityStatus", "ZakatEligible")
-                        .HasDatabaseName("ix_beneficiary_pick");
-
-                    b.ToTable("beneficiary", "store", t =>
-                        {
-                            t.HasCheckConstraint("beneficiary_eligibility_status_check", "(eligibility_status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'inactive'::text]))");
-
-                            t.HasCheckConstraint("beneficiary_kind_check", "(kind = ANY (ARRAY['student'::text, 'teacher'::text, 'parent'::text, 'school'::text, 'library'::text]))");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Giving.CauseUpdate", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
-
-                    b.Property<Guid?>("AssetId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("asset_id");
-
-                    b.Property<string>("BodyAr")
-                        .HasColumnType("text")
-                        .HasColumnName("body_ar");
-
-                    b.Property<string>("BodyEn")
-                        .HasColumnType("text")
-                        .HasColumnName("body_en");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("created_by");
-
-                    b.Property<bool>("IsPublic")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_public")
-                        .HasDefaultValueSql("true");
-
-                    b.Property<DateTimeOffset?>("NotifiedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("notified_at");
-
-                    b.Property<bool>("NotifyDonors")
-                        .HasColumnType("boolean")
-                        .HasColumnName("notify_donors")
-                        .HasDefaultValueSql("false");
-
-                    b.Property<DateOnly>("OccurredOn")
-                        .HasColumnType("date")
-                        .HasColumnName("occurred_on");
-
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("product_id");
+                        .HasColumnName("target_kind");
 
                     b.Property<string>("TitleAr")
                         .IsRequired()
@@ -1618,384 +661,46 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("title_en");
 
-                    b.Property<int?>("UnitsDelivered")
-                        .HasColumnType("integer")
-                        .HasColumnName("units_delivered");
+                    b.Property<decimal>("UnitAmount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("unit_amount");
 
                     b.HasKey("Id")
-                        .HasName("cause_update_pkey");
+                        .HasName("pk_order_line");
 
-                    b.HasIndex("ProductId", "OccurredOn")
-                        .IsDescending(false, true)
-                        .HasDatabaseName("ix_cause_update_product");
+                    b.HasIndex("CategoryId")
+                        .HasDatabaseName("ix_order_line_category");
 
-                    b.ToTable("cause_update", "store", t =>
+                    b.HasIndex("OptionId")
+                        .HasDatabaseName("ix_order_line_option");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("ix_order_line_project");
+
+                    b.HasIndex("OrderId", "LineNo")
+                        .IsUnique()
+                        .HasDatabaseName("ux_order_line_no");
+
+                    b.ToTable("order_line", "store", t =>
                         {
-                            t.HasCheckConstraint("cause_update_units_delivered_check", "(units_delivered >= 0)");
+                            t.HasCheckConstraint("ck_line_amount", "amount = unit_amount * quantity AND quantity BETWEEN 1 AND 999 AND unit_amount > 0");
+
+                            t.HasCheckConstraint("ck_line_kind", "target_kind IN ('project', 'category')");
+
+                            t.HasCheckConstraint("ck_line_target", "(target_kind = 'project' AND project_id IS NOT NULL AND category_id IS NULL) OR (target_kind = 'category' AND category_id IS NOT NULL AND project_id IS NULL AND option_id IS NULL)");
                         });
                 });
 
-            modelBuilder.Entity("Ta3lom.Store.Domain.Giving.Distribution", b =>
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Identity.Customer", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
-
-                    b.Property<Guid>("BookFormatId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("book_format_id");
-
-                    b.Property<DateOnly?>("DeliveredOn")
-                        .HasColumnType("date")
-                        .HasColumnName("delivered_on");
-
-                    b.Property<Guid?>("ProofAssetId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("proof_asset_id");
-
-                    b.Property<Guid>("SponsoredUnitId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("sponsored_unit_id");
-
-                    b.HasKey("Id")
-                        .HasName("distribution_pkey");
-
-                    b.HasIndex("SponsoredUnitId")
-                        .IsUnique()
-                        .HasDatabaseName("distribution_sponsored_unit_id_key");
-
-                    b.ToTable("distribution", "store");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Giving.PoolContribution", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("amount");
+                        .HasColumnName("id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<bool>("IsZakat")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_zakat")
-                        .HasDefaultValueSql("false");
-
-                    b.Property<Guid>("OrderLineId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("order_line_id");
-
-                    b.Property<decimal>("Remaining")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("remaining");
-
-                    b.Property<Guid>("SponsorshipOfferId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("sponsorship_offer_id");
-
-                    b.Property<DateTimeOffset?>("SweptToFundAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("swept_to_fund_at");
-
-                    b.HasKey("Id")
-                        .HasName("pool_contribution_pkey");
-
-                    b.HasIndex("OrderLineId")
-                        .IsUnique()
-                        .HasDatabaseName("pool_contribution_order_line_id_key");
-
-                    b.HasIndex("SponsorshipOfferId", "CreatedAt")
-                        .HasDatabaseName("ix_pool_fifo")
-                        .HasFilter("(remaining > (0)::numeric)");
-
-                    b.ToTable("pool_contribution", "store", t =>
-                        {
-                            t.HasCheckConstraint("pool_contribution_amount_check", "(amount > (0)::numeric)");
-
-                            t.HasCheckConstraint("pool_contribution_check", "(remaining <= amount)");
-
-                            t.HasCheckConstraint("pool_contribution_remaining_check", "(remaining >= (0)::numeric)");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Giving.SponsoredUnit", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
-
-                    b.Property<DateTimeOffset?>("AllocatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("allocated_at");
-
-                    b.Property<string>("AllocatedBy")
-                        .HasColumnType("text")
-                        .HasColumnName("allocated_by");
-
-                    b.Property<Guid?>("AllocationBatchId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("allocation_batch_id");
-
-                    b.Property<Guid?>("BeneficiaryId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("beneficiary_id");
-
-                    b.Property<DateTimeOffset?>("CompletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("completed_at");
-
-                    b.Property<DateTimeOffset>("FundedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("funded_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<bool>("HasZakat")
-                        .HasColumnType("boolean")
-                        .HasColumnName("has_zakat")
-                        .HasDefaultValueSql("false");
-
-                    b.Property<DateTimeOffset?>("LapsedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("lapsed_at");
-
-                    b.Property<Guid?>("OrderLineId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("order_line_id");
-
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("product_id");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("source");
-
-                    b.Property<Guid>("SponsorshipOfferId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("sponsorship_offer_id");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("status")
-                        .HasDefaultValueSql("'awaiting_allocation'::text");
-
-                    b.Property<decimal>("UnitPrice")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("unit_price");
-
-                    b.Property<uint>("xmin")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
-
-                    b.HasKey("Id")
-                        .HasName("sponsored_unit_pkey");
-
-                    b.HasIndex("BeneficiaryId")
-                        .HasDatabaseName("ix_unit_beneficiary");
-
-                    b.HasIndex("OrderLineId")
-                        .HasDatabaseName("ix_unit_orderline");
-
-                    b.HasIndex("ProductId", "FundedAt")
-                        .HasDatabaseName("ix_unit_fifo")
-                        .HasFilter("(status = 'awaiting_allocation'::text)");
-
-                    b.ToTable("sponsored_unit", "store", t =>
-                        {
-                            t.HasCheckConstraint("ck_unit_alloc", "((status <> ALL (ARRAY['allocated'::text, 'completed'::text])) OR (beneficiary_id IS NOT NULL))");
-
-                            t.HasCheckConstraint("ck_unit_source", "((source = 'full'::text) = (order_line_id IS NOT NULL))");
-
-                            t.HasCheckConstraint("sponsored_unit_source_check", "(source = ANY (ARRAY['full'::text, 'pooled'::text]))");
-
-                            t.HasCheckConstraint("sponsored_unit_status_check", "(status = ANY (ARRAY['awaiting_allocation'::text, 'allocated'::text, 'completed'::text, 'lapsed'::text, 'cancelled'::text]))");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Giving.SponsoredUnitEvent", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<long>("Id"));
-
-                    b.Property<string>("Actor")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("actor");
-
-                    b.Property<DateTimeOffset>("At")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<string>("FromStatus")
-                        .HasColumnType("text")
-                        .HasColumnName("from_status");
-
-                    b.Property<string>("ToStatus")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("to_status");
-
-                    b.Property<Guid>("UnitId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("unit_id");
-
-                    b.HasKey("Id")
-                        .HasName("sponsored_unit_event_pkey");
-
-                    b.HasIndex("UnitId", "At")
-                        .HasDatabaseName("ix_unit_event_unit");
-
-                    b.ToTable("sponsored_unit_event", "store");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Giving.SponsorshipPool", b =>
-                {
-                    b.Property<Guid>("SponsorshipOfferId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("sponsorship_offer_id");
-
-                    b.Property<decimal>("Balance")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("balance")
-                        .HasDefaultValueSql("0");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<uint>("xmin")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
-
-                    b.HasKey("SponsorshipOfferId")
-                        .HasName("sponsorship_pool_pkey");
-
-                    b.ToTable("sponsorship_pool", "store", t =>
-                        {
-                            t.HasCheckConstraint("sponsorship_pool_balance_check", "(balance >= (0)::numeric)");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Giving.UnitFunding", b =>
-                {
-                    b.Property<Guid>("SponsoredUnitId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("sponsored_unit_id");
-
-                    b.Property<Guid>("PoolContributionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("pool_contribution_id");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("amount");
-
-                    b.HasKey("SponsoredUnitId", "PoolContributionId")
-                        .HasName("unit_funding_pkey");
-
-                    b.ToTable("unit_funding", "store", t =>
-                        {
-                            t.HasCheckConstraint("unit_funding_amount_check", "(amount > (0)::numeric)");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Giving.ZakatLedgerEntry", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<long>("Id"));
-
-                    b.Property<string>("Actor")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("actor");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("amount");
-
-                    b.Property<DateTimeOffset>("At")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<string>("Direction")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("direction");
-
-                    b.Property<Guid?>("OrderLineId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("order_line_id");
-
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("product_id");
-
-                    b.Property<string>("Reference")
-                        .HasColumnType("text")
-                        .HasColumnName("reference");
-
-                    b.HasKey("Id")
-                        .HasName("zakat_ledger_pkey");
-
-                    b.HasIndex("ProductId", "At")
-                        .HasDatabaseName("ix_zakat_product");
-
-                    b.ToTable("zakat_ledger", "store", t =>
-                        {
-                            t.HasCheckConstraint("zakat_ledger_amount_check", "(amount > (0)::numeric)");
-
-                            t.HasCheckConstraint("zakat_ledger_direction_check", "(direction = ANY (ARRAY['in'::text, 'out'::text, 'refund'::text]))");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Identity.Customer", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
-
-                    b.Property<bool>("AnonymousDefault")
-                        .HasColumnType("boolean")
-                        .HasColumnName("anonymous_default")
-                        .HasDefaultValueSql("false");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
+                        .HasColumnName("created_at");
 
                     b.Property<string>("Email")
                         .HasColumnType("citext")
@@ -2012,13 +717,12 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                     b.Property<string>("Locale")
                         .IsRequired()
                         .HasColumnType("character(2)")
-                        .HasColumnName("locale")
-                        .HasDefaultValueSql("'ar'::bpchar");
+                        .HasColumnName("locale");
 
                     b.Property<bool>("MarketingOptIn")
                         .HasColumnType("boolean")
-                        .HasColumnName("marketing_opt_in")
-                        .HasDefaultValueSql("false");
+                        .HasDefaultValue(false)
+                        .HasColumnName("marketing_opt_in");
 
                     b.Property<string>("Mobile")
                         .IsRequired()
@@ -2032,119 +736,47 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("status")
-                        .HasDefaultValueSql("'active'::text");
+                        .HasColumnName("status");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("now()");
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
-                        .HasName("customer_pkey");
+                        .HasName("pk_customer");
 
                     b.HasIndex("Email")
                         .HasDatabaseName("ix_customer_email");
 
                     b.HasIndex("Mobile")
                         .IsUnique()
-                        .HasDatabaseName("customer_mobile_key");
+                        .HasDatabaseName("ux_customer_mobile");
 
                     b.ToTable("customer", "store", t =>
                         {
-                            t.HasCheckConstraint("customer_locale_check", "(locale = ANY (ARRAY['ar'::bpchar, 'en'::bpchar]))");
+                            t.HasCheckConstraint("ck_customer_locale", "locale IN ('ar', 'en')");
 
-                            t.HasCheckConstraint("customer_mobile_check", "(mobile ~ '^\\+9665[0-9]{8}$'::text)");
+                            t.HasCheckConstraint("ck_customer_mobile", "mobile ~ '^\\+9665[0-9]{8}$'");
 
-                            t.HasCheckConstraint("customer_status_check", "(status = ANY (ARRAY['active'::text, 'blocked'::text, 'anonymised'::text]))");
+                            t.HasCheckConstraint("ck_customer_status", "status IN ('active', 'blocked', 'anonymised')");
                         });
                 });
 
-            modelBuilder.Entity("Ta3lom.Store.Domain.Identity.CustomerAddress", b =>
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Identity.OtpChallenge", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
-
-                    b.Property<string>("BuildingNo")
-                        .HasColumnType("text")
-                        .HasColumnName("building_no");
-
-                    b.Property<string>("City")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("city");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<Guid>("CustomerId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("customer_id");
-
-                    b.Property<string>("District")
-                        .HasColumnType("text")
-                        .HasColumnName("district");
-
-                    b.Property<bool>("IsDefault")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_default")
-                        .HasDefaultValueSql("false");
-
-                    b.Property<string>("PostalCode")
-                        .HasColumnType("text")
-                        .HasColumnName("postal_code");
-
-                    b.Property<string>("RecipientMobile")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("recipient_mobile");
-
-                    b.Property<string>("RecipientName")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("recipient_name");
-
-                    b.Property<string>("ShortAddress")
-                        .HasColumnType("text")
-                        .HasColumnName("short_address");
-
-                    b.Property<string>("Street")
-                        .HasColumnType("text")
-                        .HasColumnName("street");
-
-                    b.HasKey("Id")
-                        .HasName("customer_address_pkey");
-
-                    b.HasIndex("CustomerId")
-                        .IsUnique()
-                        .HasDatabaseName("ux_address_default")
-                        .HasFilter("is_default");
-
-                    b.ToTable("customer_address", "store", t =>
-                        {
-                            t.HasCheckConstraint("customer_address_postal_code_check", "(postal_code ~ '^[0-9]{5}$'::text)");
-
-                            t.HasCheckConstraint("customer_address_recipient_mobile_check", "(recipient_mobile ~ '^\\+9665[0-9]{8}$'::text)");
-
-                            t.HasCheckConstraint("customer_address_short_address_check", "(short_address ~ '^[A-Z]{4}[0-9]{4}$'::text)");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Identity.OtpChallenge", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
+                        .HasColumnName("id");
 
                     b.Property<short>("Attempts")
                         .HasColumnType("smallint")
-                        .HasColumnName("attempts")
-                        .HasDefaultValueSql("0");
+                        .HasColumnName("attempts");
 
                     b.Property<string>("CodeHash")
                         .IsRequired()
@@ -2157,8 +789,7 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
+                        .HasColumnName("created_at");
 
                     b.Property<DateTimeOffset>("ExpiresAt")
                         .HasColumnType("timestamp with time zone")
@@ -2179,7 +810,14 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         .HasColumnName("purpose");
 
                     b.HasKey("Id")
-                        .HasName("otp_challenge_pkey");
+                        .HasName("pk_otp_challenge");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_otp_created");
+
+                    b.HasIndex("IpHash", "CreatedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_otp_ip_recent");
 
                     b.HasIndex("Mobile", "CreatedAt")
                         .IsDescending(false, true)
@@ -2187,25 +825,29 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
 
                     b.ToTable("otp_challenge", "store", t =>
                         {
-                            t.HasCheckConstraint("otp_challenge_purpose_check", "(purpose = ANY (ARRAY['login'::text, 'beneficiary_invite'::text]))");
+                            t.HasCheckConstraint("ck_otp_attempts", "attempts BETWEEN 0 AND 5");
+
+                            t.HasCheckConstraint("ck_otp_purpose", "purpose IN ('login')");
                         });
                 });
 
-            modelBuilder.Entity("Ta3lom.Store.Domain.Identity.RefreshToken", b =>
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Identity.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
+                        .HasColumnName("id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
+                        .HasColumnName("created_at");
 
                     b.Property<DateTimeOffset>("ExpiresAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("expires_at");
+
+                    b.Property<DateTimeOffset>("FamilyExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("family_expires_at");
 
                     b.Property<Guid>("FamilyId")
                         .HasColumnType("uuid")
@@ -2238,32 +880,35 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         .HasColumnName("user_agent");
 
                     b.HasKey("Id")
-                        .HasName("refresh_token_pkey");
+                        .HasName("pk_refresh_token");
+
+                    b.HasIndex("FamilyId")
+                        .HasDatabaseName("ix_refresh_family");
 
                     b.HasIndex("TokenHash")
                         .IsUnique()
-                        .HasDatabaseName("refresh_token_token_hash_key");
+                        .HasDatabaseName("ux_refresh_token_hash");
 
                     b.HasIndex("SubjectType", "SubjectId")
                         .HasDatabaseName("ix_refresh_subject");
 
                     b.ToTable("refresh_token", "store", t =>
                         {
-                            t.HasCheckConstraint("refresh_token_subject_type_check", "(subject_type = ANY (ARRAY['customer'::text, 'staff'::text]))");
+                            t.HasCheckConstraint("ck_refresh_expiry", "expires_at <= family_expires_at");
+
+                            t.HasCheckConstraint("ck_refresh_subject", "subject_type IN ('customer', 'staff')");
                         });
                 });
 
-            modelBuilder.Entity("Ta3lom.Store.Domain.Identity.StaffUser", b =>
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Identity.StaffUser", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
+                        .HasColumnName("id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
+                        .HasColumnName("created_at");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -2272,13 +917,17 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("FailedCount")
                         .HasColumnType("integer")
-                        .HasColumnName("failed_count")
-                        .HasDefaultValueSql("0");
+                        .HasDefaultValue(0)
+                        .HasColumnName("failed_count");
+
+                    b.Property<DateTimeOffset?>("FirstFailedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_failed_at");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")
-                        .HasColumnName("is_active")
-                        .HasDefaultValueSql("true");
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
 
                     b.Property<DateTimeOffset?>("LastLoginAt")
                         .HasColumnType("timestamp with time zone")
@@ -2287,6 +936,11 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("LockedUntil")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("locked_until");
+
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("must_change_password");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -2298,35 +952,47 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("pass_hash");
 
+                    b.Property<DateTimeOffset?>("PasswordChangedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("password_changed_at");
+
                     b.PrimitiveCollection<string[]>("Roles")
                         .IsRequired()
                         .HasColumnType("text[]")
-                        .HasColumnName("roles")
-                        .HasDefaultValueSql("'{viewer}'::text[]");
+                        .HasColumnName("roles");
+
+                    b.Property<long?>("TotpLastStep")
+                        .HasColumnType("bigint")
+                        .HasColumnName("totp_last_step");
 
                     b.Property<byte[]>("TotpSecretEnc")
                         .HasColumnType("bytea")
                         .HasColumnName("totp_secret_enc");
 
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
-                        .HasName("staff_user_pkey");
+                        .HasName("pk_staff_user");
 
                     b.HasIndex("Email")
                         .IsUnique()
-                        .HasDatabaseName("staff_user_email_key");
+                        .HasDatabaseName("ux_staff_email");
 
                     b.ToTable("staff_user", "store", t =>
                         {
-                            t.HasCheckConstraint("staff_user_roles_check", "(roles <@ ARRAY['admin'::text, 'store_manager'::text, 'finance'::text, 'allocation_officer'::text, 'fulfilment'::text, 'viewer'::text])");
+                            t.HasCheckConstraint("ck_staff_roles", "cardinality(roles) > 0 AND roles <@ ARRAY['admin', 'store_manager', 'finance', 'viewer']::text[]");
                         });
                 });
 
-            modelBuilder.Entity("Ta3lom.Store.Domain.Media.MediaAsset", b =>
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Media.MediaAsset", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
+                        .HasColumnName("id");
 
                     b.Property<string>("AltAr")
                         .HasColumnType("text")
@@ -2338,8 +1004,11 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text")
+                        .HasColumnName("created_by");
 
                     b.Property<int?>("Height")
                         .HasColumnType("integer")
@@ -2347,8 +1016,7 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
 
                     b.Property<bool>("IsPublic")
                         .HasColumnType("boolean")
-                        .HasColumnName("is_public")
-                        .HasDefaultValueSql("true");
+                        .HasColumnName("is_public");
 
                     b.Property<string>("Kind")
                         .IsRequired()
@@ -2374,25 +1042,27 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         .HasColumnName("width");
 
                     b.HasKey("Id")
-                        .HasName("media_asset_pkey");
+                        .HasName("pk_media_asset");
+
+                    b.HasIndex("CreatedAt")
+                        .IsDescending()
+                        .HasDatabaseName("ix_media_created");
 
                     b.HasIndex("StorageKey")
                         .IsUnique()
-                        .HasDatabaseName("media_asset_storage_key_key");
+                        .HasDatabaseName("ux_media_storage_key");
 
                     b.ToTable("media_asset", "store", t =>
                         {
-                            t.HasCheckConstraint("ck_media_alt", "((kind <> 'image'::text) OR (alt_ar IS NOT NULL))");
+                            t.HasCheckConstraint("ck_media_alt", "kind <> 'image' OR alt_ar IS NOT NULL");
 
-                            t.HasCheckConstraint("ck_media_private_book", "((kind <> 'book_file'::text) OR (is_public = false))");
+                            t.HasCheckConstraint("ck_media_kind", "kind IN ('image', 'pdf')");
 
-                            t.HasCheckConstraint("media_asset_kind_check", "(kind = ANY (ARRAY['image'::text, 'pdf'::text, 'book_file'::text]))");
-
-                            t.HasCheckConstraint("media_asset_size_bytes_check", "(size_bytes > 0)");
+                            t.HasCheckConstraint("ck_media_size", "size_bytes > 0");
                         });
                 });
 
-            modelBuilder.Entity("Ta3lom.Store.Domain.Notifications.MessageTemplate", b =>
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Notifications.MessageTemplate", b =>
                 {
                     b.Property<string>("Key")
                         .HasColumnType("text")
@@ -2420,23 +1090,26 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         .HasColumnName("updated_at")
                         .HasDefaultValueSql("now()");
 
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text")
+                        .HasColumnName("updated_by");
+
                     b.HasKey("Key", "Channel", "Locale")
-                        .HasName("message_template_pkey");
+                        .HasName("pk_message_template");
 
                     b.ToTable("message_template", "store", t =>
                         {
-                            t.HasCheckConstraint("message_template_channel_check", "(channel = ANY (ARRAY['sms'::text, 'email'::text]))");
+                            t.HasCheckConstraint("ck_template_channel", "channel IN ('sms', 'email')");
 
-                            t.HasCheckConstraint("message_template_locale_check", "(locale = ANY (ARRAY['ar'::bpchar, 'en'::bpchar]))");
+                            t.HasCheckConstraint("ck_template_locale", "locale IN ('ar', 'en')");
                         });
                 });
 
-            modelBuilder.Entity("Ta3lom.Store.Domain.Notifications.Notification", b =>
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Notifications.Notification", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
+                        .HasColumnName("id");
 
                     b.Property<string>("Channel")
                         .IsRequired()
@@ -2445,44 +1118,25 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
+                        .HasColumnName("created_at");
 
-                    b.Property<string>("Error")
+                    b.Property<string>("DedupeKey")
                         .HasColumnType("text")
-                        .HasColumnName("error");
+                        .HasColumnName("dedupe_key");
 
-                    b.Property<string>("Locale")
+                    b.Property<string>("ProviderRef")
+                        .HasColumnType("text")
+                        .HasColumnName("provider_ref");
+
+                    b.Property<string>("RecipientHash")
                         .IsRequired()
-                        .HasColumnType("character(2)")
-                        .HasColumnName("locale");
-
-                    b.Property<Guid?>("OutboxMessageId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("outbox_message_id");
-
-                    b.Property<string>("ProviderMsgId")
-                        .HasColumnType("text")
-                        .HasColumnName("provider_msg_id");
-
-                    b.Property<string>("Recipient")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("recipient");
-
-                    b.Property<Guid?>("RelatedOrderId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("related_order_id");
-
-                    b.Property<DateTimeOffset?>("SentAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("sent_at");
+                        .HasColumnType("character(64)")
+                        .HasColumnName("recipient_hash");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("status")
-                        .HasDefaultValueSql("'queued'::text");
+                        .HasColumnName("status");
 
                     b.Property<string>("TemplateKey")
                         .IsRequired()
@@ -2490,35 +1144,42 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         .HasColumnName("template_key");
 
                     b.HasKey("Id")
-                        .HasName("notification_pkey");
+                        .HasName("pk_notification");
 
-                    b.HasIndex("RelatedOrderId")
-                        .HasDatabaseName("ix_notification_order");
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_notification_created");
 
-                    b.HasIndex("OutboxMessageId", "Channel", "Recipient")
+                    b.HasIndex("DedupeKey")
                         .IsUnique()
-                        .HasDatabaseName("ux_notification_once")
-                        .HasFilter("(outbox_message_id IS NOT NULL)");
+                        .HasDatabaseName("ux_notification_dedupe");
 
                     b.ToTable("notification", "store", t =>
                         {
-                            t.HasCheckConstraint("notification_channel_check", "(channel = ANY (ARRAY['sms'::text, 'email'::text]))");
+                            t.HasCheckConstraint("ck_notification_channel", "channel IN ('sms', 'email')");
 
-                            t.HasCheckConstraint("notification_status_check", "(status = ANY (ARRAY['queued'::text, 'sent'::text, 'failed'::text]))");
+                            t.HasCheckConstraint("ck_notification_status", "status IN ('sent', 'failed')");
                         });
                 });
 
-            modelBuilder.Entity("Ta3lom.Store.Domain.Notifications.OutboxMessage", b =>
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Notifications.OutboxMessage", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
+                        .HasColumnName("id");
 
                     b.Property<int>("Attempts")
                         .HasColumnType("integer")
-                        .HasColumnName("attempts")
-                        .HasDefaultValueSql("0");
+                        .HasDefaultValue(0)
+                        .HasColumnName("attempts");
+
+                    b.Property<DateTimeOffset?>("ClaimedUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("claimed_until");
+
+                    b.Property<bool>("DeadLettered")
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("dead_lettered");
 
                     b.Property<string>("LastError")
                         .HasColumnType("text")
@@ -2526,13 +1187,11 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTimeOffset>("NextAttemptAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("next_attempt_at")
-                        .HasDefaultValueSql("now()");
+                        .HasColumnName("next_attempt_at");
 
                     b.Property<DateTimeOffset>("OccurredAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("occurred_at")
-                        .HasDefaultValueSql("now()");
+                        .HasColumnName("occurred_at");
 
                     b.Property<string>("Payload")
                         .IsRequired()
@@ -2549,596 +1208,19 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         .HasColumnName("type");
 
                     b.HasKey("Id")
-                        .HasName("outbox_message_pkey");
+                        .HasName("pk_outbox_message");
 
                     b.HasIndex("NextAttemptAt")
                         .HasDatabaseName("ix_outbox_pending")
-                        .HasFilter("(processed_at IS NULL)");
+                        .HasFilter("processed_at IS NULL AND NOT dead_lettered");
+
+                    b.HasIndex("Type", "OccurredAt")
+                        .HasDatabaseName("ix_outbox_type");
 
                     b.ToTable("outbox_message", "store");
                 });
 
-            modelBuilder.Entity("Ta3lom.Store.Domain.Ordering.Dedication", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
-
-                    b.Property<string>("CardToken")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("card_token");
-
-                    b.Property<string>("CustomText")
-                        .HasColumnType("text")
-                        .HasColumnName("custom_text");
-
-                    b.Property<string>("FromName")
-                        .HasColumnType("text")
-                        .HasColumnName("from_name");
-
-                    b.Property<Guid>("OrderLineId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("order_line_id");
-
-                    b.Property<DateTimeOffset?>("SentAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("sent_at");
-
-                    b.Property<string>("SmsStatus")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("sms_status")
-                        .HasDefaultValueSql("'pending'::text");
-
-                    b.Property<string>("TemplateKey")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("template_key");
-
-                    b.Property<string>("ToMobile")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("to_mobile");
-
-                    b.Property<string>("ToName")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("to_name");
-
-                    b.HasKey("Id")
-                        .HasName("dedication_pkey");
-
-                    b.HasIndex("CardToken")
-                        .IsUnique()
-                        .HasDatabaseName("dedication_card_token_key");
-
-                    b.HasIndex("OrderLineId")
-                        .IsUnique()
-                        .HasDatabaseName("dedication_order_line_id_key");
-
-                    b.ToTable("dedication", "store", t =>
-                        {
-                            t.HasCheckConstraint("dedication_custom_text_check", "(length(custom_text) <= 140)");
-
-                            t.HasCheckConstraint("dedication_sms_status_check", "(sms_status = ANY (ARRAY['pending'::text, 'sent'::text, 'failed'::text, 'skipped'::text]))");
-
-                            t.HasCheckConstraint("dedication_to_mobile_check", "(to_mobile ~ '^\\+9665[0-9]{8}$'::text)");
-
-                            t.HasCheckConstraint("dedication_to_name_check", "((length(to_name) >= 2) AND (length(to_name) <= 60))");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Ordering.Order", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
-
-                    b.Property<DateTimeOffset?>("CancelledAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("cancelled_at");
-
-                    b.Property<string>("ContactEmail")
-                        .IsRequired()
-                        .HasColumnType("citext")
-                        .HasColumnName("contact_email");
-
-                    b.Property<string>("ContactMobile")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("contact_mobile");
-
-                    b.Property<string>("ContactName")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("contact_name");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasColumnType("character(3)")
-                        .HasColumnName("currency")
-                        .HasDefaultValueSql("'SAR'::bpchar");
-
-                    b.Property<Guid>("CustomerId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("customer_id");
-
-                    b.Property<DateTimeOffset?>("FulfilledAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("fulfilled_at");
-
-                    b.Property<decimal>("GiftsTotal")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("gifts_total")
-                        .HasDefaultValueSql("0");
-
-                    b.Property<decimal>("GrandTotal")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("grand_total");
-
-                    b.Property<bool>("IsAnonymous")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_anonymous")
-                        .HasDefaultValueSql("false");
-
-                    b.Property<string>("Locale")
-                        .IsRequired()
-                        .HasColumnType("character(2)")
-                        .HasColumnName("locale")
-                        .HasDefaultValueSql("'ar'::bpchar");
-
-                    b.Property<DateTimeOffset?>("PaidAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("paid_at");
-
-                    b.Property<DateTimeOffset>("PaymentDueAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("payment_due_at");
-
-                    b.Property<DateTimeOffset>("PlacedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("placed_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<decimal>("PurchasesTotal")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("purchases_total")
-                        .HasDefaultValueSql("0");
-
-                    b.Property<string>("Reference")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("reference");
-
-                    b.Property<decimal>("RefundedTotal")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("refunded_total")
-                        .HasDefaultValueSql("0");
-
-                    b.Property<string>("ShippingAddress")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("shipping_address");
-
-                    b.Property<decimal>("ShippingTotal")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("shipping_total")
-                        .HasDefaultValueSql("0");
-
-                    b.Property<Guid?>("SourceCartId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("source_cart_id");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("status")
-                        .HasDefaultValueSql("'pending_payment'::text");
-
-                    b.Property<DateTimeOffset>("TermsAcceptedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("terms_accepted_at");
-
-                    b.Property<decimal>("VatTotal")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("vat_total")
-                        .HasDefaultValueSql("0");
-
-                    b.Property<uint>("xmin")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
-
-                    b.HasKey("Id")
-                        .HasName("orders_pkey");
-
-                    b.HasIndex("PaymentDueAt")
-                        .HasDatabaseName("ix_order_due")
-                        .HasFilter("(status = ANY (ARRAY['pending_payment'::text, 'payment_failed'::text]))");
-
-                    b.HasIndex("Reference")
-                        .IsUnique()
-                        .HasDatabaseName("orders_reference_key");
-
-                    b.HasIndex("CustomerId", "PlacedAt")
-                        .IsDescending(false, true)
-                        .HasDatabaseName("ix_order_customer");
-
-                    b.HasIndex("Status", "PlacedAt")
-                        .HasDatabaseName("ix_order_status");
-
-                    b.ToTable("orders", "store", t =>
-                        {
-                            t.HasCheckConstraint("ck_order_total", "(grand_total = ((purchases_total + shipping_total) + gifts_total))");
-
-                            t.HasCheckConstraint("orders_currency_check", "(currency = 'SAR'::bpchar)");
-
-                            t.HasCheckConstraint("orders_grand_total_check", "(grand_total > (0)::numeric)");
-
-                            t.HasCheckConstraint("orders_status_check", "(status = ANY (ARRAY['pending_payment'::text, 'paid'::text, 'payment_failed'::text, 'payment_review'::text, 'expired'::text, 'cancelled'::text, 'fulfilled'::text, 'partially_refunded'::text, 'refunded'::text]))");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Ordering.OrderLine", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("amount");
-
-                    b.Property<Guid?>("BookFormatId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("book_format_id");
-
-                    b.Property<string>("FulfilmentStatus")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("fulfilment_status")
-                        .HasDefaultValueSql("'pending'::text");
-
-                    b.Property<string>("Intent")
-                        .HasColumnType("text")
-                        .HasColumnName("intent");
-
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("kind");
-
-                    b.Property<short>("LineNo")
-                        .HasColumnType("smallint")
-                        .HasColumnName("line_no");
-
-                    b.Property<string>("Mode")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("mode");
-
-                    b.Property<Guid>("OrderId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("order_id");
-
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("product_id");
-
-                    b.Property<string>("ProductType")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("product_type");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer")
-                        .HasColumnName("quantity");
-
-                    b.Property<decimal>("RefundedAmount")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("refunded_amount")
-                        .HasDefaultValueSql("0");
-
-                    b.Property<Guid?>("SponsorshipOfferId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("sponsorship_offer_id");
-
-                    b.Property<string>("TitleAr")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("title_ar");
-
-                    b.Property<string>("TitleEn")
-                        .HasColumnType("text")
-                        .HasColumnName("title_en");
-
-                    b.Property<decimal>("UnitPrice")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("unit_price");
-
-                    b.Property<decimal>("VatAmount")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("vat_amount")
-                        .HasDefaultValueSql("0");
-
-                    b.Property<decimal>("VatRate")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(5,2)")
-                        .HasColumnName("vat_rate")
-                        .HasDefaultValueSql("0");
-
-                    b.HasKey("Id")
-                        .HasName("order_line_pkey");
-
-                    b.HasIndex("OrderId", "LineNo")
-                        .IsUnique()
-                        .HasDatabaseName("order_line_order_id_line_no_key");
-
-                    b.HasIndex("ProductId", "Kind")
-                        .HasDatabaseName("ix_order_line_product");
-
-                    b.ToTable("order_line", "store", t =>
-                        {
-                            t.HasCheckConstraint("ck_line_buy_vat", "((kind = 'buy'::text) OR (vat_amount = (0)::numeric))");
-
-                            t.HasCheckConstraint("ck_line_intent", "((kind = 'donate'::text) OR (kind = 'sponsor'::text) OR (intent IS NULL))");
-
-                            t.HasCheckConstraint("ck_line_offer", "((kind <> 'sponsor'::text) OR (sponsorship_offer_id IS NOT NULL))");
-
-                            t.HasCheckConstraint("ck_line_refund", "(refunded_amount <= amount)");
-
-                            t.HasCheckConstraint("order_line_amount_check", "(amount > (0)::numeric)");
-
-                            t.HasCheckConstraint("order_line_fulfilment_status_check", "(fulfilment_status = ANY (ARRAY['pending'::text, 'enrolled'::text, 'pending_sync'::text, 'available'::text, 'preparing'::text, 'shipped'::text, 'delivered'::text, 'returned'::text, 'funded'::text, 'received'::text, 'refunded'::text]))");
-
-                            t.HasCheckConstraint("order_line_intent_check", "(intent = ANY (ARRAY['sadaqa'::text, 'zakat'::text]))");
-
-                            t.HasCheckConstraint("order_line_kind_check", "(kind = ANY (ARRAY['buy'::text, 'sponsor'::text, 'donate'::text]))");
-
-                            t.HasCheckConstraint("order_line_mode_check", "(mode = ANY (ARRAY['units'::text, 'amount'::text]))");
-
-                            t.HasCheckConstraint("order_line_product_type_check", "(product_type = ANY (ARRAY['course'::text, 'book'::text, 'cause'::text]))");
-
-                            t.HasCheckConstraint("order_line_quantity_check", "((quantity >= 1) AND (quantity <= 999))");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Payments.Payment", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("amount");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<string>("FailureCode")
-                        .HasColumnType("text")
-                        .HasColumnName("failure_code");
-
-                    b.Property<string>("FailureMessage")
-                        .HasColumnType("text")
-                        .HasColumnName("failure_message");
-
-                    b.Property<string>("Method")
-                        .HasColumnType("text")
-                        .HasColumnName("method");
-
-                    b.Property<Guid>("OrderId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("order_id");
-
-                    b.Property<string>("Provider")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("provider");
-
-                    b.Property<string>("ProviderPaymentId")
-                        .HasColumnType("text")
-                        .HasColumnName("provider_payment_id");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("status")
-                        .HasDefaultValueSql("'initiated'::text");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.HasKey("Id")
-                        .HasName("payment_pkey");
-
-                    b.HasIndex("OrderId")
-                        .HasDatabaseName("ix_payment_order");
-
-                    b.HasIndex("Provider", "ProviderPaymentId")
-                        .IsUnique()
-                        .HasDatabaseName("payment_provider_provider_payment_id_key");
-
-                    b.HasIndex("Status", "CreatedAt")
-                        .HasDatabaseName("ix_payment_reconcile")
-                        .HasFilter("(status = 'initiated'::text)");
-
-                    b.ToTable("payment", "store", t =>
-                        {
-                            t.HasCheckConstraint("payment_amount_check", "(amount > (0)::numeric)");
-
-                            t.HasCheckConstraint("payment_method_check", "(method = ANY (ARRAY['mada'::text, 'applepay'::text, 'card'::text, 'stcpay'::text, 'bnpl'::text]))");
-
-                            t.HasCheckConstraint("payment_status_check", "(status = ANY (ARRAY['initiated'::text, 'authorized'::text, 'captured'::text, 'failed'::text, 'voided'::text, 'refunded'::text, 'partially_refunded'::text]))");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Payments.PaymentEvent", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<long>("Id"));
-
-                    b.Property<string>("Error")
-                        .HasColumnType("text")
-                        .HasColumnName("error");
-
-                    b.Property<string>("EventType")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("event_type");
-
-                    b.Property<string>("Payload")
-                        .IsRequired()
-                        .HasColumnType("jsonb")
-                        .HasColumnName("payload");
-
-                    b.Property<DateTimeOffset?>("ProcessedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("processed_at");
-
-                    b.Property<string>("Provider")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("provider");
-
-                    b.Property<string>("ProviderEventId")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("provider_event_id");
-
-                    b.Property<DateTimeOffset>("ReceivedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("received_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<bool>("SignatureValid")
-                        .HasColumnType("boolean")
-                        .HasColumnName("signature_valid");
-
-                    b.HasKey("Id")
-                        .HasName("payment_event_pkey");
-
-                    b.HasIndex("Provider", "ProviderEventId")
-                        .IsUnique()
-                        .HasDatabaseName("payment_event_provider_provider_event_id_key");
-
-                    b.ToTable("payment_event", "store");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Payments.Refund", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuidv7()");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("amount");
-
-                    b.Property<DateTimeOffset?>("CompletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("completed_at");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<Guid>("OrderId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("order_id");
-
-                    b.Property<Guid>("PaymentId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("payment_id");
-
-                    b.Property<string>("ProviderRefundId")
-                        .HasColumnType("text")
-                        .HasColumnName("provider_refund_id");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("reason");
-
-                    b.Property<string>("RequestedBy")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("requested_by");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("status")
-                        .HasDefaultValueSql("'requested'::text");
-
-                    b.HasKey("Id")
-                        .HasName("refund_pkey");
-
-                    b.ToTable("refund", "store", t =>
-                        {
-                            t.HasCheckConstraint("refund_amount_check", "(amount > (0)::numeric)");
-
-                            t.HasCheckConstraint("refund_status_check", "(status = ANY (ARRAY['requested'::text, 'succeeded'::text, 'failed'::text]))");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Payments.RefundLine", b =>
-                {
-                    b.Property<Guid>("RefundId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("refund_id");
-
-                    b.Property<Guid>("OrderLineId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("order_line_id");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("amount");
-
-                    b.Property<int?>("Units")
-                        .HasColumnType("integer")
-                        .HasColumnName("units");
-
-                    b.HasKey("RefundId", "OrderLineId")
-                        .HasName("refund_line_pkey");
-
-                    b.ToTable("refund_line", "store", t =>
-                        {
-                            t.HasCheckConstraint("refund_line_amount_check", "(amount > (0)::numeric)");
-                        });
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Settings.Setting", b =>
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Settings.Setting", b =>
                 {
                     b.Property<string>("Key")
                         .HasColumnType("text")
@@ -3159,163 +1241,34 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         .HasColumnName("value");
 
                     b.HasKey("Key")
-                        .HasName("setting_pkey");
+                        .HasName("pk_setting");
 
                     b.ToTable("setting", "store");
                 });
 
-            modelBuilder.Entity("Ta3lom.Store.Infrastructure.Persistence.ReadModels.AllocationBacklogView", b =>
+            modelBuilder.Entity("Ta3lom.Store.Domain.ReadModels.CatalogStat", b =>
                 {
-                    b.Property<long>("Allocated")
-                        .HasColumnType("bigint")
-                        .HasColumnName("allocated");
+                    b.Property<decimal>("PendingAmount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("pending_amount");
 
-                    b.Property<long>("Awaiting")
-                        .HasColumnType("bigint")
-                        .HasColumnName("awaiting");
-
-                    b.Property<long>("Completed")
-                        .HasColumnType("bigint")
-                        .HasColumnName("completed");
-
-                    b.Property<DateTimeOffset?>("OldestAwaiting")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("oldest_awaiting");
-
-                    b.Property<long>("Overdue30")
-                        .HasColumnType("bigint")
-                        .HasColumnName("overdue30");
-
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("product_id");
-
-                    b.Property<string>("Slug")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("slug");
-
-                    b.ToTable((string)null);
-
-                    b.ToView("v_allocation_backlog", "store");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Infrastructure.Persistence.ReadModels.GoalView", b =>
-                {
-                    b.Property<int?>("DonorCount")
+                    b.Property<int>("PendingOrders")
                         .HasColumnType("integer")
-                        .HasColumnName("donor_count");
+                        .HasColumnName("pending_orders");
 
-                    b.Property<DateTimeOffset?>("EndsAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("ends_at");
-
-                    b.Property<int?>("FundedUnits")
-                        .HasColumnType("integer")
-                        .HasColumnName("funded_units");
-
-                    b.Property<Guid>("ProductId")
+                    b.Property<Guid>("TargetId")
                         .HasColumnType("uuid")
-                        .HasColumnName("product_id");
+                        .HasColumnName("target_id");
 
-                    b.Property<decimal?>("RaisedAmount")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("raised_amount");
-
-                    b.Property<string>("Slug")
+                    b.Property<string>("TargetKind")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("slug");
-
-                    b.Property<decimal?>("TargetAmount")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("target_amount");
-
-                    b.Property<int?>("TargetUnits")
-                        .HasColumnType("integer")
-                        .HasColumnName("target_units");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("type");
+                        .HasColumnName("target_kind");
 
                     b.ToTable((string)null);
 
-                    b.ToView("v_goal", "store");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Infrastructure.Persistence.ReadModels.SalesDailyView", b =>
-                {
-                    b.Property<DateOnly?>("Day")
-                        .HasColumnType("date")
-                        .HasColumnName("day");
-
-                    b.Property<decimal?>("Gross")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("gross");
-
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("kind");
-
-                    b.Property<long>("Orders")
-                        .HasColumnType("bigint")
-                        .HasColumnName("orders");
-
-                    b.Property<string>("ProductType")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("product_type");
-
-                    b.Property<decimal?>("Refunded")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("refunded");
-
-                    b.Property<decimal?>("Vat")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("vat");
-
-                    b.ToTable((string)null);
-
-                    b.ToView("v_sales_daily", "store");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Infrastructure.Persistence.ReadModels.ZakatBalanceView", b =>
-                {
-                    b.Property<decimal?>("Balance")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("balance");
-
-                    b.Property<decimal?>("Disbursed")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("disbursed");
-
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("product_id");
-
-                    b.Property<decimal?>("Received")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("received");
-
-                    b.Property<decimal?>("Refunded")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)")
-                        .HasColumnName("refunded");
-
-                    b.ToTable((string)null);
-
-                    b.ToView("v_zakat_balance", "store");
+                    b.ToView("v_catalog_stats", "store");
                 });
 
             modelBuilder.Entity("Ta3lom.Store.Infrastructure.Persistence.Records.IdempotencyRecord", b =>
@@ -3330,576 +1283,177 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
 
                     b.Property<string>("RequestHash")
                         .IsRequired()
                         .HasColumnType("character(64)")
                         .HasColumnName("request_hash");
 
-                    b.Property<string>("Response")
+                    b.Property<string>("ResponseBody")
                         .HasColumnType("jsonb")
-                        .HasColumnName("response");
+                        .HasColumnName("response_body");
 
-                    b.Property<int?>("StatusCode")
+                    b.Property<int?>("ResponseStatus")
                         .HasColumnType("integer")
-                        .HasColumnName("status_code");
+                        .HasColumnName("response_status");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
 
                     b.HasKey("Scope", "Key")
-                        .HasName("idempotency_key_pkey");
+                        .HasName("pk_idempotency_key");
 
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("ix_idempotency_created");
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("ix_idempotency_expires");
 
-                    b.ToTable("idempotency_key", "store");
+                    b.ToTable("idempotency_key", "store", t =>
+                        {
+                            t.HasCheckConstraint("ck_idempotency_status", "status IN ('in_progress', 'completed')");
+                        });
                 });
 
-            modelBuilder.Entity("Ta3lom.Store.Domain.Carts.Cart", b =>
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Catalog.Category", b =>
                 {
-                    b.HasOne("Ta3lom.Store.Domain.Identity.Customer", null)
+                    b.HasOne("Ta3lom.Store.Domain.Entities.Media.MediaAsset", null)
+                        .WithMany()
+                        .HasForeignKey("ImageAssetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_category_image");
+                });
+
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Catalog.Project", b =>
+                {
+                    b.HasOne("Ta3lom.Store.Domain.Entities.Catalog.Category", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_project_category");
+
+                    b.HasOne("Ta3lom.Store.Domain.Entities.Media.MediaAsset", null)
+                        .WithMany()
+                        .HasForeignKey("CoverAssetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_project_cover");
+                });
+
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Catalog.ProjectOption", b =>
+                {
+                    b.HasOne("Ta3lom.Store.Domain.Entities.Catalog.Project", null)
+                        .WithMany("Options")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_option_project");
+                });
+
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Catalog.ProjectSlugHistory", b =>
+                {
+                    b.HasOne("Ta3lom.Store.Domain.Entities.Catalog.Project", null)
+                        .WithMany("SlugHistory")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_slug_history_project");
+                });
+
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Donations.Cart", b =>
+                {
+                    b.HasOne("Ta3lom.Store.Domain.Entities.Identity.Customer", null)
                         .WithMany()
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .HasConstraintName("cart_customer_id_fkey");
+                        .HasConstraintName("fk_cart_customer");
                 });
 
-            modelBuilder.Entity("Ta3lom.Store.Domain.Carts.CartLine", b =>
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Donations.CartLine", b =>
                 {
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.BookFormat", null)
-                        .WithMany()
-                        .HasForeignKey("BookFormatId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("cart_line_book_format_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Carts.Cart", null)
-                        .WithMany()
+                    b.HasOne("Ta3lom.Store.Domain.Entities.Donations.Cart", null)
+                        .WithMany("Lines")
                         .HasForeignKey("CartId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("cart_line_cart_id_fkey");
+                        .HasConstraintName("fk_cart_line_cart");
 
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.Product", null)
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("cart_line_product_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Catalog.BookDetail", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.Product", null)
-                        .WithOne()
-                        .HasForeignKey("Ta3lom.Store.Domain.Catalog.BookDetail", "ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("book_detail_product_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Catalog.BookFormat", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Media.MediaAsset", null)
-                        .WithMany()
-                        .HasForeignKey("FileAssetId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("book_format_file_asset_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.Product", null)
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("book_format_product_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Catalog.CauseDetail", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.Product", null)
-                        .WithOne()
-                        .HasForeignKey("Ta3lom.Store.Domain.Catalog.CauseDetail", "ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("cause_detail_product_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Catalog.CourseDetail", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.Product", null)
-                        .WithOne()
-                        .HasForeignKey("Ta3lom.Store.Domain.Catalog.CourseDetail", "ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("course_detail_product_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Catalog.CourseModule", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.Product", null)
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("course_module_product_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Catalog.GoalAdjustment", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.Product", null)
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("goal_adjustment_product_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.SponsorshipOffer", null)
-                        .WithMany()
-                        .HasForeignKey("SponsorshipOfferId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("goal_adjustment_sponsorship_offer_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Catalog.GoalProgress", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.Product", null)
-                        .WithOne()
-                        .HasForeignKey("Ta3lom.Store.Domain.Catalog.GoalProgress", "ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("goal_progress_product_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Catalog.Product", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.Category", null)
+                    b.HasOne("Ta3lom.Store.Domain.Entities.Catalog.Category", null)
                         .WithMany()
                         .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_cart_line_category");
+
+                    b.HasOne("Ta3lom.Store.Domain.Entities.Catalog.ProjectOption", null)
+                        .WithMany()
+                        .HasForeignKey("OptionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_cart_line_option");
+
+                    b.HasOne("Ta3lom.Store.Domain.Entities.Catalog.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_cart_line_project");
+                });
+
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Donations.Order", b =>
+                {
+                    b.HasOne("Ta3lom.Store.Domain.Entities.Identity.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_orders_customer");
+                });
+
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Donations.OrderLine", b =>
+                {
+                    b.HasOne("Ta3lom.Store.Domain.Entities.Catalog.Category", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_order_line_category");
+
+                    b.HasOne("Ta3lom.Store.Domain.Entities.Catalog.ProjectOption", null)
+                        .WithMany()
+                        .HasForeignKey("OptionId")
                         .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("product_category_id_fkey");
+                        .HasConstraintName("fk_order_line_option");
 
-                    b.HasOne("Ta3lom.Store.Domain.Media.MediaAsset", null)
-                        .WithMany()
-                        .HasForeignKey("CoverAssetId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("product_cover_asset_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Catalog.SponsorshipOffer", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.Product", null)
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("sponsorship_offer_product_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Documents.DonationReceipt", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Ordering.Order", null)
-                        .WithMany()
-                        .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("donation_receipt_order_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Media.MediaAsset", null)
-                        .WithMany()
-                        .HasForeignKey("PdfAssetId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("donation_receipt_pdf_asset_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Documents.DonationReceipt", null)
-                        .WithMany()
-                        .HasForeignKey("ReferencesReceiptId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("donation_receipt_references_receipt_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Documents.Invoice", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Ordering.Order", null)
-                        .WithMany()
-                        .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("invoice_order_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Media.MediaAsset", null)
-                        .WithMany()
-                        .HasForeignKey("PdfAssetId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("invoice_pdf_asset_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Documents.Invoice", null)
-                        .WithMany()
-                        .HasForeignKey("ReferencesInvoiceId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("invoice_references_invoice_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Fulfilment.DownloadGrant", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.BookFormat", null)
-                        .WithMany()
-                        .HasForeignKey("BookFormatId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("download_grant_book_format_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Identity.Customer", null)
-                        .WithMany()
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("download_grant_customer_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Ordering.OrderLine", null)
-                        .WithMany()
-                        .HasForeignKey("OrderLineId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("download_grant_order_line_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Fulfilment.DownloadLogEntry", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Fulfilment.DownloadGrant", null)
-                        .WithMany()
-                        .HasForeignKey("GrantId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("download_log_grant_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Fulfilment.Enrolment", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Identity.Customer", null)
-                        .WithMany()
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("enrolment_customer_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Ordering.OrderLine", null)
-                        .WithMany()
-                        .HasForeignKey("OrderLineId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("enrolment_order_line_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.Product", null)
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("enrolment_product_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Giving.SponsoredUnit", null)
-                        .WithMany()
-                        .HasForeignKey("SponsoredUnitId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("fk_enrolment_unit");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Fulfilment.Shipment", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Ordering.Order", null)
-                        .WithMany()
-                        .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("shipment_order_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Fulfilment.StockMovement", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.BookFormat", null)
-                        .WithMany()
-                        .HasForeignKey("BookFormatId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("stock_movement_book_format_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Giving.AllocationBatch", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.Product", null)
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("allocation_batch_product_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Giving.Beneficiary", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Identity.Customer", null)
-                        .WithMany()
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("beneficiary_customer_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Giving.CauseUpdate", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Media.MediaAsset", null)
-                        .WithMany()
-                        .HasForeignKey("AssetId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("cause_update_asset_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.Product", null)
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("cause_update_product_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Giving.Distribution", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.BookFormat", null)
-                        .WithMany()
-                        .HasForeignKey("BookFormatId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("distribution_book_format_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Media.MediaAsset", null)
-                        .WithMany()
-                        .HasForeignKey("ProofAssetId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("distribution_proof_asset_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Giving.SponsoredUnit", null)
-                        .WithMany()
-                        .HasForeignKey("SponsoredUnitId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("distribution_sponsored_unit_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Giving.PoolContribution", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Ordering.OrderLine", null)
-                        .WithMany()
-                        .HasForeignKey("OrderLineId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("pool_contribution_order_line_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.SponsorshipOffer", null)
-                        .WithMany()
-                        .HasForeignKey("SponsorshipOfferId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("pool_contribution_sponsorship_offer_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Giving.SponsoredUnit", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Giving.AllocationBatch", null)
-                        .WithMany()
-                        .HasForeignKey("AllocationBatchId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("sponsored_unit_allocation_batch_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Giving.Beneficiary", null)
-                        .WithMany()
-                        .HasForeignKey("BeneficiaryId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("sponsored_unit_beneficiary_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Ordering.OrderLine", null)
-                        .WithMany()
-                        .HasForeignKey("OrderLineId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("sponsored_unit_order_line_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.Product", null)
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("sponsored_unit_product_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.SponsorshipOffer", null)
-                        .WithMany()
-                        .HasForeignKey("SponsorshipOfferId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("sponsored_unit_sponsorship_offer_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Giving.SponsoredUnitEvent", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Giving.SponsoredUnit", null)
-                        .WithMany()
-                        .HasForeignKey("UnitId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("sponsored_unit_event_unit_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Giving.SponsorshipPool", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.SponsorshipOffer", null)
-                        .WithOne()
-                        .HasForeignKey("Ta3lom.Store.Domain.Giving.SponsorshipPool", "SponsorshipOfferId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("sponsorship_pool_sponsorship_offer_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Giving.UnitFunding", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Giving.PoolContribution", null)
-                        .WithMany()
-                        .HasForeignKey("PoolContributionId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("unit_funding_pool_contribution_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Giving.SponsoredUnit", null)
-                        .WithMany()
-                        .HasForeignKey("SponsoredUnitId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("unit_funding_sponsored_unit_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Giving.ZakatLedgerEntry", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Ordering.OrderLine", null)
-                        .WithMany()
-                        .HasForeignKey("OrderLineId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("zakat_ledger_order_line_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.Product", null)
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("zakat_ledger_product_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Identity.CustomerAddress", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Identity.Customer", null)
-                        .WithMany()
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("customer_address_customer_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Notifications.Notification", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Notifications.OutboxMessage", null)
-                        .WithMany()
-                        .HasForeignKey("OutboxMessageId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("notification_outbox_message_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Ordering.Order", null)
-                        .WithMany()
-                        .HasForeignKey("RelatedOrderId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("notification_related_order_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Ordering.Dedication", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Ordering.OrderLine", null)
-                        .WithMany()
-                        .HasForeignKey("OrderLineId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("dedication_order_line_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Ordering.Order", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Identity.Customer", null)
-                        .WithMany()
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("orders_customer_id_fkey");
-                });
-
-            modelBuilder.Entity("Ta3lom.Store.Domain.Ordering.OrderLine", b =>
-                {
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.BookFormat", null)
-                        .WithMany()
-                        .HasForeignKey("BookFormatId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("order_line_book_format_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Ordering.Order", null)
-                        .WithMany()
+                    b.HasOne("Ta3lom.Store.Domain.Entities.Donations.Order", null)
+                        .WithMany("Lines")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("order_line_order_id_fkey");
+                        .HasConstraintName("fk_order_line_order");
 
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.Product", null)
+                    b.HasOne("Ta3lom.Store.Domain.Entities.Catalog.Project", null)
                         .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("order_line_product_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Catalog.SponsorshipOffer", null)
-                        .WithMany()
-                        .HasForeignKey("SponsorshipOfferId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("order_line_sponsorship_offer_id_fkey");
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_order_line_project");
                 });
 
-            modelBuilder.Entity("Ta3lom.Store.Domain.Payments.Payment", b =>
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Catalog.Project", b =>
                 {
-                    b.HasOne("Ta3lom.Store.Domain.Ordering.Order", null)
-                        .WithMany()
-                        .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("payment_order_id_fkey");
+                    b.Navigation("Options");
+
+                    b.Navigation("SlugHistory");
                 });
 
-            modelBuilder.Entity("Ta3lom.Store.Domain.Payments.Refund", b =>
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Donations.Cart", b =>
                 {
-                    b.HasOne("Ta3lom.Store.Domain.Ordering.Order", null)
-                        .WithMany()
-                        .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("refund_order_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Payments.Payment", null)
-                        .WithMany()
-                        .HasForeignKey("PaymentId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("refund_payment_id_fkey");
+                    b.Navigation("Lines");
                 });
 
-            modelBuilder.Entity("Ta3lom.Store.Domain.Payments.RefundLine", b =>
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Donations.Order", b =>
                 {
-                    b.HasOne("Ta3lom.Store.Domain.Ordering.OrderLine", null)
-                        .WithMany()
-                        .HasForeignKey("OrderLineId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("refund_line_order_line_id_fkey");
-
-                    b.HasOne("Ta3lom.Store.Domain.Payments.Refund", null)
-                        .WithMany()
-                        .HasForeignKey("RefundId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("refund_line_refund_id_fkey");
+                    b.Navigation("Lines");
                 });
 #pragma warning restore 612, 618
         }

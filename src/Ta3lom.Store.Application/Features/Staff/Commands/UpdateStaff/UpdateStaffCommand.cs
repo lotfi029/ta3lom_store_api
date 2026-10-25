@@ -5,8 +5,10 @@ using Ta3lom.Store.Domain.Constants;
 
 namespace Ta3lom.Store.Application.Features.Staff.Commands.UpdateStaff;
 
-/// `PUT /v1/admin/staff/{id}` (#125): name, roles, active flag. Deactivation revokes every session.
-public sealed record UpdateStaffCommand(Guid Id, string Name, IReadOnlyList<string> Roles, bool IsActive) : ICommand<StaffUserResponse>;
+/// `PUT /v1/admin/staff/{id}`: name, roles, active flag, with the `version` read before (409 on a stale one). The last active
+/// admin cannot lose the role or be deactivated (D-12): the active admins are locked first, so two admins demoting each other
+/// at the same time cannot both succeed. Deactivation revokes every session.
+public sealed record UpdateStaffCommand(Guid Id, string Name, IReadOnlyList<string> Roles, bool IsActive, uint Version) : ICommand<StaffUserResponse>;
 
 internal sealed class UpdateStaffCommandHandler(
     IStaffUserRepository staff,
@@ -15,21 +17,36 @@ internal sealed class UpdateStaffCommandHandler(
     IUnitOfWork uow,
     IClock clock) : ICommandHandler<UpdateStaffCommand, StaffUserResponse>
 {
-    public async Task<Result<StaffUserResponse>> HandleAsync(UpdateStaffCommand command, CancellationToken ct = default)
+    public Task<Result<StaffUserResponse>> HandleAsync(UpdateStaffCommand command, CancellationToken ct = default) =>
+        uow.ExecuteInTransactionAsync(token => UpdateAsync(command, token), ct);
+
+    private async Task<Result<StaffUserResponse>> UpdateAsync(UpdateStaffCommand command, CancellationToken ct)
     {
+        var admins = await staff.LockActiveAdminIdsAsync(ct);
         var user = await staff.GetByIdAsync(command.Id, ct);
         if (user is null)
         {
             return StaffErrors.NotFound;
         }
 
+        if (user.Version != command.Version)
+        {
+            return GeneralErrors.ConcurrencyConflict;
+        }
+
+        var staysAdmin = command.IsActive && command.Roles.Contains(Roles.Admin, StringComparer.Ordinal);
+        if (admins.Contains(user.Id) && !staysAdmin && admins.Count == 1)
+        {
+            return StaffErrors.LastAdmin;
+        }
+
         user.Update(command.Name, command.Roles, command.IsActive);
-        await uow.SaveChangesAsync(ct);
         if (!command.IsActive)
         {
             await refreshTokens.RevokeAllForSubjectAsync(TokenSubjectType.Staff, user.Id, clock.UtcNow, ct);
         }
 
+        await uow.SaveChangesAsync(ct);
         return mapper.Map<StaffUserResponse>(user);
     }
 }

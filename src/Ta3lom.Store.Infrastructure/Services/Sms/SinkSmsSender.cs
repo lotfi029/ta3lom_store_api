@@ -6,8 +6,8 @@ using Ta3lom.Store.Domain.ValueObjects;
 
 namespace Ta3lom.Store.Infrastructure.Services.Sms;
 
-/// Development/test SMS sink (plan 14 §4.3): keeps the last 200 messages in memory for `GET /dev/sms`.
-/// The log line carries only the masked mobile and the length, never the body (OTP codes, 09 §8.1).
+/// Development/test SMS sink: keeps the last 200 messages in memory for `GET /dev/sms`.
+/// The log line carries only the masked mobile and the length, never the body (OTP codes).
 internal sealed partial class SinkSmsSender(IClock clock, ILogger<SinkSmsSender> logger) : ISmsSender, IDevSmsInbox
 {
     private const int Capacity = 200;

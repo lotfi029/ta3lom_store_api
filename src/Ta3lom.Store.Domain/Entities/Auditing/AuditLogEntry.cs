@@ -1,6 +1,6 @@
 namespace Ta3lom.Store.Domain.Entities.Auditing;
 
-/// Table `audit_log`: append-only record of staff mutations (BR-S11). Never updated or deleted.
+/// Table `audit_log`: append-only record of staff changes and security events (BR-A13). Never updated or deleted.
 public sealed class AuditLogEntry
 {
     public AuditLogEntry(string actor, string action, string entity, DateTimeOffset now,

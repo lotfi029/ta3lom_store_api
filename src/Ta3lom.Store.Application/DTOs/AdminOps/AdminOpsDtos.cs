@@ -1,50 +1,43 @@
-using System.Text.Json;
-using Ta3lom.Store.Application.DTOs.Account;
-
 namespace Ta3lom.Store.Application.DTOs.AdminOps;
 
-/// `GET /v1/admin/dashboard` (11 §9.2, FR-S74). Periods are Riyadh days ending today.
-public sealed record DashboardResponse(PeriodTotals Sales, PeriodTotals Gifts, int OrdersAwaitingPayment, int OrdersInReview,
-    IReadOnlyList<TopProduct> TopProducts, IReadOnlyList<CampaignProgress> Campaigns, AllocationSummary Allocation, IReadOnlyList<DashboardAlert> Alerts);
+/// `GET /v1/admin/dashboard` (BR-A13): counts and the projects with the largest pending amount. Paid totals arrive with
+/// R5-Payments. "Today" and "this week" are Riyadh dates; the week starts on Sunday.
+public sealed record DashboardResponse(int PublishedProjects, int ActiveCategories, int ActiveDonors, int PendingOrdersToday, int PendingOrdersThisWeek,
+    IReadOnlyList<DashboardProject> TopProjectsByPendingAmount);
 
-public sealed record PeriodTotals(string Today, string Last7Days, string Last30Days);
+public sealed record DashboardProject(Guid ProjectId, string Slug, string TitleAr, int PendingOrders, string PendingAmount);
 
-public sealed record TopProduct(string Slug, string Amount);
+/// `GET /v1/admin/customers`.
+public sealed record AdminCustomerRow(Guid Id, string Mobile, string? FullName, string? Email, string Status, int OrderCount, DateTimeOffset CreatedAt,
+    DateTimeOffset? LastLoginAt);
 
-public sealed record CampaignProgress(string Slug, int Percent, DateTimeOffset? EndsAt);
+/// `GET /v1/admin/customers/{id}`: the donor with their latest orders.
+public sealed record AdminCustomerDetail(Guid Id, string Mobile, string? FullName, string? Email, string Locale, bool MarketingOptIn, string Status,
+    DateTimeOffset? PdplConsentAt, DateTimeOffset CreatedAt, DateTimeOffset? LastLoginAt, IReadOnlyList<AdminOrderRow> RecentOrders, uint Version);
 
-public sealed record AllocationSummary(long Awaiting, long Overdue30, DateTimeOffset? OldestAwaiting);
+/// `GET /v1/admin/orders`.
+public sealed record AdminOrderRow(string Reference, string Status, string TotalAmount, int LineCount, string DonorName, string DonorMobile,
+    DateTimeOffset CreatedAt, DateTimeOffset PaymentDueAt);
 
-/// `allocation.overdue`, `outbox.dead`, `integrity.failed`.
-public sealed record DashboardAlert(string Code, long Count);
+public sealed record AdminOrderLine(int LineNo, string TargetKind, Guid? ProjectId, Guid? CategoryId, Guid? OptionId, string TitleAr, string? TitleEn,
+    string? OptionLabelAr, int Quantity, string UnitAmount, string Amount);
 
-/// `GET /v1/admin/reports/{name}` JSON (11 §9.16): rows keyed by camelCase column names; money as strings.
-public sealed record ReportResponse(string Name, DateOnly From, DateOnly To, IReadOnlyList<IReadOnlyDictionary<string, object?>> Rows);
+/// `GET /v1/admin/orders/{reference}`.
+public sealed record AdminOrderDetail(string Reference, string Status, string TotalAmount, Guid CustomerId, string DonorName, string DonorEmail,
+    string DonorMobile, string Locale, DateTimeOffset CreatedAt, DateTimeOffset PaymentDueAt, DateTimeOffset? CancelledAt, string? CancelledBy,
+    IReadOnlyList<AdminOrderLine> Lines);
 
-/// A report file (`text/csv`, UTF-8 with BOM).
-public sealed record ReportFile(byte[] Content, string FileName);
+/// `GET /v1/admin/templates`.
+public sealed record TemplateResponse(string Key, string Channel, string Locale, string? Subject, string Body, DateTimeOffset UpdatedAt, string? UpdatedBy);
 
-/// 11 §9.20 `CustomerRow` (staff view: full mobile).
-public sealed record CustomerRow(Guid Id, string Mobile, string? FullName, string? Email, string Status, DateTimeOffset CreatedAt, DateTimeOffset? LastLoginAt,
-    int OrdersCount);
+/// `PUT /v1/admin/templates/{key}/{channel}/{locale}`.
+public sealed record TemplateInput(string? Subject, string Body);
 
-/// `Customer360`: profile, orders, giving totals, enrolments.
-public sealed record Customer360(CustomerRow Customer, IReadOnlyList<OrderSummary> Orders, GivingTotals Giving, IReadOnlyList<EnrolmentItem> Enrolments);
+/// `POST /v1/admin/templates/test`: renders an unsaved text with sample values and sends it — an e-mail to the calling
+/// staff member, an SMS to `to`.
+public sealed record TemplateTestRequest(string Channel, string? Subject, string Body, string? To);
 
-public sealed record BlockCustomerRequest(string? Reason);
+public sealed record TemplateTestResponse(string? Subject, string Body, bool Sent);
 
-/// 11 §9.21: `diff` is the stored JSON object (personal fields already masked as `***`).
-public sealed record AuditEntry(long Id, DateTimeOffset At, string Actor, string Action, string Entity, string? EntityId, JsonElement? Diff);
-
-/// 11 §9.18 `Template`: `variables` are the `{{ name }}` placeholders found in the subject and body.
-public sealed record TemplateResponse(string Key, string Channel, string Locale, string? Subject, string Body, DateTimeOffset UpdatedAt,
-    IReadOnlyList<string> Variables);
-
-public sealed record TemplateUpdateRequest(string? Subject, string? Body);
-
-/// `POST …/test`: sends the **saved** template to one recipient with sample values (unset variables show as `[name]`).
-public sealed record TemplateTestRequest(string? Recipient, IReadOnlyDictionary<string, string>? SampleData);
-
-public sealed record TemplateTestResponse(TemplateRendered Rendered);
-
-public sealed record TemplateRendered(string? Subject, string Body);
+/// `GET /v1/admin/audit`.
+public sealed record AuditRow(long Id, DateTimeOffset At, string Actor, string Action, string Entity, string? EntityId, string? Diff);

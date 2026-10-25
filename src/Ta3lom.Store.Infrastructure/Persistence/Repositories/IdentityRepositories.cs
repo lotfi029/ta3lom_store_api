@@ -1,6 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
-using NpgsqlTypes;
 using Ta3lom.Store.Domain.Entities.Identity;
 using Ta3lom.Store.Domain.Entities.Notifications;
 using Ta3lom.Store.Domain.Enums;
@@ -12,20 +10,13 @@ internal sealed class CustomerRepository(StoreDbContext db) : GenericRepository<
 {
     public Task<Customer?> FindByMobileAsync(string mobileE164, CancellationToken ct = default) =>
         Set.FirstOrDefaultAsync(c => c.Mobile == mobileE164, ct);
-
-    public async Task<Guid> FindOrCreateByMobileAsync(string mobileE164, DateTimeOffset now, CancellationToken ct = default)
-    {
-        await Db.Database.ExecuteSqlAsync($"""
-            INSERT INTO store.customer (id, mobile, locale, anonymous_default, marketing_opt_in, status, created_at, updated_at)
-            VALUES ({Guid.CreateVersion7()}, {mobileE164}, 'ar', false, false, 'active', {now}, {now})
-            ON CONFLICT (mobile) DO NOTHING
-            """, ct);
-        return (await Db.Database.SqlQuery<Guid>($"SELECT id AS \"Value\" FROM store.customer WHERE mobile = {mobileE164}").ToListAsync(ct)).Single();
-    }
 }
 
 internal sealed class OtpChallengeRepository(StoreDbContext db) : GenericRepository<OtpChallenge>(db), IOtpChallengeRepository
 {
+    public Task LockMobileAsync(string mobileE164, CancellationToken ct = default) =>
+        Db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtextextended({"otp:" + mobileE164}, 0))", ct);
+
     public async Task<IReadOnlyList<DateTimeOffset>> IssuedForMobileSinceAsync(string mobileE164, DateTimeOffset since, CancellationToken ct = default) =>
         await Set.AsNoTracking().Where(o => o.Mobile == mobileE164 && o.CreatedAt >= since)
             .OrderBy(o => o.CreatedAt).Select(o => o.CreatedAt).ToListAsync(ct);
@@ -48,9 +39,6 @@ internal sealed class OtpChallengeRepository(StoreDbContext db) : GenericReposit
             """).ToListAsync(ct);
         return rows.SingleOrDefault();
     }
-
-    public Task<int> DeleteCreatedBeforeAsync(DateTimeOffset before, CancellationToken ct = default) =>
-        Set.Where(o => o.CreatedAt < before).ExecuteDeleteAsync(ct);
 }
 
 internal sealed class RefreshTokenRepository(StoreDbContext db) : GenericRepository<RefreshToken>(db), IRefreshTokenRepository
@@ -75,15 +63,13 @@ internal sealed class RefreshTokenRepository(StoreDbContext db) : GenericReposit
 
 internal sealed class NotificationRepository(StoreDbContext db) : GenericRepository<Notification>(db), INotificationRepository
 {
-    public async Task<Notification?> TryClaimAsync(Guid outboxMessageId, MessageChannel channel, string recipient, string templateKey, string locale,
-        Guid? relatedOrderId, DateTimeOffset now, CancellationToken ct = default)
+    public async Task<Notification?> TryClaimAsync(string dedupeKey, MessageChannel channel, string recipientHash, string templateKey,
+        DateTimeOffset now, CancellationToken ct = default)
     {
-        var order = new NpgsqlParameter("related_order_id", NpgsqlDbType.Uuid) { Value = (object?)relatedOrderId ?? DBNull.Value };
         var ids = await Db.Database.SqlQuery<Guid>($"""
-            INSERT INTO store.notification (id, channel, recipient, template_key, locale, status, related_order_id, outbox_message_id, created_at)
-            VALUES ({Guid.CreateVersion7()}, {channel.ToWire()}, {recipient}, {templateKey}, {locale}, 'queued', {order}, {outboxMessageId}, {now})
-            ON CONFLICT (outbox_message_id, channel, recipient) WHERE outbox_message_id IS NOT NULL
-            DO UPDATE SET status = 'queued', error = NULL WHERE notification.status = 'failed'
+            INSERT INTO store.notification (id, channel, recipient_hash, template_key, dedupe_key, status, created_at)
+            VALUES ({Guid.CreateVersion7()}, {channel.ToWire()}, {recipientHash}, {templateKey}, {dedupeKey}, 'failed', {now})
+            ON CONFLICT (dedupe_key) DO UPDATE SET created_at = EXCLUDED.created_at WHERE notification.status = 'failed'
             RETURNING id AS "Value"
             """).ToListAsync(ct);
         return ids.Count == 0 ? null : await Set.SingleAsync(n => n.Id == ids[0], ct);
@@ -95,4 +81,9 @@ internal sealed class StaffUserRepository(StoreDbContext db) : GenericRepository
     /// `staff_user.email` is citext: the comparison in SQL is case-insensitive.
     public Task<StaffUser?> FindByEmailAsync(string email, CancellationToken ct = default) =>
         Set.FirstOrDefaultAsync(s => s.Email == email, ct);
+
+    public async Task<IReadOnlyList<Guid>> LockActiveAdminIdsAsync(CancellationToken ct = default) =>
+        await Db.Database.SqlQuery<Guid>($"""
+            SELECT id AS "Value" FROM store.staff_user WHERE is_active AND 'admin' = ANY (roles) ORDER BY id FOR UPDATE
+            """).ToListAsync(ct);
 }

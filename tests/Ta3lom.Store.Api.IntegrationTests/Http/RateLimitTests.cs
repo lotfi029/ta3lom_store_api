@@ -4,7 +4,7 @@ using Ta3lom.Store.Domain.Errors;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Http;
 
-/// `public` policy (09 §5.15) with test-sized limits from Store:RateLimits:Public.
+/// `public` policy with test-sized limits from Store:RateLimits:Public.
 public sealed class RateLimitTests(RateLimitedApiFactory factory) : IClassFixture<RateLimitedApiFactory>
 {
     [Fact]

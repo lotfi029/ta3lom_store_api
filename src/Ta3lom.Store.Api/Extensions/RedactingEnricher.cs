@@ -3,9 +3,9 @@ using Serilog.Events;
 
 namespace Ta3lom.Store.Api.Extensions;
 
-/// Replaces sensitive values with "***" before any sink sees them (09 §8.1): properties, dictionary keys
+/// Replaces sensitive values with "***" before any sink sees them: properties, dictionary keys
 /// and structure members whose name contains authorization, cookie, password, secret or token.
-/// Mobile masking and OTP `code` redaction are added with identity (S-04).
+/// Mobile masking and OTP `code` redaction are added with identity.
 public sealed class RedactingEnricher : ILogEventEnricher
 {
     public const string Mask = "***";

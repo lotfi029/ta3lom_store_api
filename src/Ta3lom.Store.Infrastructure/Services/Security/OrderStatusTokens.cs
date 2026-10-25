@@ -1,30 +1,23 @@
 using System.Security.Cryptography;
+using System.Text;
 using Microsoft.Extensions.Options;
 using Ta3lom.Store.Application.Interfaces;
 
 namespace Ta3lom.Store.Infrastructure.Services.Security;
 
-/// 11 §6.3: `st_` + base64url(HMAC-SHA256(Store:Tokens:StatusKeyBase64, order id))[..16 bytes]; stateless, constant-time check.
+/// Token = base64url(HMAC-SHA256(`Store:Tokens:StatusKeyBase64`, reference)); the order keeps SHA-256(token) in hex.
 internal sealed class OrderStatusTokens(IOptions<TokenKeyOptions> options) : IOrderStatusTokens
 {
-    private const string Prefix = "st_";
-
-    public string Issue(Guid orderId) => Prefix + Base64Url(Mac(orderId));
-
-    public bool Verify(Guid orderId, string? token)
+    public (string Token, string Hash) Create(string reference)
     {
-        if (token is null || !token.StartsWith(Prefix, StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        var expected = System.Text.Encoding.ASCII.GetBytes(Issue(orderId));
-        var actual = System.Text.Encoding.ASCII.GetBytes(token);
-        return CryptographicOperations.FixedTimeEquals(expected, actual);
+        var mac = HMACSHA256.HashData(Convert.FromBase64String(options.Value.StatusKeyBase64), Encoding.UTF8.GetBytes(reference));
+        var token = Convert.ToBase64String(mac).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        return (token, HashOf(token));
     }
 
-    private byte[] Mac(Guid orderId) =>
-        HMACSHA256.HashData(Convert.FromBase64String(options.Value.StatusKeyBase64), orderId.ToByteArray())[..16];
+    public bool Matches(string token, string storedHash) =>
+        token.Length is > 0 and <= 100
+        && CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(HashOf(token)), Encoding.ASCII.GetBytes(storedHash));
 
-    private static string Base64Url(byte[] bytes) => Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+    private static string HashOf(string token) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 }

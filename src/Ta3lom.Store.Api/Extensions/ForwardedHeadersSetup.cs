@@ -5,7 +5,7 @@ using Ta3lom.Store.Api.Options;
 
 namespace Ta3lom.Store.Api.Extensions;
 
-/// TLS ends at Caddy (08 §4). X-Forwarded-For/Proto are trusted only from the configured proxy
+/// TLS ends at Caddy. X-Forwarded-For/Proto are trusted only from the configured proxy
 /// networks; the framework's loopback defaults are cleared.
 public static class ForwardedHeadersSetup
 {

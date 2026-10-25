@@ -1,11 +1,11 @@
 namespace Ta3lom.Store.Application.Interfaces;
 
-/// Renders `message_template` rows (Scriban, RUL-63). Missing locale falls back to Arabic.
+/// Renders `message_template` rows (Scriban). Missing locale falls back to Arabic.
 public interface ITemplateRenderer
 {
     Task<RenderedMessage> RenderAsync(string templateKey, MessageChannel channel, string locale, object model, CancellationToken ct = default);
 
-    /// Parses a template text without rendering it: null when valid, else the first error with its position (FR-S77).
+    /// Parses a template text without rendering it: null when valid, else the first error with its position.
     TemplateSyntaxError? Check(string text);
 
     /// Renders an unsaved text with sample values (template test send, #122).

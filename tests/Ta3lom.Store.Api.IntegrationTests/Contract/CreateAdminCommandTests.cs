@@ -2,7 +2,7 @@ using Ta3lom.Store.Api.Cli;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Contract;
 
-/// `create-admin` exists as a verb (database/03 §3) and refuses to run without its required options (S-05).
+/// `create-admin` exists as a verb and refuses to run without its required options.
 public sealed class CreateAdminCommandTests
 {
     [Fact]

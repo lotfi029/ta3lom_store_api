@@ -8,6 +8,6 @@ TestResults/
 *.suo
 *.swp
 .DS_Store
-/deploy/env/*.env
-!/deploy/env/*.env.example
+
+
 __pycache__/

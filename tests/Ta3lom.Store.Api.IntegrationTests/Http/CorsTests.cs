@@ -3,7 +3,7 @@ using Ta3lom.Store.Api.IntegrationTests.Infrastructure;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Http;
 
-/// CORS on the /v1 group (08 §3.1, 11 §1.2), exercised through the test-only probe route.
+/// CORS on the /v1 group: the allow-list is the store web site and its staging copy, exercised through the test-only probe route.
 public sealed class CorsTests(ProbeApiFactory factory) : IClassFixture<ProbeApiFactory>
 {
     private const string Ping = "/v1/__test/ping";
@@ -11,8 +11,8 @@ public sealed class CorsTests(ProbeApiFactory factory) : IClassFixture<ProbeApiF
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     [Theory]
-    [InlineData("https://ta3lom.sa")]
-    [InlineData("https://www.ta3lom.sa")]
+    [InlineData(StoreApiFactory.WebOrigin)]
+    [InlineData(StoreApiFactory.StagingOrigin)]
     public async Task Preflight_from_the_site_is_allowed_with_credentials(string origin)
     {
         var response = await factory.CreateClient().SendAsync(Preflight(origin), Ct);
@@ -28,8 +28,9 @@ public sealed class CorsTests(ProbeApiFactory factory) : IClassFixture<ProbeApiF
 
     [Theory]
     [InlineData("https://evil.example")]
-    [InlineData("http://ta3lom.sa")]
-    [InlineData("https://staging.ta3lom.sa")]
+    [InlineData("http://store.ta3lom.sa")]
+    [InlineData("https://ta3lom.sa")]
+    [InlineData("https://store.ta3lom.sa.evil.example")]
     [InlineData("http://localhost:4200")]
     public async Task Preflight_from_any_other_origin_is_refused(string origin)
     {
@@ -42,12 +43,12 @@ public sealed class CorsTests(ProbeApiFactory factory) : IClassFixture<ProbeApiF
     public async Task Actual_request_exposes_the_contract_headers()
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, Ping);
-        request.Headers.Add("Origin", "https://ta3lom.sa");
+        request.Headers.Add("Origin", StoreApiFactory.WebOrigin);
 
         var response = await factory.CreateClient().SendAsync(request, Ct);
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        response.Headers.GetValues("Access-Control-Allow-Origin").Single().ShouldBe("https://ta3lom.sa");
+        response.Headers.GetValues("Access-Control-Allow-Origin").Single().ShouldBe(StoreApiFactory.WebOrigin);
         var exposed = string.Join(",", response.Headers.GetValues("Access-Control-Expose-Headers")).Split(',').Select(h => h.Trim());
         exposed.ShouldBe(["ETag", "Retry-After", "Location", "Idempotent-Replayed"], ignoreOrder: true);
     }
@@ -62,17 +63,14 @@ public sealed class CorsTests(ProbeApiFactory factory) : IClassFixture<ProbeApiF
     }
 }
 
-public sealed class StagingCorsTests(StagingApiFactory factory) : IClassFixture<StagingApiFactory>
+/// Development adds the local web app to the same allow-list.
+public sealed class DevelopmentCorsTests(DevelopmentApiFactory factory) : IClassFixture<DevelopmentApiFactory>
 {
     [Fact]
-    public async Task Staging_allows_only_the_staging_site()
+    public async Task Development_also_allows_localhost()
     {
-        var client = factory.CreateClient();
+        var response = await factory.CreateClient().SendAsync(CorsTests.Preflight("http://localhost:4200"), TestContext.Current.CancellationToken);
 
-        var staging = await client.SendAsync(CorsTests.Preflight("https://staging.ta3lom.sa"), TestContext.Current.CancellationToken);
-        var production = await client.SendAsync(CorsTests.Preflight("https://ta3lom.sa"), TestContext.Current.CancellationToken);
-
-        staging.Headers.GetValues("Access-Control-Allow-Origin").Single().ShouldBe("https://staging.ta3lom.sa");
-        production.Headers.Contains("Access-Control-Allow-Origin").ShouldBeFalse();
+        response.Headers.GetValues("Access-Control-Allow-Origin").Single().ShouldBe("http://localhost:4200");
     }
 }

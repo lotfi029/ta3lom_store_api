@@ -1,6 +1,6 @@
 namespace Ta3lom.Store.Application.Interfaces;
 
-/// Outgoing SMS (09 §4.3 fakes table): `SinkSmsSender` in Development/Staging/tests, a provider adapter in
+/// Outgoing SMS: `SinkSmsSender` in Development/Staging/tests, a provider adapter in
 /// Production. Implementations never log the body (it may carry an OTP code).
 public interface ISmsSender
 {

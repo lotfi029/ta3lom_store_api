@@ -14,7 +14,7 @@ public sealed class LayerTests
                 "Ta3lom.Store.Infrastructure", "Ta3lom.Store.Api")
             .GetResult().FailingTypeNames.ShouldBeNull();
 
-    /// K-b: no EF in Domain. K-f: only the DI abstractions, and only for AddDomain().
+    /// No EF in Domain; only the DI abstractions, and only for AddDomain().
     [Fact]
     public void Domain_has_no_outward_dependencies() =>
         Types.InAssembly(Assemblies.Domain).That().DoNotHaveName("DependencyInjection").ShouldNot()
@@ -28,7 +28,7 @@ public sealed class LayerTests
             .Where(n => n.StartsWith("Microsoft.", StringComparison.Ordinal))
             .ShouldBeSubsetOf(["Microsoft.Extensions.DependencyInjection.Abstractions"]);
 
-    /// K-c: EF Core abstractions for IApplicationDbContext reads only; never Npgsql, Relational or ASP.NET Core.
+    /// EF Core abstractions for IApplicationDbContext reads only; never Npgsql, Relational or ASP.NET Core.
     [Fact]
     public void Application_references_Domain_and_EF_abstractions_only()
     {
@@ -39,7 +39,7 @@ public sealed class LayerTests
             .ShouldNotContain(n => n.StartsWith("Npgsql", StringComparison.Ordinal) || n == "Microsoft.EntityFrameworkCore.Relational");
     }
 
-    /// K-g: DTOs moved from the Contracts project into Application/DTOs; they stay sealed and never expose entities.
+    /// DTOs live in Application/DTOs; they stay sealed and never expose entities.
     [Fact]
     public void Application_DTOs_are_sealed_and_do_not_expose_entities()
     {
@@ -50,7 +50,7 @@ public sealed class LayerTests
             .GetResult().FailingTypeNames.ShouldBeNull();
     }
 
-    /// K-g: request/response records live in Application/DTOs, not in the Api.
+    /// Request/response records live in Application/DTOs, not in the Api.
     [Fact]
     public void Api_defines_no_DTOs() =>
         Assemblies.Api.GetTypes()
@@ -59,7 +59,7 @@ public sealed class LayerTests
             .Select(t => t.FullName)
             .ShouldBeEmpty();
 
-    /// Infrastructure may use ASP.NET Core Data Protection (a standalone library, 09 §5.13) but nothing of the web stack.
+    /// Infrastructure may use ASP.NET Core Data Protection (a standalone library) but nothing of the web stack.
     [Fact]
     public void Infrastructure_does_not_reference_Api_or_the_web_stack() =>
         Types.InAssembly(Assemblies.Infrastructure).ShouldNot()

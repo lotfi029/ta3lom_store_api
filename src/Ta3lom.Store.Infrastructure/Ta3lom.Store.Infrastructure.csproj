@@ -6,15 +6,13 @@
   <ItemGroup>
     <PackageReference Include="Quartz.Extensions.Hosting" />
     <PackageReference Include="Scriban" />
-    <PackageReference Include="QuestPDF" />
-    <PackageReference Include="QRCoder" />
-    <PackageReference Include="PDFsharp" />
     <PackageReference Include="MailKit" />
     <PackageReference Include="Otp.NET" />
     <PackageReference Include="SkiaSharp" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
     <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
@@ -25,10 +23,8 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
-    <!-- P0-3: fonts for the PDF documents (SIL OFL 1.1, licences next to the files). -->
-    <EmbeddedResource Include="Resources/Fonts/*.ttf" LogicalName="Fonts.%(Filename)%(Extension)" />
-    <!-- The nightly checks run from code (S-33 dashboard, S-35 IntegrityChecks job): one source, db/reference/003. -->
-    <EmbeddedResource Include="../../db/reference/003_integrity_checks.sql" LogicalName="Integrity.003_integrity_checks.sql" />
+    <!-- The nightly integrity checks run from code (IntegrityChecks job). -->
+    <EmbeddedResource Include="Resources/Integrity/integrity_checks.sql" LogicalName="Integrity.integrity_checks.sql" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Ta3lom.Store.Api.IntegrationTests" />

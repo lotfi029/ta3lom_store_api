@@ -3,7 +3,7 @@ using Ta3lom.Store.Api.IntegrationTests.Infrastructure;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Http;
 
-/// API headers (08 §6.3, 06 NFR-S, 11 §1.7) and the /docs exemption outside Production.
+/// API headers; OpenAPI and Scalar exist in Development only.
 public sealed class SecurityHeadersTests(StoreApiFactory factory) : IClassFixture<StoreApiFactory>
 {
     private const string Csp = "default-src 'none'; frame-ancestors 'none'";
@@ -49,24 +49,13 @@ public sealed class SecurityHeadersTests(StoreApiFactory factory) : IClassFixtur
     }
 
     [Theory]
-    [InlineData("/docs/")]
+    [InlineData("/docs")]
     [InlineData("/openapi/v1.json")]
-    public async Task Docs_and_openapi_have_no_CSP_or_frame_header_outside_production(string path)
+    public async Task Docs_and_openapi_are_not_mapped_outside_development(string path)
     {
         var response = await factory.CreateClient().GetAsync(path, Ct);
 
-        response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        response.Headers.Contains("Content-Security-Policy").ShouldBeFalse();
-        response.Headers.Contains("X-Frame-Options").ShouldBeFalse();
-        Header(response, "X-Content-Type-Options").ShouldBe("nosniff");
-    }
-
-    [Fact]
-    public async Task Scalar_page_loads_outside_production()
-    {
-        var html = await factory.CreateClient().GetStringAsync("/docs", Ct);
-
-        html.ShouldContain("scalar");
+        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
     private static string? Header(HttpResponseMessage response, string name) =>
@@ -128,5 +117,31 @@ public sealed class ProductionHeadersTests(ProductionApiFactory factory) : IClas
         request.Headers.Add("X-Forwarded-Proto", "https");
         request.Headers.Add("X-Forwarded-For", "198.51.100.7");
         return request;
+    }
+}
+
+/// Development maps OpenAPI and Scalar; they get no CSP and no frame header so Scalar can load.
+public sealed class DevelopmentDocsTests(DevelopmentApiFactory factory) : IClassFixture<DevelopmentApiFactory>
+{
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
+    [Theory]
+    [InlineData("/docs/")]
+    [InlineData("/openapi/v1.json")]
+    public async Task Docs_and_openapi_have_no_CSP_or_frame_header_in_development(string path)
+    {
+        var response = await factory.CreateClient().GetAsync(path, Ct);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        response.Headers.Contains("Content-Security-Policy").ShouldBeFalse();
+        response.Headers.Contains("X-Frame-Options").ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Scalar_page_loads_in_development()
+    {
+        var html = await factory.CreateClient().GetStringAsync("/docs", Ct);
+
+        html.ShouldContain("scalar");
     }
 }

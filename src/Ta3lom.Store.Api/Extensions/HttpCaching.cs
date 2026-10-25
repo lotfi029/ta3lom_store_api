@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 
 namespace Ta3lom.Store.Api.Extensions;
 
-/// Public caching of the catalogue (11 §1.7): weak ETag = hash of the JSON body, `If-None-Match` → 304, and
+/// Public caching of the catalogue: weak ETag = hash of the JSON body, `If-None-Match` → 304, and
 /// `Cache-Control` per class (content: max-age 60 + SWR 300; live: max-age 15). Output caching keeps a copy per
 /// URL (locale-free: the bodies are bilingual) and is evicted by tag when staff change the catalogue.
 public static class HttpCaching
@@ -14,11 +14,14 @@ public static class HttpCaching
     public const string LivePolicy = "catalog-live";
     public const string CatalogTag = "catalog";
 
+    /// The query keys the public catalogue reads; any other key shares the cached entry (no cache-busting by junk keys).
+    public static readonly string[] VaryKeys = ["q", "category", "sort", "page", "pageSize", "fields"];
+
     public static IServiceCollection AddStoreOutputCache(this IServiceCollection services) =>
         services.AddOutputCache(o =>
         {
-            o.AddPolicy(ContentPolicy, b => b.Expire(TimeSpan.FromSeconds(60)).SetVaryByQuery("*").Tag(CatalogTag));
-            o.AddPolicy(LivePolicy, b => b.Expire(TimeSpan.FromSeconds(15)).SetVaryByQuery("*").Tag(CatalogTag));
+            o.AddPolicy(ContentPolicy, b => b.Expire(TimeSpan.FromSeconds(60)).SetVaryByQuery(VaryKeys).Tag(CatalogTag));
+            o.AddPolicy(LivePolicy, b => b.Expire(TimeSpan.FromSeconds(15)).SetVaryByQuery(VaryKeys).Tag(CatalogTag));
         });
 
     /// Content endpoints: `public, max-age=60, stale-while-revalidate=300`.

@@ -1,6 +1,6 @@
 namespace Ta3lom.Store.Application.Interfaces;
 
-/// `idempotency_key` rows (11 §1.5, 09 §5.16): first writer wins on (scope, key); a NULL status means in progress.
+/// `idempotency_key` rows: first writer wins on (scope, key); a NULL status means in progress.
 public interface IIdempotencyStore
 {
     Task<IdempotencyClaim> ClaimAsync(string scope, string key, string requestHash, CancellationToken ct = default);

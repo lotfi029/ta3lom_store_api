@@ -1,6 +1,6 @@
 namespace Ta3lom.Store.Application.Features.CustomerAuth.Commands.LogoutAll;
 
-/// "Sign out everywhere" (FR-S28): every refresh-token family of the customer is revoked.
+/// "Sign out everywhere": every refresh-token family of the donor is revoked.
 public sealed record LogoutAllCommand(Guid CustomerId) : ICommand;
 
 internal sealed class LogoutAllCommandHandler(IRefreshTokenRepository refreshTokens, IClock clock) : ICommandHandler<LogoutAllCommand>

@@ -3,7 +3,7 @@ using System.Net;
 
 namespace Ta3lom.Store.Api.Options;
 
-/// The `Store` configuration section (09 §7.2). Validated at start-up: the app refuses to run misconfigured.
+/// The `Store` configuration section. Validated at start-up: the app refuses to run misconfigured.
 public sealed class StoreOptions
 {
     public const string Section = "Store";
@@ -69,7 +69,7 @@ public sealed class StoreOptions
 
 public sealed class CorsSettings
 {
-    /// Allowed browser origins (08 §3.1): per environment in appsettings.{Environment}.json.
+    /// Allowed browser origins: per environment in appsettings.{Environment}.json.
     public IList<string> Origins { get; init; } = [];
 }
 
@@ -83,10 +83,10 @@ public sealed class ForwardedHeadersSettings
 
 public sealed class RateLimitSettings
 {
-    /// `public` policy (09 §5.15): token bucket, 120/min with a burst of 40.
+    /// `public` policy: token bucket, 120/min with a burst of 40.
     public TokenBucketSettings Public { get; set; } = new() { TokenLimit = 40, TokensPerPeriod = 2, ReplenishmentPeriodSeconds = 1 };
 
-    /// Window policies of 09 §5.15 (per hashed IP, or per subject where noted).
+    /// Window policies (per hashed IP, or per subject where noted).
     public WindowSettings OtpRequest { get; set; } = new() { PermitLimit = 10, WindowSeconds = 3600 };
 
     public WindowSettings OtpVerify { get; set; } = new() { PermitLimit = 30, WindowSeconds = 900 };
@@ -124,6 +124,6 @@ public sealed class TokenBucketSettings
 
 public sealed class TelemetrySettings
 {
-    /// OTLP collector; empty = no export (09 §8.2).
+    /// OTLP collector; empty = no export.
     public string? OtlpEndpoint { get; set; }
 }

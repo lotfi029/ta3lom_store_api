@@ -1,6 +1,6 @@
 namespace Ta3lom.Store.Application.Features.Staff.Commands.UnlockStaff;
 
-/// `POST /v1/admin/staff/{id}/unlock` (#128).
+/// `POST /v1/admin/staff/{id}/unlock`: clears the lockout and the failure count.
 public sealed record UnlockStaffCommand(Guid Id) : ICommand;
 
 internal sealed class UnlockStaffCommandHandler(IStaffUserRepository staff, IUnitOfWork uow) : ICommandHandler<UnlockStaffCommand>

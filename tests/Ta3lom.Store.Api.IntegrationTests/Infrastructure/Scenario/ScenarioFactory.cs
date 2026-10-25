@@ -7,8 +7,6 @@ using Microsoft.Extensions.Hosting;
 using Ta3lom.Store.Api.IntegrationTests.Infrastructure.Database;
 using Ta3lom.Store.Application.Abstractions.Messaging;
 using Ta3lom.Store.Application.Abstractions.Time;
-using Ta3lom.Store.Application.DTOs.Dev;
-using Ta3lom.Store.Application.Features.Dev.Commands.ConfirmPayment;
 using Ta3lom.Store.Application.Interfaces;
 using Ta3lom.Store.Domain.Entities.Identity;
 using Ta3lom.Store.Domain.IRepositories;
@@ -17,19 +15,17 @@ using Ta3lom.Store.SharedKernel;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Infrastructure.Scenario;
 
-/// T-1 (Run-plan-review §3): a host with its own migrated and seeded database (reference catalogue 002 + SeedRunner), so
-/// a test class can place orders, settle and allocate without touching other classes. Deterministic pieces:
+/// A host with its own migrated and seeded database, so a test class can sign in, build carts and place orders without
+/// touching other classes. Deterministic pieces:
 /// <list type="bullet">
 /// <item>`Clock` (FakeClock, starts at the real time so signed tokens stay valid) replaces the system clock;</item>
 /// <item>SMS and e-mail go to the sinks (`Sms`, `MailAsync`); the e-mail sink writes to a per-factory folder;</item>
 /// <item>the outbox loop and Quartz are off: `DrainOutboxAsync` and `RunAsync` run them on demand;</item>
-/// <item>tokens are minted with the app's own issuer (`CustomerAsync`, `StaffAsync`), settlements go through the same
-/// command as the dev trigger (`SettleAsync`).</item>
+/// <item>tokens are minted with the app's own issuer (`CustomerAsync`, `StaffAsync`); OTP codes are read from the
+/// in-process SMS sink, never through `/dev`.</item>
 /// </list>
 public class ScenarioFactory : StoreApiFactory
 {
-    public const string WebOrigin = "https://ta3lom.sa";
-
     private static int _mobileCounter;
 
     private readonly Lazy<string> _database;
@@ -40,7 +36,7 @@ public class ScenarioFactory : StoreApiFactory
         _database = new(() =>
         {
             var cs = CreateDatabaseAsync().GetAwaiter().GetResult();
-            Clock.Set(DateTimeOffset.UtcNow.AddSeconds(1));   // after the seed: campaigns seeded with starts_at = now() have started
+            Clock.Set(DateTimeOffset.UtcNow.AddSeconds(1));
             return cs;
         });
     }
@@ -58,7 +54,7 @@ public class ScenarioFactory : StoreApiFactory
         ["Store:Email:SinkFolder"] = _mailFolder,
         ["Store:Files:Root"] = Path.Combine(_mailFolder, "files"),
         ["Store:Outbox:Enabled"] = "false",
-        // Every client of a test class shares one address; the limits themselves are covered by RateLimitTests and S-04.
+        // Every client of a test class shares one address; the limits themselves are covered by RateLimitTests.
         ["Store:RateLimits:Public:TokenLimit"] = "100000",
         ["Store:RateLimits:Public:TokensPerPeriod"] = "100000",
         ["Store:RateLimits:OtpRequest:PermitLimit"] = "100000",
@@ -109,35 +105,6 @@ public class ScenarioFactory : StoreApiFactory
 
     public static string E164(string mobile) => "+966" + mobile[1..];
 
-    /// A valid one-page PDF (for book files).
-    public static byte[] MinimalPdf()
-    {
-        string[] objects =
-        [
-            "<< /Type /Catalog /Pages 2 0 R >>",
-            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << >> >>",
-            "<< /Length 5 >>\nstream\nBT ET\nendstream",
-        ];
-        var sb = new System.Text.StringBuilder("%PDF-1.4\n");
-        var offsets = new List<int>();
-        for (var i = 0; i < objects.Length; i++)
-        {
-            offsets.Add(sb.Length);
-            sb.Append(System.Globalization.CultureInfo.InvariantCulture, $"{i + 1} 0 obj\n{objects[i]}\nendobj\n");
-        }
-
-        var xref = sb.Length;
-        sb.Append("xref\n0 5\n0000000000 65535 f \n");
-        foreach (var o in offsets)
-        {
-            sb.Append(System.Globalization.CultureInfo.InvariantCulture, $"{o:D10} 00000 n \n");
-        }
-
-        sb.Append(System.Globalization.CultureInfo.InvariantCulture, $"trailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n");
-        return System.Text.Encoding.ASCII.GetBytes(sb.ToString());
-    }
-
     public IDevSmsInbox Sms => Services.GetRequiredService<IDevSmsInbox>();
 
     public IReadOnlyList<DevSmsMessage> SmsTo(string mobile) => [.. Sms.Latest(200).Where(m => m.To == E164(mobile))];
@@ -170,14 +137,6 @@ public class ScenarioFactory : StoreApiFactory
         return await scope.ServiceProvider.GetRequiredService<ICommandHandler<TCommand, TResult>>().HandleAsync(command, TestContext.Current.CancellationToken);
     }
 
-    /// The dev trigger (doc 15 §2.4) without HTTP: a verified capture for the order's grand total or a given amount.
-    public async Task<DevSettlementResponse> SettleAsync(string reference, string? amount = null, string? confirmationId = null)
-    {
-        var result = await RunAsync<ConfirmPaymentCommand, DevSettlementResponse>(new ConfirmPaymentCommand(reference, amount, confirmationId));
-        result.IsSuccess.ShouldBeTrue(result.IsFailure ? result.Error.Code : null);
-        return result.Value;
-    }
-
     /// A signed-in customer (row created as the first OTP login would) and a client carrying its bearer.
     public async Task<ActorClient> CustomerAsync(string? mobile = null)
     {
@@ -191,17 +150,29 @@ public class ScenarioFactory : StoreApiFactory
         return new ActorClient(Authorized(token.Token), customer.Id, mobile, null);
     }
 
-    /// A staff member with the given roles (created directly; TOTP is covered by the S-05 tests) and a bearer client.
+    /// A staff member with the given roles (created directly, password already changed; the sign-in flow is covered by the
+    /// staff auth tests) and a bearer client.
     public async Task<ActorClient> StaffAsync(params string[] roles)
     {
         await using var scope = Services.CreateAsyncScope();
         var sp = scope.ServiceProvider;
         var email = $"{string.Join('-', roles).Replace('_', '-')}-{Guid.NewGuid():N}@test.ta3lom.sa";
         var staff = StaffUser.Create(email, "Test " + string.Join(", ", roles), "not-a-hash", roles, Clock.UtcNow);
+        staff.ChangePassword("not-a-hash", Clock.UtcNow);
         sp.GetRequiredService<IGenericRepository<StaffUser>>().Add(staff);
         await sp.GetRequiredService<IUnitOfWork>().SaveChangesAsync(TestContext.Current.CancellationToken);
-        var token = sp.GetRequiredService<IAccessTokenIssuer>().IssueStaff(staff.Id, email, roles);
+        var token = sp.GetRequiredService<IAccessTokenIssuer>().IssueStaff(staff.Id, email, roles, passwordChangeRequired: false);
         return new ActorClient(Authorized(token.Token), staff.Id, null, email);
+    }
+
+    /// A staff member created like the admin app does: a real one-time password that must be changed, no authenticator yet.
+    public async Task<(Guid Id, string Email, string OneTimePassword)> NewStaffAccountAsync(params string[] roles)
+    {
+        var email = $"staff-{Guid.NewGuid():N}@test.ta3lom.sa";
+        var created = await RunAsync<Ta3lom.Store.Application.Features.Staff.Commands.CreateStaff.CreateStaffCommand, Ta3lom.Store.Application.DTOs.Staff.CreateStaffResponse>(
+            new(email, "Staff member", roles.Length == 0 ? ["admin"] : roles));
+        created.IsSuccess.ShouldBeTrue();
+        return (created.Value.Staff.Id, email, created.Value.OneTimePassword);
     }
 
     public HttpClient Anonymous() => CreateClient();
@@ -210,7 +181,7 @@ public class ScenarioFactory : StoreApiFactory
 
     public Task ExecuteSqlAsync(string sql) => SqlRunner.ExecuteAsync(DatabaseConnectionString, sql);
 
-    /// db/reference/003: the integrity checks; returns "number: rows" for every check that found rows.
+    /// The integrity checks; returns "number: rows" for every check that found rows.
     public async Task<IReadOnlyList<string>> IntegrityFailuresAsync()
     {
         await using var scope = Services.CreateAsyncScope();
@@ -228,7 +199,6 @@ public class ScenarioFactory : StoreApiFactory
     private static async Task<string> CreateDatabaseAsync()
     {
         var cs = await StoreSchema.CreateMigratedAsync("scn");
-        await SqlRunner.ExecuteAsync(cs, SqlRunner.ReferenceFile("002_store_seed.sql"));
         await StoreSchema.SeedAsync(cs);
         return cs;
     }

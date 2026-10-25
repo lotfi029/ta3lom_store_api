@@ -8,7 +8,7 @@ using Ta3lom.Store.Api.IntegrationTests.Infrastructure;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Health;
 
-/// #134, #135 (11 §10, FR-S83).
+/// #134, #135.
 public sealed class HealthTests(StoreApiFactory factory) : IClassFixture<StoreApiFactory>
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;

@@ -1,149 +1,121 @@
 using FluentValidation;
-using Ta3lom.Store.Application.DTOs.AdminCatalog;
+using Ta3lom.Store.Application.DTOs.Media;
 using Ta3lom.Store.Domain.Entities.Media;
 
 namespace Ta3lom.Store.Application.Features.Media.Commands.UploadMedia;
 
-/// `POST /v1/admin/media` (#75, FR-S72, RUL-03): allow-list per kind; images are re-encoded to WebP (max 2400 px),
-/// which strips EXIF; PDFs and book files must start with `%PDF`; `book_file` is stored private.
-/// Limits: images 10 MB, PDFs and book files 200 MB (11 §9.6, OP-6).
-public sealed record UploadMediaCommand(string Kind, string ContentType, long Length, Stream Content, string? AltAr, string? AltEn) : ICommand<MediaAssetResponse>;
+/// `POST /v1/admin/media`: the content is sniffed by its magic bytes (the declared type is not trusted). Images are JPEG,
+/// PNG or WebP, ≤ 10 MB and ≤ 40 MP, re-encoded to WebP with the longest edge ≤ 2400 px (metadata dropped); SVG and
+/// everything else is refused. PDFs start with `%PDF`, ≤ 20 MB. Storage keys are generated here. If the row cannot be
+/// saved the stored file is deleted again (no orphan files).
+public sealed record UploadMediaCommand(string Kind, long Length, Stream Content, string? AltAr, string? AltEn) : ICommand<MediaAssetResponse>;
 
 internal sealed class UploadMediaCommandHandler(
     IGenericRepository<MediaAsset> media,
     IFileStorage storage,
     IImageProcessor images,
     IFileUrls urls,
+    ICurrentActor actor,
     IUnitOfWork uow,
     IClock clock) : ICommandHandler<UploadMediaCommand, MediaAssetResponse>
 {
     public const long MaxImageBytes = 10L * 1024 * 1024;
-    public const long MaxPdfBytes = 200L * 1024 * 1024;
-    private static readonly string[] ImageTypes = ["image/jpeg", "image/png", "image/webp"];
+    public const long MaxPdfBytes = 20L * 1024 * 1024;
+    public const long MaxImagePixels = 40_000_000;
+    public const int MaxImageEdge = 2400;
 
     public async Task<Result<MediaAssetResponse>> HandleAsync(UploadMediaCommand command, CancellationToken ct = default)
     {
         var kind = EnumWire.Parse<MediaKind>(command.Kind);
+        var limit = kind == MediaKind.Image ? MaxImageBytes : MaxPdfBytes;
+        if (command.Length > limit)
+        {
+            return MediaErrors.TooLarge(limit);
+        }
+
+        if (kind == MediaKind.Image && string.IsNullOrWhiteSpace(command.AltAr))
+        {
+            return MediaErrors.AltRequired;
+        }
+
+        var bytes = await ReadAtMostAsync(command.Content, limit, ct);
+        if (bytes is null)
+        {
+            return MediaErrors.TooLarge(limit);
+        }
+
         var now = clock.UtcNow;
         var id = Guid.CreateVersion7();
-
+        string key, mime;
+        byte[] stored;
+        int? width = null, height = null;
         if (kind == MediaKind.Image)
         {
-            if (string.IsNullOrWhiteSpace(command.AltAr))
+            if (FileSignatures.Sniff(bytes) is not (FileSignature.Jpeg or FileSignature.Png or FileSignature.Webp))
             {
-                return AdminCatalogErrors.MediaAltRequired;
+                return MediaErrors.TypeNotAllowed;
             }
 
-            if (!ImageTypes.Contains(command.ContentType, StringComparer.OrdinalIgnoreCase))
+            var processed = images.ToWebp(bytes, MaxImageEdge, MaxImagePixels);
+            if (processed.Status == ImageProcessStatus.TooManyPixels)
             {
-                return AdminCatalogErrors.MediaTypeNotAllowed;
+                return MediaErrors.TooLarge(MaxImagePixels);
             }
 
-            if (command.Length > MaxImageBytes)
+            if (processed.Image is not { } image)
             {
-                return AdminCatalogErrors.MediaTooLarge(MaxImageBytes);
+                return MediaErrors.TypeNotAllowed;
             }
 
-            using var buffer = new MemoryStream();
-            await command.Content.CopyToAsync(buffer, ct);
-            var processed = images.ToWebp(buffer.GetBuffer().AsSpan(0, (int)buffer.Length), 2400);
-            if (processed is null)
+            (key, mime, stored, width, height) = ($"images/{now:yyyy}/{id:N}.webp", "image/webp", image.Bytes, image.Width, image.Height);
+        }
+        else
+        {
+            if (FileSignatures.Sniff(bytes) != FileSignature.Pdf)
             {
-                return AdminCatalogErrors.MediaTypeNotAllowed;
+                return MediaErrors.TypeNotAllowed;
             }
 
-            var key = $"images/{now:yyyy}/{id:N}.webp";
-            await storage.SaveAsync(key, isPublic: true, new MemoryStream(processed.Bytes), ct);
-            return await SaveAsync(MediaAsset.Create(kind, key, "image/webp", processed.Bytes.LongLength, processed.Width, processed.Height,
-                command.AltAr, command.AltEn, now), ct);
+            (key, mime, stored) = ($"pdf/{now:yyyy}/{id:N}.pdf", "application/pdf", bytes);
         }
 
-        if (!string.Equals(command.ContentType, "application/pdf", StringComparison.OrdinalIgnoreCase))
+        await using (var content = new MemoryStream(stored, writable: false))
         {
-            return AdminCatalogErrors.MediaTypeNotAllowed;
+            await storage.SaveAsync(key, isPublic: true, content, ct);
         }
 
-        if (command.Length > MaxPdfBytes)
+        var asset = new MediaAsset(kind, key, mime, stored.LongLength, width, height, command.AltAr, command.AltEn, actor.Name, now);
+        try
         {
-            return AdminCatalogErrors.MediaTooLarge(MaxPdfBytes);
+            media.Add(asset);
+            await uow.SaveChangesAsync(ct);
         }
-
-        var header = new byte[5];
-        var read = await command.Content.ReadAtLeastAsync(header, header.Length, throwOnEndOfStream: false, ct);
-        if (read < 5 || header[0] != '%' || header[1] != 'P' || header[2] != 'D' || header[3] != 'F')
+        catch
         {
-            return AdminCatalogErrors.MediaTypeNotAllowed;
+            await storage.DeleteAsync(key, isPublic: true, CancellationToken.None);
+            throw;
         }
 
-        var isPublic = kind != MediaKind.BookFile;
-        var fileKey = kind == MediaKind.BookFile ? $"books/{id:N}.pdf" : $"pdf/{now:yyyy}/{id:N}.pdf";
-        using (var content = new ConcatenatedStream(header.AsMemory(0, read), command.Content))
-        {
-            await storage.SaveAsync(fileKey, isPublic, content, ct);
-        }
-
-        return await SaveAsync(MediaAsset.Create(kind, fileKey, "application/pdf", command.Length, null, null, command.AltAr, command.AltEn, now), ct);
-    }
-
-    private async Task<Result<MediaAssetResponse>> SaveAsync(MediaAsset asset, CancellationToken ct)
-    {
-        media.Add(asset);
-        await uow.SaveChangesAsync(ct);
         return MediaMapping.ToResponse(asset, urls);
     }
 
-    /// The bytes already read for the magic-number check, followed by the rest of the upload.
-    private sealed class ConcatenatedStream(ReadOnlyMemory<byte> head, Stream tail) : Stream
+    /// The whole upload, or null when it is longer than <paramref name="limit"/> (a lying Content-Length).
+    private static async Task<byte[]?> ReadAtMostAsync(Stream content, long limit, CancellationToken ct)
     {
-        private int _position;
-
-        public override bool CanRead => true;
-
-        public override bool CanSeek => false;
-
-        public override bool CanWrite => false;
-
-        public override long Length => throw new NotSupportedException();
-
-        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
-
-        public override int Read(byte[] buffer, int offset, int count) => Read(buffer.AsSpan(offset, count));
-
-        public override int Read(Span<byte> buffer)
+        using var buffer = new MemoryStream();
+        var chunk = new byte[81920];
+        int read;
+        while ((read = await content.ReadAsync(chunk, ct)) > 0)
         {
-            if (_position < head.Length)
+            if (buffer.Length + read > limit)
             {
-                var n = Math.Min(buffer.Length, head.Length - _position);
-                head.Span.Slice(_position, n).CopyTo(buffer);
-                _position += n;
-                return n;
+                return null;
             }
 
-            return tail.Read(buffer);
+            buffer.Write(chunk, 0, read);
         }
 
-        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
-        {
-            if (_position < head.Length)
-            {
-                var n = Math.Min(buffer.Length, head.Length - _position);
-                head.Slice(_position, n).CopyTo(buffer);
-                _position += n;
-                return n;
-            }
-
-            return await tail.ReadAsync(buffer, cancellationToken);
-        }
-
-        public override void Flush()
-        {
-        }
-
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
-        public override void SetLength(long value) => throw new NotSupportedException();
-
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        return buffer.ToArray();
     }
 }
 
@@ -151,7 +123,9 @@ internal sealed class UploadMediaCommandValidator : AbstractValidator<UploadMedi
 {
     public UploadMediaCommandValidator()
     {
-        RuleFor(c => c.Kind).Must(k => k is "image" or "pdf" or "book_file").WithMessage("kind must be image, pdf or book_file.");
+        RuleFor(c => c.Kind).Must(k => k is "image" or "pdf").WithMessage("kind must be image or pdf.");
         RuleFor(c => c.Length).GreaterThan(0).WithMessage("file is required.");
+        RuleFor(c => c.AltAr).MaximumLength(300);
+        RuleFor(c => c.AltEn).MaximumLength(300);
     }
 }

@@ -7,7 +7,7 @@ using Ta3lom.Store.Domain.Errors;
 
 namespace Ta3lom.Store.Api.Infrastructure;
 
-/// RFC 9457 ProblemDetails with a stable `code` (11 §1.6): `type` = {PublicBaseUrl}/problems/{code},
+/// RFC 9457 ProblemDetails with a stable `code`: `type` = {PublicBaseUrl}/problems/{code},
 /// `title`/`detail` in the request language (ar default, en), `traceId` = W3C trace id.
 public static class ProblemDetailsSetup
 {

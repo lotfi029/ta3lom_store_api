@@ -8,8 +8,8 @@ using Ta3lom.Store.Domain.Errors;
 
 namespace Ta3lom.Store.Api.Extensions;
 
-/// In-memory limiter per container (09 §5.15). Limits come from Store:RateLimits:* so tests can shrink them.
-/// Partition key: the client IP after ForwardedHeaders (HMAC'd once the IP-hash key exists, S-04).
+/// In-memory limiter per container. Limits come from Store:RateLimits:* so tests can shrink them.
+/// Partition key: the client IP after ForwardedHeaders (HMAC'd with the hashing key).
 public static class RateLimitingSetup
 {
     public static IServiceCollection AddStoreRateLimiting(this IServiceCollection services)
@@ -65,7 +65,7 @@ public static class RateLimitingSetup
             QueueLimit = 0,
         }));
 
-    /// The HMAC'd client IP (09 §5.15): the raw IP never becomes a partition key held in memory.
+    /// The HMAC'd client IP: the raw IP never becomes a partition key held in memory.
     private static string ClientKey(HttpContext http) =>
         http.Connection.RemoteIpAddress is { } ip ? http.RequestServices.GetRequiredService<IPseudonymizer>().HashIp(ip.ToString()) : "unknown";
 

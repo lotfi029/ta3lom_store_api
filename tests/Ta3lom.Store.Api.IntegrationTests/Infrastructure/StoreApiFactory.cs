@@ -7,11 +7,14 @@ using Ta3lom.Store.Api.IntegrationTests.Infrastructure.Database;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Infrastructure;
 
-/// Hosts the real Program in-memory. Environment "Testing" (non-production: /docs is mapped).
-/// Settings are overridden with UseSetting so they apply before Program reads configuration.
+/// Hosts the real Program in-memory in the environment "Testing" — not Development, so `/dev`, OpenAPI and the DEV ONLY
+/// key fallback are off and the factory supplies throw-away keys. Settings are applied with UseSetting so they win over
+/// appsettings*.json before Program reads configuration.
 public class StoreApiFactory : WebApplicationFactory<Program>
 {
     public const string PublicBaseUrl = "https://store-api.ta3lom.sa";
+    public const string WebOrigin = "https://store.ta3lom.sa";
+    public const string StagingOrigin = "https://store-staging.ta3lom.sa";
 
     /// Proxy network trusted for X-Forwarded-* in tests (the Docker network in production).
     public const string KnownProxyIp = "10.0.0.2";
@@ -23,12 +26,20 @@ public class StoreApiFactory : WebApplicationFactory<Program>
     /// The migrated and seeded shared database; a test can point a factory elsewhere (e.g. an unreachable server).
     protected virtual string ConnectionString => SharedStoreDatabase.ConnectionString;
 
+    /// Throw-away keys (never real ones): every environment except Development refuses missing or DEV ONLY keys.
+    public static IReadOnlyDictionary<string, string?> TestKeys { get; } = new Dictionary<string, string?>
+    {
+        ["Store:Jwt:CustomerSigningKeyBase64"] = TestKey(1),
+        ["Store:Jwt:StaffSigningKeyBase64"] = TestKey(2),
+        ["Store:Otp:PepperBase64"] = TestKey(3),
+        ["Store:Tokens:StatusKeyBase64"] = TestKey(4),
+        ["Store:Hashing:KeyBase64"] = TestKey(5),
+    };
+
     /// Settings applied on top of appsettings*.json.
-    protected virtual IReadOnlyDictionary<string, string?> Settings => new Dictionary<string, string?>
+    protected virtual IReadOnlyDictionary<string, string?> Settings => new Dictionary<string, string?>(TestKeys)
     {
         ["Store:PublicBaseUrl"] = PublicBaseUrl,
-        ["Store:Cors:Origins:0"] = "https://ta3lom.sa",
-        ["Store:Cors:Origins:1"] = "https://www.ta3lom.sa",
         ["Store:ForwardedHeaders:KnownNetworks:0"] = "10.0.0.0/8",
         ["Serilog:MinimumLevel:Default"] = "Fatal",
     };
@@ -37,7 +48,6 @@ public class StoreApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment(EnvironmentName);
         builder.UseSetting("ConnectionStrings:Store", ConnectionString);
-        builder.UseSetting("Store:Pii:MobileHashKeyBase64", StoreSchema.PiiHashKeyBase64);
         builder.UseSetting("Store:DataProtection:KeysPath", StoreSchema.DataProtectionKeysPath);
         builder.UseSetting("Store:Seed:RunOnStartup", "false");   // the shared database is seeded once by the fixture
         foreach (var (key, value) in Settings)
@@ -55,9 +65,11 @@ public class StoreApiFactory : WebApplicationFactory<Program>
     protected virtual void ConfigureTestServices(IServiceCollection services)
     {
     }
+
+    public static string TestKey(byte seed) => Convert.ToBase64String(Enumerable.Repeat(seed, 32).ToArray());
 }
 
-/// Registers the test-only /v1 probe endpoints (A1). Production code maps no probe route.
+/// Registers the test-only /v1 probe endpoints. Production code maps no probe route.
 public class ProbeApiFactory : StoreApiFactory
 {
     protected override void ConfigureTestServices(IServiceCollection services) =>
@@ -74,32 +86,40 @@ public sealed class RateLimitedApiFactory : ProbeApiFactory
     };
 }
 
-/// Production environment: appsettings.Production.json origins, no /docs, HSTS on.
-public sealed class ProductionApiFactory : StoreApiFactory
+/// Production environment: appsettings.Production.json, no /docs, HSTS on.
+public class ProductionApiFactory : StoreApiFactory
 {
     protected override string EnvironmentName => "Production";
 
-    /// Production refuses missing or DEV ONLY signing keys (S-04): throw-away test keys, never real ones.
-    protected override IReadOnlyDictionary<string, string?> Settings => new Dictionary<string, string?>
+    /// Production also requires the site-rebuild settings (a throw-away token; the outbox is off, nothing is dispatched).
+    protected override IReadOnlyDictionary<string, string?> Settings => new Dictionary<string, string?>(base.Settings)
     {
-        ["Store:ForwardedHeaders:KnownNetworks:0"] = "10.0.0.0/8",
-        ["Serilog:MinimumLevel:Default"] = "Fatal",
-        ["Store:Jwt:CustomerSigningKeyBase64"] = TestKey(1),
-        ["Store:Jwt:StaffSigningKeyBase64"] = TestKey(2),
-        ["Store:Otp:PepperBase64"] = TestKey(3),
-        ["Store:Tokens:StatusKeyBase64"] = TestKey(4),
-        ["Store:Downloads:LinkKeyBase64"] = TestKey(5),
+        ["Store:SiteRebuild:Repository"] = "example/web",
+        ["Store:SiteRebuild:Token"] = "test-token-not-real",
+        ["Store:Outbox:Enabled"] = "false",
     };
-
-    private static string TestKey(byte seed) => Convert.ToBase64String(Enumerable.Repeat(seed, 32).ToArray());
 }
 
-public sealed class StagingApiFactory : ProbeApiFactory
+/// Production without `Store:SiteRebuild`: must refuse to start.
+public sealed class ProductionWithoutRebuildFactory : ProductionApiFactory
 {
-    protected override string EnvironmentName => "Staging";
+    protected override IReadOnlyDictionary<string, string?> Settings =>
+        base.Settings.Where(s => !s.Key.StartsWith("Store:SiteRebuild", StringComparison.Ordinal)).ToDictionary();
+}
+
+/// Development environment: `/dev` and OpenAPI are mapped, DEV ONLY keys are accepted.
+public sealed class DevelopmentApiFactory : StoreApiFactory
+{
+    protected override string EnvironmentName => "Development";
 
     protected override IReadOnlyDictionary<string, string?> Settings => new Dictionary<string, string?>
     {
+        ["Store:PublicBaseUrl"] = PublicBaseUrl,
         ["Serilog:MinimumLevel:Default"] = "Fatal",
+        ["Store:Files:Root"] = Path.Combine(Path.GetTempPath(), $"ta3lom-store-dev-files-{Guid.NewGuid():N}"),
+        ["Store:Outbox:Enabled"] = "false",
     };
+
+    protected override void ConfigureTestServices(IServiceCollection services) =>
+        services.AddSingleton<Ta3lom.Store.Api.Endpoints.IEndpoint, ProbeEndpoints>();
 }

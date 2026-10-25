@@ -4,7 +4,7 @@ using Ta3lom.Store.SharedKernel;
 
 namespace Ta3lom.Store.Infrastructure.Services.Outbox;
 
-/// `type` = the event record name, `payload` = camelCase JSON (09 §3.4). The dispatcher (S-17) maps the type back.
+/// `type` = the event record name, `payload` = camelCase JSON. The dispatcher maps the type back.
 internal static class OutboxSerializer
 {
     public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);

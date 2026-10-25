@@ -1,9 +1,9 @@
-using Ta3lom.Store.Application.DTOs.AdminCatalog;
+using Ta3lom.Store.Application.DTOs.Media;
 using Ta3lom.Store.Domain.Entities.Media;
 
 namespace Ta3lom.Store.Application.Features.Media.Commands.UpdateMediaAlt;
 
-/// `PATCH /v1/admin/media/{id}` (#77, RUL-03): images keep a non-empty Arabic alt text.
+/// `PATCH /v1/admin/media/{id}`: images keep a non-empty Arabic alt text.
 public sealed record UpdateMediaAltCommand(Guid Id, string? AltAr, string? AltEn) : ICommand<MediaAssetResponse>;
 
 internal sealed class UpdateMediaAltCommandHandler(IGenericRepository<MediaAsset> media, IFileUrls urls, IUnitOfWork uow)
@@ -19,7 +19,7 @@ internal sealed class UpdateMediaAltCommandHandler(IGenericRepository<MediaAsset
 
         if (asset.Kind == MediaKind.Image && string.IsNullOrWhiteSpace(command.AltAr))
         {
-            return AdminCatalogErrors.MediaAltRequired;
+            return MediaErrors.AltRequired;
         }
 
         asset.SetAlt(command.AltAr, command.AltEn);

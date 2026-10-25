@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.DataProtection;
 
 namespace Ta3lom.Store.Api.Extensions;
 
-/// `t3s_cart` (09 §5.9, RUL-11/16): the guest cart id, sealed with Data Protection; HttpOnly, Secure, SameSite=Lax,
+/// `t3s_cart`: the guest cart id, sealed with Data Protection; HttpOnly, Secure, SameSite=Lax,
 /// path `/v1`, 30 days from the last change. A tampered or foreign value reads as "no cart".
 internal sealed class CartCookie(IDataProtectionProvider dataProtection)
 {

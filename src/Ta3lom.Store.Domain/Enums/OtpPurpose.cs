@@ -4,5 +4,4 @@ namespace Ta3lom.Store.Domain.Enums;
 public enum OtpPurpose
 {
     Login,
-    BeneficiaryInvite,
 }

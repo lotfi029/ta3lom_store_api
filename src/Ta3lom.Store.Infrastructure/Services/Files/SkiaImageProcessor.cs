@@ -3,23 +3,29 @@ using Ta3lom.Store.Application.Interfaces;
 
 namespace Ta3lom.Store.Infrastructure.Services.Files;
 
-/// Decodes an upload and re-encodes it as WebP (quality 85), scaling the longest edge down to the limit. Only
-/// pixels are written, so EXIF and other metadata (GPS, device) are dropped (11 §9.6, audit G12).
+/// Reads the header first and refuses images above the pixel limit before any pixel is decoded (decompression bombs),
+/// then re-encodes as WebP (quality 85) with the longest edge scaled down to the limit. Only pixels are written, so EXIF
+/// and other metadata (GPS, device) are dropped.
 internal sealed class SkiaImageProcessor : IImageProcessor
 {
-    public ProcessedImage? ToWebp(ReadOnlySpan<byte> input, int maxEdge)
+    public ImageProcessResult ToWebp(ReadOnlySpan<byte> input, int maxEdge, long maxPixels)
     {
         using var data = SKData.CreateCopy(input);
         using var codec = SKCodec.Create(data);
-        if (codec is null)
+        if (codec is null || codec.Info.Width <= 0 || codec.Info.Height <= 0)
         {
-            return null;
+            return new(ImageProcessStatus.NotAnImage, null);
+        }
+
+        if ((long)codec.Info.Width * codec.Info.Height > maxPixels)
+        {
+            return new(ImageProcessStatus.TooManyPixels, null);
         }
 
         using var decoded = SKBitmap.Decode(codec);
         if (decoded is null)
         {
-            return null;
+            return new(ImageProcessStatus.NotAnImage, null);
         }
 
         var bitmap = decoded;
@@ -27,7 +33,8 @@ internal sealed class SkiaImageProcessor : IImageProcessor
         SKBitmap? resized = null;
         if (scale < 1.0)
         {
-            resized = decoded.Resize(new SKImageInfo((int)(decoded.Width * scale), (int)(decoded.Height * scale)), new SKSamplingOptions(SKCubicResampler.Mitchell));
+            var info = new SKImageInfo(Math.Max(1, (int)(decoded.Width * scale)), Math.Max(1, (int)(decoded.Height * scale)));
+            resized = decoded.Resize(info, new SKSamplingOptions(SKCubicResampler.Mitchell));
             bitmap = resized ?? decoded;
         }
 
@@ -35,7 +42,7 @@ internal sealed class SkiaImageProcessor : IImageProcessor
         {
             using var image = SKImage.FromBitmap(bitmap);
             using var encoded = image.Encode(SKEncodedImageFormat.Webp, 85);
-            return new ProcessedImage(encoded.ToArray(), bitmap.Width, bitmap.Height);
+            return new(ImageProcessStatus.Ok, new ProcessedImage(encoded.ToArray(), bitmap.Width, bitmap.Height));
         }
         finally
         {

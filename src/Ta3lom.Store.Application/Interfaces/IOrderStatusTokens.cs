@@ -1,9 +1,11 @@
 namespace Ta3lom.Store.Application.Interfaces;
 
-/// Per-order status token (11 §6.3): `st_` + HMAC of the order id, so the thanks page can poll without a session.
+/// The per-order status token handed to the browser at checkout (`GET /v1/orders/{reference}/status?t=`). Only its hash is
+/// stored on the order.
 public interface IOrderStatusTokens
 {
-    string Issue(Guid orderId);
+    (string Token, string Hash) Create(string reference);
 
-    bool Verify(Guid orderId, string? token);
+    /// Fixed-time comparison of a presented token with the stored hash.
+    bool Matches(string token, string storedHash);
 }

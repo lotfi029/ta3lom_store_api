@@ -3,8 +3,9 @@ using Ta3lom.Store.ArchitectureTests.Support;
 
 namespace Ta3lom.Store.ArchitectureTests;
 
-/// Domain entities protect their state (CLAUDE.md): no public setters, no persistence attributes,
-/// a private parameterless constructor for EF Core and a public one that sets the required state.
+/// Domain entities protect their state: no public setters, no persistence attributes, a private parameterless constructor
+/// for EF Core, and a creation path that sets the required state (a constructor or a static factory; child entities are
+/// created by their aggregate root through an internal one).
 public sealed class DomainModelTests
 {
     private static readonly Type[] Entities = [.. Assemblies.Domain.GetTypes()
@@ -13,7 +14,7 @@ public sealed class DomainModelTests
                     && t.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, Type.EmptyTypes) is not null)];
 
     [Fact]
-    public void Every_table_has_an_entity() => Entities.Length.ShouldBe(48);   // 49 tables; idempotency_key is an Infrastructure record
+    public void Every_table_has_an_entity() => Entities.Length.ShouldBe(18);   // 19 tables; idempotency_key is an Infrastructure record
 
     [Fact]
     public void Entities_have_no_public_setters()
@@ -36,6 +37,10 @@ public sealed class DomainModelTests
     }
 
     [Fact]
-    public void Entities_are_created_through_a_public_constructor() =>
-        Entities.Where(t => t.GetConstructors().Length == 0).Select(t => t.Name).ShouldBeEmpty();
+    public void Entities_have_a_creation_path_besides_the_EF_constructor() =>
+        Entities.Where(t =>
+                !t.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Any(c => !c.IsPrivate)
+                && !t.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic).Any(m => m.ReturnType == t && !m.IsPrivate)
+                && !t.GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic).Any(c => c.IsPrivate && c.GetParameters().Length > 0))
+            .Select(t => t.Name).ShouldBeEmpty();
 }

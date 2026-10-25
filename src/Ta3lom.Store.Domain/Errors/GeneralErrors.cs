@@ -1,6 +1,6 @@
 namespace Ta3lom.Store.Domain.Errors;
 
-/// Cross-cutting errors (11 §1.6 "General"). Module catalogues (`CartErrors`, `CheckoutErrors` …) follow the same shape.
+/// Cross-cutting errors. Module catalogues (`CartErrors`, `OrderErrors` …) follow the same shape.
 public static class GeneralErrors
 {
     public static Error NotFound => Error.NotFound(ErrorCodes.NotFound, "The resource was not found.");

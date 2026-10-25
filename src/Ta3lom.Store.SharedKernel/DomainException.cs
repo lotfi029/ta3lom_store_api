@@ -1,6 +1,6 @@
 namespace Ta3lom.Store.SharedKernel;
 
-/// Thrown only for invariant violations that indicate a bug or a race (09 §3.2).
+/// Thrown only for invariant violations that indicate a bug or a race.
 /// Expected business outcomes are returned as Application errors, not thrown.
 public sealed class DomainException : Exception
 {
@@ -21,6 +21,6 @@ public sealed class DomainException : Exception
         Code = "domain.error";
     }
 
-    /// Stable machine code, returned as the ProblemDetails `code` (11 §1.6).
+    /// Stable machine code, returned as the ProblemDetails `code`.
     public string Code { get; }
 }

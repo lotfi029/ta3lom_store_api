@@ -6,7 +6,7 @@ using Ta3lom.Store.Api.Cli;
 using Ta3lom.Store.Api.Endpoints;
 using Ta3lom.Store.Api.Extensions;
 
-// CLI verbs run without the web host (database/03 §3).
+// CLI verbs run without the web host.
 if (args.Length > 0 && args[0] == CreateAdminCommand.Verb)
 {
     return CreateAdminCommand.Run(args[1..], Console.Out);
@@ -22,7 +22,7 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    // Explicit Mapster maps must be complete (K-h); fails fast on an unmapped member.
+    // Explicit Mapster maps must be complete; fails fast on an unmapped member.
     app.Services.GetRequiredService<TypeAdapterConfig>().Compile();
 }
 
@@ -52,10 +52,10 @@ app.MapEndpoints(v1);
 app.MapDevEndpoints();
 app.MapHealthEndpoints();
 
-if (!app.Environment.IsProduction())
+if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();                              // /openapi/v1.json
-    app.MapScalarApiReference("/docs");            // Scalar UI
+    app.MapOpenApi().AllowAnonymous();                             // /openapi/v1.json
+    app.MapScalarApiReference("/docs").AllowAnonymous();           // Scalar UI
 }
 
 await app.RunAsync();

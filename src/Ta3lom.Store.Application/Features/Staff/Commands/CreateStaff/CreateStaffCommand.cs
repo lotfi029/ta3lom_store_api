@@ -6,8 +6,8 @@ using Ta3lom.Store.Domain.Entities.Identity;
 
 namespace Ta3lom.Store.Application.Features.Staff.Commands.CreateStaff;
 
-/// `POST /v1/admin/staff` (#124, RUL-62): a one-time password is returned once; TOTP enrolment is forced at
-/// the first login (no secret yet). Also used by the `create-admin` CLI.
+/// `POST /v1/admin/staff` (BR-A12): a one-time password is returned once and must be changed at the first sign-in; TOTP
+/// enrolment is forced then too (no secret yet). Also used by the `create-admin` CLI.
 public sealed record CreateStaffCommand(string Email, string Name, IReadOnlyList<string> Roles) : ICommand<CreateStaffResponse>;
 
 internal sealed class CreateStaffCommandHandler(

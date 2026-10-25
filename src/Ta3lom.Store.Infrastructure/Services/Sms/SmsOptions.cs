@@ -1,6 +1,6 @@
 namespace Ta3lom.Store.Infrastructure.Services.Sms;
 
-/// `Store:Sms` (09 §4.3). `Provider = sink` writes to the log and `/dev/sms`; `unifonic` calls the provider.
+/// `Store:Sms`. `Provider = sink` writes to the log and `/dev/sms`; `unifonic` calls the provider.
 /// Keys are empty in the repo: the real provider needs the approved sender id (launch checklist).
 public sealed class SmsOptions
 {

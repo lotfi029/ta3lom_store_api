@@ -2,114 +2,100 @@ using Microsoft.AspNetCore.Mvc;
 using Ta3lom.Store.Api.Extensions;
 using Ta3lom.Store.Application.Abstractions.Messaging;
 using Ta3lom.Store.Application.Abstractions.Pagination;
-using Ta3lom.Store.Application.DTOs.AdminCatalog;
 using Ta3lom.Store.Application.DTOs.Catalog;
-using Ta3lom.Store.Application.Features.AdminCatalog.Commands.AddBookFormat;
-using Ta3lom.Store.Application.Features.AdminCatalog.Commands.ArchiveProduct;
-using Ta3lom.Store.Application.Features.AdminCatalog.Commands.CloseOffer;
-using Ta3lom.Store.Application.Features.AdminCatalog.Commands.CreateOffer;
-using Ta3lom.Store.Application.Features.AdminCatalog.Commands.CreateProduct;
-using Ta3lom.Store.Application.Features.AdminCatalog.Commands.PublishProduct;
-using Ta3lom.Store.Application.Features.AdminCatalog.Commands.ReplaceModules;
-using Ta3lom.Store.Application.Features.AdminCatalog.Commands.SetGoalSeed;
-using Ta3lom.Store.Application.Features.AdminCatalog.Commands.UpdateBookFormat;
-using Ta3lom.Store.Application.Features.AdminCatalog.Commands.UpdateOffer;
-using Ta3lom.Store.Application.Features.AdminCatalog.Commands.UpdateProduct;
-using Ta3lom.Store.Application.Features.AdminCatalog.Commands.UpsertBookDetail;
-using Ta3lom.Store.Application.Features.AdminCatalog.Commands.UpsertCauseDetail;
-using Ta3lom.Store.Application.Features.AdminCatalog.Commands.UpsertCourseDetail;
-using Ta3lom.Store.Application.Features.AdminCatalog.Queries.GetAdminProduct;
-using Ta3lom.Store.Application.Features.AdminCatalog.Queries.ListAdminProducts;
-using Ta3lom.Store.Application.Features.AdminCatalog.Queries.ListOffers;
-using Ta3lom.Store.Application.Features.AdminCatalog.Queries.PreviewProduct;
+using Ta3lom.Store.Application.Features.AdminCatalog.Categories;
+using Ta3lom.Store.Application.Features.AdminCatalog.Projects;
 using Ta3lom.Store.Domain.Constants;
 
 namespace Ta3lom.Store.Api.Endpoints;
 
-/// `/v1/admin/products`, `/v1/admin/formats`, `/v1/admin/offers` (11 §9.3–§9.4, endpoints #54–#71; RUL-01 … RUL-07,
-/// RUL-10). Reads need `staff:read`, writes `staff:catalogue`; writes are audited and evict the public cache.
+/// `/v1/admin/categories` and `/v1/admin/projects` (BR-A01…A05, D-05…D-08): reads for every staff role, writes for admin and
+/// store_manager. Every write evicts the public catalogue cache.
 internal sealed class AdminCatalogEndpoints : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        var admin = app.MapGroup("/admin").WithTags("Admin · Catalogue").RequireRateLimiting(RatePolicies.Admin)
+        var categories = app.MapGroup("/admin/categories").WithTags("Admin · Categories")
+            .RequireRateLimiting(RatePolicies.Admin).RequireSameOrigin()
             .ProducesProblem(StatusCodes.Status401Unauthorized).ProducesProblem(StatusCodes.Status403Forbidden);
-        var read = admin.MapGroup(string.Empty).RequireAuthorization(Policies.StaffRead);
-        var write = admin.MapGroup(string.Empty).RequireAuthorization(Policies.StaffCatalogue).EvictsCatalogCache()
-            .ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status404NotFound);
+        categories.MapGet("/", ListCategoriesAsync).RequireAuthorization(Policies.StaffRead).Produces<IReadOnlyList<AdminCategoryResponse>>();
+        categories.MapPost("/", CreateCategoryAsync).RequireAuthorization(Policies.StaffCatalogue).EvictsCatalogCache()
+            .Produces<AdminCategoryResponse>(StatusCodes.Status201Created).ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+        categories.MapPut("/order", ReorderCategoriesAsync).RequireAuthorization(Policies.StaffCatalogue).EvictsCatalogCache()
+            .Produces<IReadOnlyList<AdminCategoryResponse>>().ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status404NotFound);
+        categories.MapPut("/{id:guid}", UpdateCategoryAsync).RequireAuthorization(Policies.StaffCatalogue).EvictsCatalogCache()
+            .Produces<AdminCategoryResponse>().ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
-        read.MapGet("/products", ListAsync).Produces<PagedResult<AdminProductRow>>();
-        write.MapPost("/products", CreateAsync).Produces<AdminProductResponse>(StatusCodes.Status201Created).ProducesProblem(StatusCodes.Status409Conflict);
-        read.MapGet("/products/{id:guid}", GetAsync).Produces<AdminProductResponse>().ProducesProblem(StatusCodes.Status404NotFound);
-        write.MapPut("/products/{id:guid}", UpdateAsync).Produces<AdminProductResponse>().ProducesProblem(StatusCodes.Status409Conflict);
-        write.MapPut("/products/{id:guid}/course", CourseAsync).Produces<AdminProductResponse>();
-        write.MapPut("/products/{id:guid}/modules", ModulesAsync).Produces<AdminProductResponse>();
-        write.MapPut("/products/{id:guid}/book", BookAsync).Produces<AdminProductResponse>();
-        write.MapPost("/products/{id:guid}/formats", AddFormatAsync).Produces<AdminBookFormat>(StatusCodes.Status201Created);
-        write.MapPut("/formats/{formatId:guid}", UpdateFormatAsync).Produces<AdminBookFormat>();
-        write.MapPut("/products/{id:guid}/cause", CauseAsync).Produces<AdminProductResponse>().ProducesProblem(StatusCodes.Status409Conflict);
-        write.MapPost("/products/{id:guid}/publish", PublishAsync).Produces<AdminProductResponse>().ProducesProblem(StatusCodes.Status422UnprocessableEntity);
-        write.MapPost("/products/{id:guid}/archive", ArchiveAsync).Produces<AdminProductResponse>();
-        read.MapGet("/products/{id:guid}/preview", PreviewAsync).Produces<ProductDetailResponse>().ProducesProblem(StatusCodes.Status404NotFound);
-        write.MapPut("/products/{id:guid}/goal-seed", GoalSeedAsync).Produces<GoalFiguresResponse>();
-        read.MapGet("/products/{id:guid}/offers", OffersAsync).Produces<IReadOnlyList<OfferResponse>>();
-        write.MapPost("/products/{id:guid}/offers", CreateOfferAsync).Produces<OfferResponse>(StatusCodes.Status201Created).ProducesProblem(StatusCodes.Status409Conflict);
-        write.MapPut("/offers/{offerId:guid}", UpdateOfferAsync).Produces<OfferResponse>();
-        write.MapPost("/offers/{offerId:guid}/close", CloseOfferAsync).Produces<CloseOfferResponse>();
+        var projects = app.MapGroup("/admin/projects").WithTags("Admin · Projects")
+            .RequireRateLimiting(RatePolicies.Admin).RequireSameOrigin()
+            .ProducesProblem(StatusCodes.Status401Unauthorized).ProducesProblem(StatusCodes.Status403Forbidden);
+        projects.MapGet("/", ListProjectsAsync).RequireAuthorization(Policies.StaffRead)
+            .Produces<PagedResult<AdminProjectRow>>().ProducesProblem(StatusCodes.Status400BadRequest);
+        projects.MapPost("/", CreateProjectAsync).RequireAuthorization(Policies.StaffCatalogue).EvictsCatalogCache()
+            .Produces<AdminProjectResponse>(StatusCodes.Status201Created).ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+        projects.MapGet("/{id:guid}", GetProjectAsync).RequireAuthorization(Policies.StaffRead)
+            .Produces<AdminProjectResponse>().ProducesProblem(StatusCodes.Status404NotFound);
+        projects.MapPut("/{id:guid}", UpdateProjectAsync).RequireAuthorization(Policies.StaffCatalogue).EvictsCatalogCache()
+            .Produces<AdminProjectResponse>().ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+        projects.MapPut("/{id:guid}/options", ReplaceOptionsAsync).RequireAuthorization(Policies.StaffCatalogue).EvictsCatalogCache()
+            .Produces<AdminProjectResponse>().ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+        projects.MapPost("/{id:guid}/publish", PublishAsync).RequireAuthorization(Policies.StaffCatalogue).EvictsCatalogCache()
+            .Produces<AdminProjectResponse>().ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+        projects.MapPost("/{id:guid}/archive", ArchiveAsync).RequireAuthorization(Policies.StaffCatalogue).EvictsCatalogCache()
+            .Produces<AdminProjectResponse>().ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+        projects.MapGet("/{id:guid}/preview", PreviewAsync).RequireAuthorization(Policies.StaffRead)
+            .Produces<ProjectDetail>().ProducesProblem(StatusCodes.Status404NotFound);
     }
 
-    private static async Task<IResult> ListAsync([FromServices] IQueryHandler<ListAdminProductsQuery, PagedResult<AdminProductRow>> handler, CancellationToken ct,
-        string? type = null, string? status = null, string? category = null, string? q = null, int page = 1, int pageSize = 20) =>
-        (await handler.HandleAsync(new ListAdminProductsQuery(type, status, category, q, page, pageSize), ct)).ToHttp();
+    private static async Task<IResult> ListCategoriesAsync([FromServices] IQueryHandler<ListAdminCategoriesQuery, IReadOnlyList<AdminCategoryResponse>> handler,
+        CancellationToken ct) =>
+        (await handler.HandleAsync(new ListAdminCategoriesQuery(), ct)).ToHttp();
 
-    private static async Task<IResult> CreateAsync([FromBody] ProductInput input, [FromServices] ICommandHandler<CreateProductCommand, AdminProductResponse> handler, CancellationToken ct) =>
-        (await handler.HandleAsync(new CreateProductCommand(input), ct)).ToHttp(p => TypedResults.Created($"/v1/admin/products/{p.Id}", p));
+    private static async Task<IResult> CreateCategoryAsync([FromBody] CategoryInput input,
+        [FromServices] ICommandHandler<CreateCategoryCommand, AdminCategoryResponse> handler, CancellationToken ct) =>
+        (await handler.HandleAsync(new CreateCategoryCommand(input), ct)).ToHttp(c => TypedResults.Created($"/v1/admin/categories/{c.Id}", c));
 
-    private static async Task<IResult> GetAsync(Guid id, [FromServices] IQueryHandler<GetAdminProductQuery, AdminProductResponse> handler, CancellationToken ct) =>
-        (await handler.HandleAsync(new GetAdminProductQuery(id), ct)).ToHttp();
+    private static async Task<IResult> UpdateCategoryAsync(Guid id, [FromBody] CategoryInput input,
+        [FromServices] ICommandHandler<UpdateCategoryCommand, AdminCategoryResponse> handler, CancellationToken ct) =>
+        (await handler.HandleAsync(new UpdateCategoryCommand(id, input), ct)).ToHttp();
 
-    private static async Task<IResult> UpdateAsync(Guid id, [FromBody] ProductInput input, [FromServices] ICommandHandler<UpdateProductCommand, AdminProductResponse> handler, CancellationToken ct) =>
-        (await handler.HandleAsync(new UpdateProductCommand(id, input), ct)).ToHttp();
+    private static async Task<IResult> ReorderCategoriesAsync([FromBody] CategoryOrderInput input,
+        [FromServices] ICommandHandler<ReorderCategoriesCommand, IReadOnlyList<AdminCategoryResponse>> handler, CancellationToken ct) =>
+        (await handler.HandleAsync(new ReorderCategoriesCommand(input.Items ?? []), ct)).ToHttp();
 
-    private static async Task<IResult> CourseAsync(Guid id, [FromBody] CourseDetailInput input, [FromServices] ICommandHandler<UpsertCourseDetailCommand, AdminProductResponse> handler, CancellationToken ct) =>
-        (await handler.HandleAsync(new UpsertCourseDetailCommand(id, input), ct)).ToHttp();
+    private static async Task<IResult> ListProjectsAsync([FromServices] IQueryHandler<ListAdminProjectsQuery, PagedResult<AdminProjectRow>> handler,
+        CancellationToken ct, string? status = null, Guid? category = null, string? q = null, int page = 1, int pageSize = 20) =>
+        (await handler.HandleAsync(new ListAdminProjectsQuery(status, category, q, page, pageSize), ct)).ToHttp();
 
-    private static async Task<IResult> ModulesAsync(Guid id, [FromBody] IReadOnlyList<CourseModuleInput> input, [FromServices] ICommandHandler<ReplaceModulesCommand, AdminProductResponse> handler, CancellationToken ct) =>
-        (await handler.HandleAsync(new ReplaceModulesCommand(id, input), ct)).ToHttp();
+    private static async Task<IResult> CreateProjectAsync([FromBody] ProjectInput input,
+        [FromServices] ICommandHandler<CreateProjectCommand, AdminProjectResponse> handler, CancellationToken ct) =>
+        (await handler.HandleAsync(new CreateProjectCommand(input), ct)).ToHttp(p => TypedResults.Created($"/v1/admin/projects/{p.Id}", p));
 
-    private static async Task<IResult> BookAsync(Guid id, [FromBody] BookDetailInput input, [FromServices] ICommandHandler<UpsertBookDetailCommand, AdminProductResponse> handler, CancellationToken ct) =>
-        (await handler.HandleAsync(new UpsertBookDetailCommand(id, input), ct)).ToHttp();
+    private static async Task<IResult> GetProjectAsync(Guid id, [FromServices] IQueryHandler<GetAdminProjectQuery, AdminProjectResponse> handler,
+        CancellationToken ct) =>
+        (await handler.HandleAsync(new GetAdminProjectQuery(id), ct)).ToHttp();
 
-    private static async Task<IResult> AddFormatAsync(Guid id, [FromBody] BookFormatInput input, [FromServices] ICommandHandler<AddBookFormatCommand, AdminBookFormat> handler, CancellationToken ct) =>
-        (await handler.HandleAsync(new AddBookFormatCommand(id, input), ct)).ToHttp(f => TypedResults.Created($"/v1/admin/formats/{f.Id}", f));
+    private static async Task<IResult> UpdateProjectAsync(Guid id, [FromBody] ProjectInput input,
+        [FromServices] ICommandHandler<UpdateProjectCommand, AdminProjectResponse> handler, CancellationToken ct) =>
+        (await handler.HandleAsync(new UpdateProjectCommand(id, input), ct)).ToHttp();
 
-    private static async Task<IResult> UpdateFormatAsync(Guid formatId, [FromBody] BookFormatInput input, [FromServices] ICommandHandler<UpdateBookFormatCommand, AdminBookFormat> handler, CancellationToken ct) =>
-        (await handler.HandleAsync(new UpdateBookFormatCommand(formatId, input), ct)).ToHttp();
+    private static async Task<IResult> ReplaceOptionsAsync(Guid id, [FromBody] ProjectOptionsInput input,
+        [FromServices] ICommandHandler<ReplaceProjectOptionsCommand, AdminProjectResponse> handler, CancellationToken ct) =>
+        (await handler.HandleAsync(new ReplaceProjectOptionsCommand(id, input), ct)).ToHttp();
 
-    private static async Task<IResult> CauseAsync(Guid id, [FromBody] CauseDetailInput input, [FromServices] ICommandHandler<UpsertCauseDetailCommand, AdminProductResponse> handler, CancellationToken ct) =>
-        (await handler.HandleAsync(new UpsertCauseDetailCommand(id, input), ct)).ToHttp();
+    private static async Task<IResult> PublishAsync(Guid id, [FromServices] ICommandHandler<PublishProjectCommand, AdminProjectResponse> handler,
+        CancellationToken ct) =>
+        (await handler.HandleAsync(new PublishProjectCommand(id), ct)).ToHttp();
 
-    private static async Task<IResult> PublishAsync(Guid id, [FromServices] ICommandHandler<PublishProductCommand, AdminProductResponse> handler, CancellationToken ct) =>
-        (await handler.HandleAsync(new PublishProductCommand(id), ct)).ToHttp();
+    private static async Task<IResult> ArchiveAsync(Guid id, [FromServices] ICommandHandler<ArchiveProjectCommand, AdminProjectResponse> handler,
+        CancellationToken ct) =>
+        (await handler.HandleAsync(new ArchiveProjectCommand(id), ct)).ToHttp();
 
-    private static async Task<IResult> ArchiveAsync(Guid id, [FromServices] ICommandHandler<ArchiveProductCommand, AdminProductResponse> handler, CancellationToken ct) =>
-        (await handler.HandleAsync(new ArchiveProductCommand(id), ct)).ToHttp();
-
-    private static async Task<IResult> PreviewAsync(Guid id, [FromServices] IQueryHandler<PreviewProductQuery, ProductDetailResponse> handler, CancellationToken ct) =>
-        (await handler.HandleAsync(new PreviewProductQuery(id), ct)).ToHttp();
-
-    private static async Task<IResult> GoalSeedAsync(Guid id, [FromBody] GoalSeedInput input, [FromServices] ICommandHandler<SetGoalSeedCommand, GoalFiguresResponse> handler, CancellationToken ct) =>
-        (await handler.HandleAsync(new SetGoalSeedCommand(id, input), ct)).ToHttp();
-
-    private static async Task<IResult> OffersAsync(Guid id, [FromServices] IQueryHandler<ListOffersQuery, IReadOnlyList<OfferResponse>> handler, CancellationToken ct) =>
-        (await handler.HandleAsync(new ListOffersQuery(id), ct)).ToHttp();
-
-    private static async Task<IResult> CreateOfferAsync(Guid id, [FromBody] OfferInput input, [FromServices] ICommandHandler<CreateOfferCommand, OfferResponse> handler, CancellationToken ct) =>
-        (await handler.HandleAsync(new CreateOfferCommand(id, input), ct)).ToHttp(o => TypedResults.Created($"/v1/admin/offers/{o.Id}", o));
-
-    private static async Task<IResult> UpdateOfferAsync(Guid offerId, [FromBody] OfferInput input, [FromServices] ICommandHandler<UpdateOfferCommand, OfferResponse> handler, CancellationToken ct) =>
-        (await handler.HandleAsync(new UpdateOfferCommand(offerId, input), ct)).ToHttp();
-
-    private static async Task<IResult> CloseOfferAsync(Guid offerId, [FromBody] CloseOfferInput? input, [FromServices] ICommandHandler<CloseOfferCommand, CloseOfferResponse> handler, CancellationToken ct) =>
-        (await handler.HandleAsync(new CloseOfferCommand(offerId, input?.SweepPool ?? false), ct)).ToHttp();
+    private static async Task<IResult> PreviewAsync(Guid id, [FromServices] IQueryHandler<PreviewProjectQuery, ProjectDetail> handler, CancellationToken ct) =>
+        (await handler.HandleAsync(new PreviewProjectQuery(id), ct)).ToHttp();
 }

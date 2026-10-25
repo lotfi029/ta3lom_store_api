@@ -8,8 +8,8 @@ using Ta3lom.Store.Domain.Constants;
 
 namespace Ta3lom.Store.Infrastructure.Services.Security;
 
-/// HMAC-SHA256 JWTs with a `kid` header (09 §5.8): customer (`store-customer`, 15 min), staff (`store-staff`,
-/// 10 min, `role` claims) and the staff MFA step (`store-staff-mfa`, 5 min).
+/// HMAC-SHA256 JWTs with a `kid` header (D-11): customer (`store-customer`, 15 min), staff (`store-staff`, 10 min, `role`
+/// claims, `pwd_change=true` while a forced password change is pending) and the staff MFA step (`store-staff-mfa`, 5 min).
 internal sealed class JwtTokenIssuer(IOptions<JwtOptions> options, IClock clock) : IAccessTokenIssuer
 {
     private readonly JsonWebTokenHandler _handler = new() { SetDefaultTimesOnTokenCreation = false };
@@ -20,11 +20,16 @@ internal sealed class JwtTokenIssuer(IOptions<JwtOptions> options, IClock clock)
         Issue(options.Value.CustomerAudience, options.Value.CustomerSigningKeyBase64, SessionPolicy.CustomerAccessLifetime,
             [new(JwtRegisteredClaimNames.Sub, customerId.ToString())]);
 
-    public AccessToken IssueStaff(Guid staffId, string email, IReadOnlyCollection<string> roles)
+    public AccessToken IssueStaff(Guid staffId, string email, IReadOnlyCollection<string> roles, bool passwordChangeRequired)
     {
         ArgumentNullException.ThrowIfNull(roles);
         List<Claim> claims = [new(JwtRegisteredClaimNames.Sub, staffId.ToString()), new(JwtRegisteredClaimNames.Email, email)];
-        claims.AddRange(roles.Select(r => new Claim("role", r)));
+        claims.AddRange(roles.Select(r => new Claim(StoreClaims.Role, r)));
+        if (passwordChangeRequired)
+        {
+            claims.Add(new Claim(StoreClaims.PasswordChangeRequired, "true"));
+        }
+
         return Issue(options.Value.StaffAudience, options.Value.StaffSigningKeyBase64, SessionPolicy.StaffAccessLifetime, claims);
     }
 
@@ -36,6 +41,7 @@ internal sealed class JwtTokenIssuer(IOptions<JwtOptions> options, IClock clock)
     {
         var o = options.Value;
         var now = clock.UtcNow.UtcDateTime;
+        var jti = Guid.CreateVersion7().ToString("N");
         var descriptor = new SecurityTokenDescriptor
         {
             Issuer = o.Issuer,
@@ -43,9 +49,9 @@ internal sealed class JwtTokenIssuer(IOptions<JwtOptions> options, IClock clock)
             IssuedAt = now,
             NotBefore = now,
             Expires = now + lifetime,
-            Subject = new ClaimsIdentity(claims.Append(new Claim(JwtRegisteredClaimNames.Jti, Guid.CreateVersion7().ToString()))),
+            Subject = new ClaimsIdentity(claims.Append(new Claim(JwtRegisteredClaimNames.Jti, jti))),
             SigningCredentials = new SigningCredentials(Key(keyBase64, o.KeyId), SecurityAlgorithms.HmacSha256),
         };
-        return new AccessToken(_handler.CreateToken(descriptor), (int)lifetime.TotalSeconds);
+        return new AccessToken(_handler.CreateToken(descriptor), (int)lifetime.TotalSeconds, jti, clock.UtcNow + lifetime);
     }
 }

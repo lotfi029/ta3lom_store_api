@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.DataProtection.Repositories;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -17,15 +16,15 @@ using Ta3lom.Store.Infrastructure.Persistence;
 using Ta3lom.Store.Infrastructure.Persistence.Interceptors;
 using Ta3lom.Store.Infrastructure.Persistence.Repositories;
 using Ta3lom.Store.Infrastructure.Persistence.Seeders;
-using Ta3lom.Store.Infrastructure.Services.Catalog;
-using Ta3lom.Store.Infrastructure.Services.Documents;
 using Ta3lom.Store.Infrastructure.Services.Email;
 using Ta3lom.Store.Infrastructure.Services.Files;
 using Ta3lom.Store.Infrastructure.Services.Health;
 using Ta3lom.Store.Infrastructure.Services.Jobs;
+using Ta3lom.Store.Infrastructure.Services.Operations;
 using Ta3lom.Store.Infrastructure.Services.Outbox;
 using Ta3lom.Store.Infrastructure.Services.Security;
 using Ta3lom.Store.Infrastructure.Services.Settings;
+using Ta3lom.Store.Infrastructure.Services.SiteRebuild;
 using Ta3lom.Store.Infrastructure.Services.Sms;
 using Ta3lom.Store.Infrastructure.Services.Templates;
 using Ta3lom.Store.Infrastructure.Services.Time;
@@ -36,8 +35,7 @@ public static class DependencyInjection
 {
     public const string ConnectionStringName = "Store";
 
-    /// Adapters for the Application ports: clock, persistence (S-02), data protection, seed, health.
-    /// SMS (S-04), email and documents (S-17) and the other adapters follow in their sessions.
+    /// Adapters for the Application ports: clock, persistence, data protection, security, messaging, files, jobs.
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
@@ -50,22 +48,16 @@ public static class DependencyInjection
         AddRepositories(services);
         AddSecurity(services);
         AddMessaging(services);
+        AddFiles(services);
 
-        // Jobs (09 §6): RAM store, in-process, Riyadh cron; each session adds its jobs here.
+        // Jobs: RAM store, in-process, Riyadh cron. Each is a thin shell around one Application command.
         services.AddQuartz(q =>
         {
             q.AddStoreJob<PruneOtpJob>(PruneOtpJob.Cron);
-            q.AddStoreJob<ExpireGuestCartsJob>(ExpireGuestCartsJob.Cron);
-            q.AddStoreJob<ExpireUnpaidOrdersJob>(ExpireUnpaidOrdersJob.Cron);
-            q.AddStoreJob<LmsProgressSyncJob>(LmsProgressSyncJob.Cron);
-            q.AddStoreJob<LowStockAlertJob>(LowStockAlertJob.Cron);
-            q.AddStoreJob<AllocationAlertsJob>(AllocationAlertsJob.Cron);
-            q.AddStoreJob<LapseUnitsJob>(LapseUnitsJob.Cron);
-            q.AddStoreJob<CloseCampaignsJob>(CloseCampaignsJob.Cron);
-            q.AddStoreJob<IntegrityChecksJob>(IntegrityChecksJob.Cron);
-            q.AddStoreJob<RetentionJob>(RetentionJob.Cron);
             q.AddStoreJob<PruneIdempotencyKeysJob>(PruneIdempotencyKeysJob.Cron);
-            q.AddStoreJob<SponsorDigestJob>(SponsorDigestJob.Cron);
+            q.AddStoreJob<ExpireGuestCartsJob>(ExpireGuestCartsJob.Cron);
+            q.AddStoreJob<RetentionJob>(RetentionJob.Cron);
+            q.AddStoreJob<IntegrityChecksJob>(IntegrityChecksJob.Cron);
         });
         services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
         services.AddSingleton<IJobRunner, QuartzJobRunner>();
@@ -85,7 +77,7 @@ public static class DependencyInjection
         services.AddDbContext<StoreDbContext>((sp, options) =>
         {
             StoreDbContextOptions.Configure(options, sp.GetRequiredService<IOptions<DatabaseOptions>>().Value.ConnectionString);
-            // Audit first (it audits business rows), then the outbox rows for the raised domain events (09 §3.4).
+            // Audit first (it audits business rows), then the outbox rows for the raised domain events.
             options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>(), sp.GetRequiredService<OutboxSaveChangesInterceptor>());
         });
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<StoreDbContext>());
@@ -93,6 +85,7 @@ public static class DependencyInjection
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 
         services.AddScoped<SeedRunner>();
+        services.AddScoped<DevelopmentCatalogSeeder>();
         services.AddHostedService<SeedHostedService>();
 
         services.AddHealthChecks().AddCheck<PostgresHealthCheck>(PostgresHealthCheck.Name, tags: [HealthTags.Ready]);
@@ -105,23 +98,13 @@ public static class DependencyInjection
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IStaffUserRepository, StaffUserRepository>();
-        services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<ICartRepository, CartRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
-        services.AddScoped<IStockRepository, StockRepository>();
-        services.AddScoped<IOperationsStatus, Services.Operations.OperationsStatus>();
-        services.AddScoped<IOperationsMaintenance, Services.Operations.OperationsMaintenance>();
-        services.AddOptions<Services.SiteRebuild.SiteRebuildOptions>().BindConfiguration(Services.SiteRebuild.SiteRebuildOptions.Section);
-        services.AddHttpClient<ISiteRebuildTrigger, Services.SiteRebuild.GitHubSiteRebuildTrigger>(c => c.Timeout = TimeSpan.FromSeconds(10));
-        services.AddScoped<IGoalProgressRepository, GoalProgressRepository>();
-        services.AddScoped<ISponsorshipPoolRepository, SponsorshipPoolRepository>();
-        services.AddScoped<IBeneficiaryRepository, BeneficiaryRepository>();
-        services.AddScoped<ISponsoredUnitRepository, SponsoredUnitRepository>();
-        services.AddScoped<IZakatLedgerRepository, ZakatLedgerRepository>();
-        services.AddScoped<IDocumentNumberAllocator, DocumentNumberAllocator>();
-        services.AddScoped<IEnrolmentRepository, EnrolmentRepository>();
-        services.AddScoped<IDownloadGrantRepository, DownloadGrantRepository>();
+        services.AddScoped<IProjectRepository, ProjectRepository>();
+        services.AddScoped<ICatalogSearch, Services.Catalog.CatalogSearch>();
+        services.AddScoped<IOperationsStatus, OperationsStatus>();
+        services.AddScoped<IOperationsMaintenance, OperationsMaintenance>();
     }
 
     private static void AddSecurity(IServiceCollection services)
@@ -129,29 +112,31 @@ public static class DependencyInjection
         services.AddOptions<JwtOptions>().BindConfiguration(JwtOptions.Section).ValidateOnStart();
         services.AddOptions<OtpOptions>().BindConfiguration(OtpOptions.Section).ValidateOnStart();
         services.AddOptions<TokenKeyOptions>().BindConfiguration(TokenKeyOptions.Section).ValidateOnStart();
-        services.AddOptions<DownloadKeyOptions>().BindConfiguration(DownloadKeyOptions.Section).ValidateOnStart();
+        services.AddOptions<HashingOptions>().BindConfiguration(HashingOptions.Section).ValidateOnStart();
         services.AddSingleton<KeyOptionsSetup>();
         services.AddSingleton<IPostConfigureOptions<JwtOptions>>(sp => sp.GetRequiredService<KeyOptionsSetup>());
         services.AddSingleton<IPostConfigureOptions<OtpOptions>>(sp => sp.GetRequiredService<KeyOptionsSetup>());
         services.AddSingleton<IPostConfigureOptions<TokenKeyOptions>>(sp => sp.GetRequiredService<KeyOptionsSetup>());
-        services.AddSingleton<IPostConfigureOptions<DownloadKeyOptions>>(sp => sp.GetRequiredService<KeyOptionsSetup>());
+        services.AddSingleton<IPostConfigureOptions<HashingOptions>>(sp => sp.GetRequiredService<KeyOptionsSetup>());
         services.AddSingleton<IValidateOptions<JwtOptions>>(sp => sp.GetRequiredService<KeyOptionsSetup>());
         services.AddSingleton<IValidateOptions<OtpOptions>>(sp => sp.GetRequiredService<KeyOptionsSetup>());
         services.AddSingleton<IValidateOptions<TokenKeyOptions>>(sp => sp.GetRequiredService<KeyOptionsSetup>());
-        services.AddSingleton<IValidateOptions<DownloadKeyOptions>>(sp => sp.GetRequiredService<KeyOptionsSetup>());
+        services.AddSingleton<IValidateOptions<HashingOptions>>(sp => sp.GetRequiredService<KeyOptionsSetup>());
 
         services.AddSingleton<IOtpHasher, OtpHasher>();
         services.AddSingleton<IRefreshTokenCodec, RefreshTokenCodec>();
         services.AddSingleton<IPseudonymizer, Pseudonymizer>();
-        services.AddSingleton<IOrderStatusTokens, OrderStatusTokens>();
         services.AddScoped<IIdempotencyStore, Services.Idempotency.IdempotencyStore>();
-        services.AddSingleton<IPaymentInitiator, Services.Payments.NullPaymentInitiator>();     // plan 14 §0: no gateway here
         services.AddSingleton<IAccessTokenIssuer, JwtTokenIssuer>();
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
         services.AddSingleton<ITotpService, TotpService>();
+        services.AddMemoryCache();
+        services.AddSingleton<IUsedTokenStore, MemoryUsedTokenStore>();
+        services.AddSingleton<IOrderStatusTokens, OrderStatusTokens>();
+        services.AddScoped<IAuditTrail, Services.Auditing.AuditTrail>();
     }
 
-    /// SMS (sink unless `Store:Sms:Provider = unifonic`) and templates.
+    /// SMS (sink unless `Store:Sms:Provider = unifonic`), e-mail (sink unless `Store:Email:Mode = smtp`), templates, outbox, settings.
     private static void AddMessaging(IServiceCollection services)
     {
         services.AddOptions<SmsOptions>().BindConfiguration(SmsOptions.Section);
@@ -164,7 +149,6 @@ public static class DependencyInjection
                 : sp.GetRequiredService<SinkSmsSender>());
         services.AddScoped<ITemplateRenderer, ScribanTemplateRenderer>();
 
-        // E-mail (sink unless `Store:Email:Mode = smtp`), outbox dispatcher (09 §5.11), documents (09 §9).
         services.AddOptions<EmailOptions>().BindConfiguration(EmailOptions.Section);
         services.AddSingleton<SinkEmailSender>();
         services.AddSingleton<IDevMailInbox>(sp => sp.GetRequiredService<SinkEmailSender>());
@@ -175,22 +159,20 @@ public static class DependencyInjection
                 : sp.GetRequiredService<SinkEmailSender>());
         services.AddOptions<OutboxOptions>().BindConfiguration(OutboxOptions.Section);
         services.AddSingleton<OutboxSignal>();
-        services.AddHostedService<OutboxDispatcher>();
-        services.AddOptions<DocumentOptions>().BindConfiguration(DocumentOptions.Section);
-        services.AddSingleton<ISellerProfile, SellerProfile>();
-        services.AddSingleton<IDocumentRenderer, QuestPdfDocumentRenderer>();
-        services.AddSingleton<IEInvoicingGateway, NoopEInvoicingGateway>();
-        services.AddSingleton<IPdfWatermarker, PdfSharpWatermarker>();
-        services.AddSingleton<IDownloadLinks, DownloadLinks>();
-        services.AddOptions<Services.Lms.LmsOptions>().BindConfiguration(Services.Lms.LmsOptions.Section);
-        services.AddSingleton<Services.Lms.InternalAccessLmsGateway>();
-        services.AddSingleton<ILmsGateway>(sp => sp.GetRequiredService<Services.Lms.InternalAccessLmsGateway>());
-        services.AddSingleton<IDevLmsProgressBoard>(sp => sp.GetRequiredService<Services.Lms.InternalAccessLmsGateway>());
+        services.AddSingleton<OutboxDispatcher>();
+        services.AddHostedService(sp => sp.GetRequiredService<OutboxDispatcher>());
+
+        services.AddOptions<SiteRebuildOptions>().BindConfiguration(SiteRebuildOptions.Section).ValidateOnStart();
+        services.AddSingleton<IValidateOptions<SiteRebuildOptions>, SiteRebuildOptionsValidator>();
+        services.AddHttpClient<ISiteRebuildTrigger, GitHubSiteRebuildTrigger>(c => c.Timeout = TimeSpan.FromSeconds(10));
+        services.AddScoped<ICatalogChangeDebounce, CatalogChangeDebounce>();
 
         services.AddSingleton<StoreSettingsProvider>();
         services.AddSingleton<IStoreSettings>(sp => sp.GetRequiredService<StoreSettingsProvider>());
-        services.AddSingleton<ISettingsProvider>(sp => sp.GetRequiredService<StoreSettingsProvider>());
-        services.AddScoped<ICatalogSearch, CatalogSearch>();
+    }
+
+    private static void AddFiles(IServiceCollection services)
+    {
         services.AddOptions<FileStorageOptions>().BindConfiguration(FileStorageOptions.Section);
         services.AddSingleton<IFileUrls, FileUrls>();
         services.AddSingleton<LocalFileStorage>();
@@ -198,8 +180,8 @@ public static class DependencyInjection
         services.AddSingleton<IImageProcessor, SkiaImageProcessor>();
     }
 
-    /// Data Protection encrypts beneficiary PII (09 §5.13). Keys persist in `Store:DataProtection:KeysPath`
-    /// (a volume in production; losing it makes PII unreadable). Certificate protection of the key ring is S-03.
+    /// Data Protection seals TOTP secrets and the guest cart cookie. Keys persist in `Store:DataProtection:KeysPath`
+    /// (a volume in production; losing it invalidates enrolled authenticators and guest carts).
     private static void AddDataProtection(IServiceCollection services)
     {
         services.AddDataProtection().SetApplicationName("ta3lom-store");
@@ -212,37 +194,10 @@ public static class DependencyInjection
                 o.XmlRepository = new FileSystemXmlRepository(new DirectoryInfo(Path.GetFullPath(Path.Combine(environment.ContentRootPath, path))), loggers);
             }
         });
-
-        services.AddOptions<PiiOptions>().BindConfiguration(PiiOptions.Section)
-            .Validate(o => HashKeyLength(o.MobileHashKeyBase64) >= 32, "Store:Pii:MobileHashKeyBase64 must be at least 32 bytes (base64)")
-            .ValidateOnStart();
-        services.AddSingleton<IValidateOptions<PiiOptions>, PiiOptionsProductionValidator>();
-        services.AddSingleton<IPiiProtector, PiiProtector>();
-    }
-
-    private static int HashKeyLength(string base64)
-    {
-        try
-        {
-            return Convert.FromBase64String(base64).Length;
-        }
-        catch (FormatException)
-        {
-            return 0;
-        }
     }
 }
 
 public sealed class DatabaseOptions
 {
     public string ConnectionString { get; set; } = string.Empty;
-}
-
-/// Production refuses the all-zero development key.
-internal sealed class PiiOptionsProductionValidator(IHostEnvironment environment) : IValidateOptions<PiiOptions>
-{
-    public ValidateOptionsResult Validate(string? name, PiiOptions options) =>
-        environment.IsProduction() && options.MobileHashKeyBase64 == Convert.ToBase64String(new byte[32])
-            ? ValidateOptionsResult.Fail("The development PII hash key cannot be used in Production")
-            : ValidateOptionsResult.Success;
 }

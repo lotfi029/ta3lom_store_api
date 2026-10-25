@@ -3,7 +3,7 @@ using Ta3lom.Store.ArchitectureTests.Support;
 
 namespace Ta3lom.Store.ArchitectureTests;
 
-/// No MediatR, AutoMapper or FluentAssertions (commercial licences; 09 §12 rule 7).
+/// No MediatR, AutoMapper or FluentAssertions (commercial licences).
 public sealed class DependencyPolicyTests
 {
     private static readonly string[] Forbidden = ["MediatR", "AutoMapper", "FluentAssertions"];

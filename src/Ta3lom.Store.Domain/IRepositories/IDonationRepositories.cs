@@ -1,0 +1,21 @@
+using Ta3lom.Store.Domain.Entities.Donations;
+
+namespace Ta3lom.Store.Domain.IRepositories;
+
+public interface ICartRepository : IGenericRepository<Cart>
+{
+    /// The cart with its lines, its row locked `FOR UPDATE` (every cart write and the checkout serialise on it).
+    Task<Cart?> GetForUpdateAsync(Guid cartId, CancellationToken ct = default);
+
+    /// The donor's cart (at most one, `ux_cart_customer`), locked like <see cref="GetForUpdateAsync"/>.
+    Task<Cart?> GetForCustomerForUpdateAsync(Guid customerId, CancellationToken ct = default);
+}
+
+public interface IOrderRepository : IGenericRepository<Order>
+{
+    /// `nextval('store.order_ref_seq')` (D-09).
+    Task<long> NextReferenceSequenceAsync(CancellationToken ct = default);
+
+    /// Every order of the donor (tracked), for anonymisation (D-14).
+    Task<IReadOnlyList<Order>> ForCustomerAsync(Guid customerId, CancellationToken ct = default);
+}

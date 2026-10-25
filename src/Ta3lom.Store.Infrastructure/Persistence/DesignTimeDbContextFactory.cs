@@ -1,7 +1,5 @@
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using Ta3lom.Store.Infrastructure.Services.Security;
 
 namespace Ta3lom.Store.Infrastructure.Persistence;
 
@@ -12,8 +10,6 @@ internal sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<S
     {
         var options = new DbContextOptionsBuilder<StoreDbContext>();
         StoreDbContextOptions.Configure(options, "Host=localhost;Database=ta3lom_store_design;Search Path=store,public");
-        var pii = new PiiProtector(new EphemeralDataProtectionProvider(),
-            Microsoft.Extensions.Options.Options.Create(new PiiOptions { MobileHashKeyBase64 = Convert.ToBase64String(new byte[32]) }));
-        return new StoreDbContext(options.Options, pii);
+        return new StoreDbContext(options.Options);
     }
 }

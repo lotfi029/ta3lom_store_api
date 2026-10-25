@@ -20,7 +20,7 @@ public sealed class OutboxOptions
     public bool Enabled { get; set; } = true;
 }
 
-/// Nudged after a SaveChanges that added outbox rows, so a paid order's SMS goes out within about a second (09 §5.11).
+/// Nudged after a SaveChanges that added outbox rows, so a paid order's SMS goes out within about a second.
 internal sealed class OutboxSignal : IDisposable
 {
     private readonly SemaphoreSlim _signal = new(0, 1);
@@ -45,18 +45,20 @@ internal sealed class OutboxSignal : IDisposable
     public void Dispose() => _signal.Dispose();
 }
 
-/// 09 §5.11: claims batches of 20 with `FOR UPDATE SKIP LOCKED` and a 5-minute lease (no transaction is held during SMS/SMTP
-/// calls), runs one handler per message in its own scope, retries with exponential backoff (10 s … 6 h, ±20 %), and
-/// dead-letters a message 24 h after it occurred (`next_attempt_at = infinity`, staff alert). Several instances are safe.
+/// Claims batches of 20 with `FOR UPDATE SKIP LOCKED` and a per-row lease (`claimed_until`, 5 minutes; no transaction is held
+/// during SMS/SMTP calls), runs one handler per message in its own scope, retries with exponential backoff (10 s … 6 h,
+/// ±20 %), and dead-letters a message after <see cref="MaxAttempts"/> attempts (`dead_lettered`, one staff alert). A lease
+/// that ran out (a crashed instance) makes the row claimable again, so several instances are safe. The outbox message id
+/// is the dedupe key of the provider call (`notification.dedupe_key`).
 internal sealed partial class OutboxDispatcher(
     IServiceScopeFactory scopes,
     OutboxSignal signal,
     IOptions<OutboxOptions> options,
     ILogger<OutboxDispatcher> logger) : BackgroundService
 {
+    public const int MaxAttempts = 10;
     private const int BatchSize = 20;
     private static readonly TimeSpan Lease = TimeSpan.FromMinutes(5);
-    private static readonly TimeSpan GiveUpAfter = TimeSpan.FromHours(24);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -109,11 +111,14 @@ internal sealed partial class OutboxDispatcher(
         await using (var scope = scopes.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<StoreDbContext>();
+            var now = scope.ServiceProvider.GetRequiredService<Application.Abstractions.Time.IClock>().UtcNow;
+            var leaseEnd = now + Lease;
             batch = await db.Database.SqlQuery<OutboxRow>($"""
                 UPDATE store.outbox_message m
-                   SET attempts = m.attempts + 1, next_attempt_at = now() + {Lease}
+                   SET attempts = m.attempts + 1, claimed_until = {leaseEnd}
                  WHERE m.id IN (SELECT id FROM store.outbox_message
-                                 WHERE processed_at IS NULL AND next_attempt_at <= now()
+                                 WHERE processed_at IS NULL AND NOT dead_lettered AND next_attempt_at <= {now}
+                                   AND (claimed_until IS NULL OR claimed_until < {now})
                                  ORDER BY next_attempt_at
                                  LIMIT {BatchSize}
                                  FOR UPDATE SKIP LOCKED)
@@ -134,38 +139,34 @@ internal sealed partial class OutboxDispatcher(
         await using var scope = scopes.CreateAsyncScope();
         var services = scope.ServiceProvider;
         var db = services.GetRequiredService<StoreDbContext>();
+        var clock = services.GetRequiredService<Application.Abstractions.Time.IClock>();
         try
         {
             var handler = services.GetServices<IOutboxHandler>().FirstOrDefault(h => h.MessageType == row.Type)
                           ?? throw new InvalidOperationException($"No outbox handler for type {row.Type}.");
             await handler.HandleAsync(new OutboxEnvelope(row.Id, row.Type, row.Payload, row.OccurredAt, row.Attempts), ct);
-            await db.Database.ExecuteSqlAsync($"UPDATE store.outbox_message SET processed_at = now(), last_error = NULL WHERE id = {row.Id}", ct);
+            var done = clock.UtcNow;
+            await db.Database.ExecuteSqlAsync($"""
+                UPDATE store.outbox_message SET processed_at = {done}, claimed_until = NULL, last_error = NULL WHERE id = {row.Id}
+                """, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            var clock = services.GetRequiredService<Application.Abstractions.Time.IClock>();
-            var deadLetter = clock.UtcNow - row.OccurredAt > GiveUpAfter;
+            var deadLetter = row.Attempts >= MaxAttempts;
             var error = ex.Message.Length > 2000 ? ex.Message[..2000] : ex.Message;
             var retryAt = clock.UtcNow + Backoff(row.Attempts);
             await using var retryScope = scopes.CreateAsyncScope();
             var retryDb = retryScope.ServiceProvider.GetRequiredService<StoreDbContext>();
-            if (deadLetter)
+            await retryDb.Database.ExecuteSqlAsync($"""
+                UPDATE store.outbox_message
+                   SET claimed_until = NULL, last_error = {error}, dead_lettered = {deadLetter}, next_attempt_at = {retryAt}
+                 WHERE id = {row.Id}
+                """, ct);
+            if (deadLetter && row.Type != nameof(StaffAlert))
             {
-                await retryDb.Database.ExecuteSqlAsync($"""
-                    UPDATE store.outbox_message SET next_attempt_at = 'infinity'::timestamptz, last_error = {error} WHERE id = {row.Id}
-                    """, ct);
-                if (row.Type != nameof(FinanceAlert))
-                {
-                    retryScope.ServiceProvider.GetRequiredService<IOutbox>().Enqueue(new FinanceAlert("outbox_dead_letter", null, null,
-                        string.Create(CultureInfo.InvariantCulture, $"{row.Type} {row.Id} after {row.Attempts} attempts: {error}")));
-                    await retryDb.SaveChangesAsync(ct);
-                }
-            }
-            else
-            {
-                await retryDb.Database.ExecuteSqlAsync($"""
-                    UPDATE store.outbox_message SET next_attempt_at = {retryAt}, last_error = {error} WHERE id = {row.Id}
-                    """, ct);
+                retryScope.ServiceProvider.GetRequiredService<IOutbox>().Enqueue(new StaffAlert("outbox_dead_letter", null,
+                    string.Create(CultureInfo.InvariantCulture, $"{row.Type} {row.Id} after {row.Attempts} attempts: {error}")));
+                await retryDb.SaveChangesAsync(ct);
             }
 
             LogHandlerFailed(logger, row.Id, row.Type, row.Attempts, deadLetter, ex);

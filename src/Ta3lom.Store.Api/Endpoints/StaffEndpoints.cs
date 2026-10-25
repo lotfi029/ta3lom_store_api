@@ -12,13 +12,12 @@ using Ta3lom.Store.Domain.Constants;
 
 namespace Ta3lom.Store.Api.Endpoints;
 
-/// `/v1/admin/staff` — staff users (11 §9.19, endpoints #123–#128; RUL-62, FR-S71). Mutations are audited
-/// by the save interceptor (staff actor).
+/// `/v1/admin/staff` — staff users and roles (BR-A12, D-12; admin only). Mutations are audited by the save interceptor.
 internal sealed class StaffEndpoints : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/admin/staff").WithTags("Admin · Staff")
+        var group = app.MapGroup("/admin/staff").WithTags("Admin · Staff").RequireSameOrigin()
             .RequireAuthorization(Policies.StaffAdmin)
             .RequireRateLimiting(RatePolicies.Admin)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
@@ -28,7 +27,7 @@ internal sealed class StaffEndpoints : IEndpoint
         group.MapPost("/", CreateAsync).Produces<CreateStaffResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status409Conflict);
         group.MapPut("/{id:guid}", UpdateAsync).Produces<StaffUserResponse>()
-            .ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict);
         group.MapPost("/{id:guid}/reset-password", ResetPasswordAsync).Produces<OneTimePasswordResponse>()
             .ProducesProblem(StatusCodes.Status404NotFound);
         group.MapPost("/{id:guid}/reset-totp", ResetTotpAsync).Produces(StatusCodes.Status204NoContent)
@@ -52,7 +51,7 @@ internal sealed class StaffEndpoints : IEndpoint
         [FromBody] UpdateStaffRequest request,
         [FromServices] ICommandHandler<UpdateStaffCommand, StaffUserResponse> handler,
         CancellationToken ct) =>
-        (await handler.HandleAsync(new UpdateStaffCommand(id, request.Name, request.Roles ?? [], request.IsActive), ct)).ToHttp();
+        (await handler.HandleAsync(new UpdateStaffCommand(id, request.Name, request.Roles ?? [], request.IsActive, request.Version), ct)).ToHttp();
 
     private static async Task<IResult> ResetPasswordAsync(Guid id, [FromServices] ICommandHandler<ResetStaffPasswordCommand, OneTimePasswordResponse> handler, CancellationToken ct) =>
         (await handler.HandleAsync(new ResetStaffPasswordCommand(id), ct)).ToHttp();

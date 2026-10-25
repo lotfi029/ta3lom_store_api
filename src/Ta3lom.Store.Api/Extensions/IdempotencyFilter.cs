@@ -9,7 +9,7 @@ using Ta3lom.Store.SharedKernel;
 
 namespace Ta3lom.Store.Api.Extensions;
 
-/// `Idempotency-Key` (11 §1.5, 09 §5.16): scope `{prefix}:{sub}`; the hash covers the canonical JSON of the bound body.
+/// `Idempotency-Key`: scope `{prefix}:{sub}`; the hash covers the canonical JSON of the bound body.
 /// Same key + same body → the stored response (`Idempotent-Replayed: true`); another body → 422; still running → 409;
 /// a 5xx releases the key so the client may retry.
 internal sealed class IdempotencyFilter(string scopePrefix, bool required) : IEndpointFilter

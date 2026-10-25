@@ -2,41 +2,59 @@ using Ta3lom.Store.Application.Features.Outbox;
 
 namespace Ta3lom.Store.Application.Features.Notifications;
 
-/// RUL-63: render a `message_template` (ar fallback) and send it once per outbox message, channel and recipient.
+/// Renders a `message_template` (Arabic fallback) and sends it at most once per outbox message, channel and recipient.
 internal sealed class NotificationDispatch(
     INotificationRepository notifications,
     ITemplateRenderer templates,
     ISmsSender sms,
     IEmailSender email,
+    IPseudonymizer pseudonymizer,
     IUnitOfWork uow,
     IClock clock)
 {
     public async Task SendOnceAsync(OutboxEnvelope envelope, MessageChannel channel, string recipient, string templateKey, string locale,
-        object model, Guid? relatedOrderId, CancellationToken ct, IReadOnlyList<EmailAttachment>? attachments = null, string? storedRecipient = null)
+        object model, CancellationToken ct)
     {
-        if (channel == MessageChannel.Sms ? !SaudiMobile.IsValid(recipient) : !recipient.Contains('@', StringComparison.Ordinal))
+        ArgumentNullException.ThrowIfNull(envelope);
+        string recipientHash;
+        if (channel == MessageChannel.Sms)
         {
-            return;                                                                         // e.g. "محذوف / deleted" after an account deletion
+            if (!SaudiMobile.TryNormalize(recipient, out var mobile))
+            {
+                return;                                                                  // e.g. an anonymised donor
+            }
+
+            recipient = mobile;
+            recipientHash = pseudonymizer.HashMobile(mobile);
+        }
+        else
+        {
+            if (!recipient.Contains('@', StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            recipientHash = pseudonymizer.HashEmail(recipient);
         }
 
-        // `storedRecipient`: what `notification.recipient` keeps when the address itself is protected (beneficiary mobiles, PDPL).
-        var row = await notifications.TryClaimAsync(envelope.Id, channel, storedRecipient ?? recipient, templateKey, locale, relatedOrderId, clock.UtcNow, ct);
+        var dedupeKey = $"{envelope.Id:N}:{channel.ToWire()}:{recipientHash}";
+        var row = await notifications.TryClaimAsync(dedupeKey, channel, recipientHash, templateKey, clock.UtcNow, ct);
         if (row is null)
         {
-            return;                                                                     // already sent or in flight
+            return;                                                                      // already sent
         }
 
         var message = await templates.RenderAsync(templateKey, channel, locale, model, ct);
         var result = channel == MessageChannel.Sms
             ? ToDelivery(await sms.SendAsync(recipient, message.Body, ct))
-            : await email.SendAsync(new EmailMessage(recipient, message.Subject ?? templateKey, message.Body, attachments ?? []), ct);
+            : await email.SendAsync(new EmailMessage(recipient, message.Subject ?? templateKey, message.Body, []), ct);
         if (result.Sent)
         {
-            row.MarkSent(result.ProviderMessageId, clock.UtcNow);
+            row.MarkSent(result.ProviderMessageId);
         }
         else
         {
-            row.MarkFailed(result.Error ?? "provider error", clock.UtcNow);
+            row.MarkFailed();
         }
 
         await uow.SaveChangesAsync(ct);

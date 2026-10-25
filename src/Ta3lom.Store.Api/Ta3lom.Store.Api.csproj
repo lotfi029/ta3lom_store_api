@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
-  <!-- Composition root and presentation. Endpoints bind → call a handler → map the Result (09 §3.1). -->
+  <!-- Composition root and presentation. Endpoints bind → call a handler → map the Result. -->
   <PropertyGroup>
     <RootNamespace>Ta3lom.Store.Api</RootNamespace>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>

@@ -6,7 +6,7 @@ using Ta3lom.Store.Domain.Errors;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Contract;
 
-/// A2: every ErrorCodes constant has a non-empty title in Arabic (neutral) and English.
+/// Every ErrorCodes constant has a non-empty title in Arabic (neutral) and English.
 public sealed class ErrorMessagesCompletenessTests
 {
     private static readonly ResourceManager Resources =
