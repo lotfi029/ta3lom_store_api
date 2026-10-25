@@ -27,7 +27,7 @@ internal sealed class EnrolTotpCommandHandler(
 
         if (user.TotpEnrolled && user.LastLoginAt is not null)
         {
-            return AuthErrors.Forbidden;
+            return GeneralErrors.Forbidden;
         }
 
         var enrolment = totp.CreateEnrolment(user.Email);

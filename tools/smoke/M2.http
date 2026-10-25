@@ -1,9 +1,0 @@
-# M2 — Identity (plan 14 §2): "OTP sign-in with the fake SMS sink, refresh rotation, reuse detection revokes the
-# family; staff login with TOTP; role policies return 403 correctly."
-# Result 30 Sep 2026 (local, Development): PASSED — steps run from S-04.http and S-05.http:
-#  1. OTP request → /dev/sms → verify → session + t3s_rt                              ✅
-#  2. Refresh rotates the cookie; the old cookie after 20 s → 401 auth.refresh_reused ✅
-#  3. After the reuse the current cookie is revoked too (family)                      ✅
-#  4. create-admin → login → TOTP enrol → verify → staff session                      ✅
-#  5. viewer → 403 on /v1/admin/staff; customer token → 401 on staff routes and back  ✅
-@base = http://localhost:5080
