@@ -13,7 +13,7 @@ Approved plan: v3 (owner review R-1…R-12 applied).
 | P4 auth | done | green | clean | 377 passed / 0 failed | donor OTP + sessions, staff password/TOTP/forced change, staff admin |
 | P5 catalogue | done | green | clean | 403 passed / 0 failed | public catalogue, admin categories/projects/options, media, ETag/output cache, site rebuild |
 | P6 donations | done | green | clean | 422 passed / 0 failed | cart + merge, quote, idempotent checkout, order status, /me |
-| P7 admin ops | pending | | | | |
+| P7 admin ops | done | green | clean | 436 passed / 0 failed | dashboard, donors, orders, templates, audit, policy matrix |
 | P8 hardening | pending | | | | |
 | P9 gates | pending | | | | |
 
@@ -107,6 +107,18 @@ Lines marked **REVIEW** are not covered by the specs (or deviate from them) and 
   refresh token, writes `customer.deleted` to the audit log and clears the session and cart cookies.
 - **REVIEW** P6: removing an unused option from a project deletes it, and cart lines pointing at it go with it (ERD:
   `fk_cart_line_option` cascades); a used option is only deactivated and its cart lines show `cart.option_unavailable`.
+- **REVIEW** P7: dashboard "today" and "this week" are Riyadh dates, the week starting on Sunday; "top projects" are the
+  five with the largest pending amount (`v_catalog_stats`).
+- P7: blocking a donor revokes every refresh token at once (the access token runs out within its 15 minutes) and writes
+  `customer.blocked`; unblocking writes `customer.unblocked`; an anonymised donor is 404 for both.
+- P7: cancelling writes `order.cancelled` (actor = staff e-mail, also stored in `orders.cancelled_by`) and queues
+  `OrderCancelled`; a non-pending order is 409 `order.cancel_not_allowed`.
+- **REVIEW** P7: `POST /v1/admin/templates/test` renders an unsaved text with fixed sample values and sends it: an e-mail
+  only to the calling staff member, an SMS to the `to` mobile in the body. Template edits must parse (422
+  `template.render_failed` with `line`/`column`); templates are edited, never created or deleted, through the API.
+- P7: the policy-matrix test reads every `/v1/admin` route from the endpoint table (sign-in routes under `/v1/admin/auth`
+  excepted) and checks the 4 roles + anonymous against the route's policies, so a new route is covered automatically.
+  The multipart upload route answers 415 before authorization to a non-multipart body; the matrix sends multipart there.
 
 ## Owner review (plan v3)
 
