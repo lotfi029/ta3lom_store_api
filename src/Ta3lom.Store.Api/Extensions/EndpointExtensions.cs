@@ -35,7 +35,7 @@ public static class EndpointExtensions
         ArgumentNullException.ThrowIfNull(app);
         if (app.Environment.IsDevelopment())
         {
-            var dev = app.MapGroup("/dev").WithTags("Dev").ExcludeFromDescription();
+            var dev = app.MapGroup("/dev").WithTags("Dev").ExcludeFromDescription().AllowAnonymous();
             foreach (var endpoint in app.Services.GetServices<IDevEndpoint>())
             {
                 endpoint.MapEndpoint(dev);

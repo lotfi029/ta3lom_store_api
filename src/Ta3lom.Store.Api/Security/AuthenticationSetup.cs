@@ -33,7 +33,13 @@ public static class AuthenticationSetup
         services.AddOptions<JwtBearerOptions>(AuthSchemes.StaffMfa).Configure<IOptions<JwtOptions>>((o, jwt) =>
             Configure(o, AuthSchemes.StaffMfa, jwt.Value.Issuer, jwt.Value.StaffMfaAudience, jwt.Value.StaffSigningKeyBase64, jwt.Value.KeyId));
 
+        // Deny by default: a route without its own policy or AllowAnonymous needs a valid customer or staff token. A request
+        // that matched no route (or only the framework's 405 endpoint) passes, so an unknown path stays 404 and a wrong
+        // method 405.
         var authorization = services.AddAuthorizationBuilder()
+            .SetFallbackPolicy(new AuthorizationPolicyBuilder(AuthSchemes.Customer, AuthSchemes.Staff)
+                .RequireAssertion(ctx => ctx.User.Identity?.IsAuthenticated == true || ctx.Resource is HttpContext { } http && http.GetEndpoint() is not RouteEndpoint)
+                .Build())
             .AddPolicy(Policies.Customer, p => p.AddAuthenticationSchemes(AuthSchemes.Customer).RequireAuthenticatedUser())
             .AddPolicy(Policies.CustomerOptional, p => p.AddAuthenticationSchemes(AuthSchemes.Customer).RequireAssertion(ctx =>
                 ctx.User.Identity?.IsAuthenticated == true || ctx.Resource is not HttpContext { Request.Headers.Authorization.Count: > 0 }))

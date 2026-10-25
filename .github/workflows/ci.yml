@@ -1,5 +1,5 @@
-# S-03a-lite — CI only (no image, no deploy; hosting comes after the build, Cloud-build-plan §5).
-# Gates of plan 14 §4.4 that run without a container registry: build, format, tests, vulnerable packages.
+# CI gates: build (warnings as errors), format, tests on Testcontainers postgres:18 with a line-coverage gate
+# (Domain >= 90 %, Application >= 80 %, merged over the test projects), vulnerable packages. No image, no deploy.
 name: ci
 
 on:
@@ -42,9 +42,48 @@ jobs:
       - name: Format
         run: dotnet format Ta3lom.Store.slnx --verify-no-changes --no-restore
 
+      # Architecture tests run without coverage: the instrumentation would add a dependency to every scanned assembly.
+      - name: Architecture tests
+        run: dotnet test --project tests/Ta3lom.Store.ArchitectureTests --no-build
+
       # Integration tests use Testcontainers postgres:18 (Docker is available on GitHub runners).
-      - name: Test
-        run: dotnet test --solution Ta3lom.Store.slnx --no-build
+      - name: Tests with coverage (Cobertura)
+        run: |
+          for project in Domain.Tests Application.Tests Api.IntegrationTests; do
+            dotnet test --project "tests/Ta3lom.Store.$project" --no-build \
+              --coverage --coverage-output-format cobertura --coverage-output "$project.cobertura.xml" --results-directory coverage
+          done
+
+      - name: Coverage gate (Domain >= 90 %, Application >= 80 %)
+        shell: python
+        run: |
+          import glob, sys, xml.etree.ElementTree as ET
+          gates = {"Ta3lom.Store.Domain": 90.0, "Ta3lom.Store.Application": 80.0}
+          hits = {}
+          for f in glob.glob("coverage/*.cobertura.xml"):
+              for pkg in ET.parse(f).getroot().iter("package"):
+                  if pkg.get("name") not in gates:
+                      continue
+                  for cls in pkg.iter("class"):
+                      for line in cls.iter("line"):
+                          key = (pkg.get("name"), cls.get("filename"), line.get("number"))
+                          hits[key] = max(hits.get(key, 0), int(line.get("hits")))
+          failed = False
+          for name, gate in gates.items():
+              lines = [h for (n, _, _), h in hits.items() if n == name]
+              pct = 100.0 * sum(1 for h in lines if h > 0) / max(len(lines), 1)
+              print(f"{name}: {pct:.1f}% of {len(lines)} lines (gate {gate:.0f}%)")
+              if pct < gate:
+                  print(f"::error::{name} line coverage {pct:.1f}% is below {gate:.0f}%")
+                  failed = True
+          sys.exit(1 if failed else 0)
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/*.cobertura.xml
 
       - name: Vulnerable packages (fail on High/Critical)
         run: |

@@ -17,7 +17,7 @@ public static class HealthEndpoints
         {
             Predicate = _ => false,
             ResponseWriter = WriteLiveAsync,
-        });
+        }).AllowAnonymous();
 
         // Readiness: checks tagged "ready" (PostgreSQL from S-02, outbox, key ring, files, scheduler).
         // Degraded → 200 so a slow dependency does not take the API out of rotation; Unhealthy → 503.
@@ -31,7 +31,7 @@ public static class HealthEndpoints
                 [HealthStatus.Degraded] = StatusCodes.Status200OK,
                 [HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable,
             },
-        });
+        }).AllowAnonymous();
         return app;
     }
 

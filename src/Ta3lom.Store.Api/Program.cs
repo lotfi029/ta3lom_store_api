@@ -52,10 +52,10 @@ app.MapEndpoints(v1);
 app.MapDevEndpoints();
 app.MapHealthEndpoints();
 
-if (!app.Environment.IsProduction())
+if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();                              // /openapi/v1.json
-    app.MapScalarApiReference("/docs");            // Scalar UI
+    app.MapOpenApi().AllowAnonymous();                             // /openapi/v1.json
+    app.MapScalarApiReference("/docs").AllowAnonymous();           // Scalar UI
 }
 
 await app.RunAsync();

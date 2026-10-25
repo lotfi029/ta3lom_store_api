@@ -14,7 +14,7 @@ Approved plan: v3 (owner review R-1…R-12 applied).
 | P5 catalogue | done | green | clean | 403 passed / 0 failed | public catalogue, admin categories/projects/options, media, ETag/output cache, site rebuild |
 | P6 donations | done | green | clean | 422 passed / 0 failed | cart + merge, quote, idempotent checkout, order status, /me |
 | P7 admin ops | done | green | clean | 436 passed / 0 failed | dashboard, donors, orders, templates, audit, policy matrix |
-| P8 hardening | pending | | | | |
+| P8 hardening | done | green | clean | 446 passed / 0 failed; coverage Domain 94.7 %, Application 85.0 % | fallback policy, Development-only docs, key guards, CI coverage gate, README, CLAUDE.md |
 | P9 gates | pending | | | | |
 
 ## Decisions
@@ -119,6 +119,19 @@ Lines marked **REVIEW** are not covered by the specs (or deviate from them) and 
 - P7: the policy-matrix test reads every `/v1/admin` route from the endpoint table (sign-in routes under `/v1/admin/auth`
   excepted) and checks the 4 roles + anonymous against the route's policies, so a new route is covered automatically.
   The multipart upload route answers 415 before authorization to a non-multipart body; the matrix sends multipart there.
+- P8: fallback authorization policy = an authenticated customer or staff token on every route endpoint that declares
+  nothing; requests that match no route (or only the framework's 405 endpoint) pass, so unknown paths stay 404 and wrong
+  methods 405. A test checks that every route declares a policy or `AllowAnonymous` (health, catalogue, sign-in, `/dev`,
+  OpenAPI/Scalar are the anonymous ones).
+- P8: OpenAPI (`/openapi/v1.json`) and Scalar (`/docs`) are mapped in Development only (previously: everywhere but
+  Production); Testing, Staging and Production answer 404.
+- P8: start-up guard tests: a missing, short or DEV ONLY key stops the host in Production, Staging and Testing.
+- P8: CI runs the architecture tests without coverage (instrumentation adds a dependency to the scanned assemblies),
+  the other test projects with Cobertura coverage, merges the reports by file and line and fails below 90 % Domain /
+  80 % Application line coverage (R-10). The merge is an inline Python step (no new tool or folder).
+- P8: README rewritten (UTF-8; the old file was UTF-16), configuration table from the old `deploy/env` list minus the
+  removed keys (`Store:Pii`, `Store:Downloads`, `Store:Documents`, `Store:Email:ManagerAlerts`); CLAUDE.md rewritten
+  without doc links.
 
 ## Owner review (plan v3)
 

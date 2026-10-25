@@ -1,7 +1,7 @@
 namespace Ta3lom.Store.Api.Extensions;
 
 /// API security headers (08 §6.3, 06): set on every response, including error responses.
-/// Outside Production, /docs and /openapi get no CSP and no X-Frame-Options so Scalar can load.
+/// In Development (the only environment that maps them), /docs and /openapi get no CSP and no X-Frame-Options so Scalar can load.
 internal sealed class SecurityHeadersMiddleware(RequestDelegate next, IHostEnvironment environment)
 {
     private const string ApiCsp = "default-src 'none'; frame-ancestors 'none'";
@@ -15,7 +15,7 @@ internal sealed class SecurityHeadersMiddleware(RequestDelegate next, IHostEnvir
     public Task InvokeAsync(HttpContext context)
     {
         var path = context.Request.Path;
-        var docsExempt = !environment.IsProduction() && DocsPrefixes.Any(p => path.StartsWithSegments(p, StringComparison.OrdinalIgnoreCase));
+        var docsExempt = environment.IsDevelopment() && DocsPrefixes.Any(p => path.StartsWithSegments(p, StringComparison.OrdinalIgnoreCase));
         var noStore = NoStorePrefixes.Any(p => path.StartsWithSegments(p, StringComparison.OrdinalIgnoreCase));
 
         context.Response.OnStarting(() =>
