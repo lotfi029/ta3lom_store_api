@@ -161,6 +161,28 @@ public sealed class PublicCatalogTests(ScenarioFactory factory) : IClassFixture<
         (await admin.GetAsync($"/v1/admin/projects?q=well{tag}&category={two.Str("id")}&page=2&pageSize=40")).Body.GetProperty("total").GetInt32().ShouldBe(100);
     }
 
+    /// API-10: lists carry the English alt text too (cards: cover; categories: image), like the detail.
+    [Fact]
+    public async Task Cards_and_categories_carry_the_English_alt_text()
+    {
+        var (admin, build) = await AdminAsync();
+        var image = await build.ImageAsync();
+        (await admin.SendAsync(HttpMethod.Patch, $"/v1/admin/media/{image}", new { altAr = "صورة الفئة", altEn = "Category image" })).Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var category = (await admin.PostAsync("/v1/admin/categories", CatalogBuilder.CategoryBody(CatalogBuilder.NewSlug("cat"), image: image))).Body;
+        var project = await build.PublishAsync(await build.DraftAsync(Guid.Parse(category.Str("id"))));
+        (await admin.SendAsync(HttpMethod.Patch, $"/v1/admin/media/{project.Str("coverAssetId")}", new { altAr = "غلاف", altEn = "Cover" }))
+            .Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var card = (await GetAsync($"/v1/catalog/projects?category={category.Str("slug")}")).Body.GetProperty("items")[0];
+        var listed = (await GetAsync("/v1/catalog/categories")).Body.EnumerateArray().Single(c => c.Str("id") == category.Str("id"));
+        var home = (await GetAsync("/v1/catalog/home")).Body.GetProperty("categories").EnumerateArray().Single(c => c.Str("id") == category.Str("id"));
+
+        card.Str("coverAltEn").ShouldBe("Cover");
+        card.Str("coverAltAr").ShouldBe("غلاف");
+        listed.Str("imageAltEn").ShouldBe("Category image");
+        home.Str("imageAltEn").ShouldBe("Category image");
+    }
+
     /// API-9: a card lists the active options of its project (sort, id), the same as the detail; none → [].
     [Fact]
     public async Task Cards_carry_the_active_options_of_the_detail()

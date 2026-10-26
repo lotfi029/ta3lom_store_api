@@ -27,6 +27,8 @@ internal sealed class CatalogReader(IApplicationDbContext db, IFileUrls urls)
 
         public string? CoverAltAr { get; init; }
 
+        public string? CoverAltEn { get; init; }
+
         public ProjectBadge? Badge { get; init; }
 
         public string CategorySlug { get; init; } = string.Empty;
@@ -71,6 +73,7 @@ internal sealed class CatalogReader(IApplicationDbContext db, IFileUrls urls)
             SummaryEn = p.SummaryEn,
             CoverKey = cover != null ? cover.StorageKey : null,
             CoverAltAr = cover != null ? cover.AltAr : null,
+            CoverAltEn = cover != null ? cover.AltEn : null,
             Badge = p.Badge,
             CategorySlug = c.Slug,
             AllowOpenAmount = p.AllowOpenAmount,
@@ -85,7 +88,7 @@ internal sealed class CatalogReader(IApplicationDbContext db, IFileUrls urls)
         new(r.Id, r.Slug, r.TitleAr, r.TitleEn, r.SummaryAr, r.SummaryEn, r.CoverKey is null ? null : urls.Public(r.CoverKey), r.CoverAltAr,
             r.Badge?.ToWire(), r.CategorySlug, r.AllowOpenAmount, (r.MinAmount ?? minGift).ToWire(),
             r.Options.Count == 0 ? null : r.Options.Min(o => o.Amount).ToWire(),
-            [.. r.Options.Select(o => new ProjectOptionView(o.Id, o.LabelAr, o.LabelEn, o.Amount.ToWire()))]);
+            [.. r.Options.Select(o => new ProjectOptionView(o.Id, o.LabelAr, o.LabelEn, o.Amount.ToWire()))], r.CoverAltEn);
 
     /// Active categories with the number of their published projects.
     public async Task<List<CategorySummary>> ActiveCategoriesAsync(CancellationToken ct)
@@ -106,11 +109,12 @@ internal sealed class CatalogReader(IApplicationDbContext db, IFileUrls urls)
                 c.DescriptionEn,
                 ImageKey = image != null ? image.StorageKey : null,
                 ImageAlt = image != null ? image.AltAr : null,
+                ImageAltEn = image != null ? image.AltEn : null,
                 c.AcceptsGeneralGifts,
                 Count = db.Projects.Count(p => p.CategoryId == c.Id && p.Status == ProjectStatus.Published),
             }).ToListAsync(ct);
         return [.. rows.Select(r => new CategorySummary(r.Id, r.Slug, r.NameAr, r.NameEn, r.DescriptionAr, r.DescriptionEn,
-            r.ImageKey is null ? null : urls.Public(r.ImageKey), r.ImageAlt, r.AcceptsGeneralGifts, r.Count))];
+            r.ImageKey is null ? null : urls.Public(r.ImageKey), r.ImageAlt, r.AcceptsGeneralGifts, r.Count, r.ImageAltEn))];
     }
 
     /// The detail of one project (any status: the admin preview uses it too), with its active options. One query.

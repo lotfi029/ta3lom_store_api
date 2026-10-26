@@ -2,13 +2,13 @@ namespace Ta3lom.Store.Application.DTOs.Catalog;
 
 /// A donation category on the public site; `projectCount` counts its published projects.
 public sealed record CategorySummary(Guid Id, string Slug, string NameAr, string? NameEn, string? DescriptionAr, string? DescriptionEn,
-    string? ImageUrl, string? ImageAltAr, bool AcceptsGeneralGifts, int ProjectCount);
+    string? ImageUrl, string? ImageAltAr, bool AcceptsGeneralGifts, int ProjectCount, string? ImageAltEn);
 
 /// A project in a listing. `minAmount` is the effective minimum of an open amount; `fromAmount` the lowest active option;
 /// `options` the active options (sort, id), as in the detail (API-9; empty when none).
 public sealed record ProjectCard(Guid Id, string Slug, string TitleAr, string? TitleEn, string? SummaryAr, string? SummaryEn,
     string? CoverUrl, string? CoverAltAr, string? Badge, string CategorySlug, bool AllowOpenAmount, string MinAmount, string? FromAmount,
-    IReadOnlyList<ProjectOptionView> Options);
+    IReadOnlyList<ProjectOptionView> Options, string? CoverAltEn);
 
 public sealed record ProjectOptionView(Guid Id, string LabelAr, string? LabelEn, string Amount);
 
