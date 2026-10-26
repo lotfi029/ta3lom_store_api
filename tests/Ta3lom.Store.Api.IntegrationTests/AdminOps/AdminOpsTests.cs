@@ -87,6 +87,8 @@ public sealed class AdminOpsTests(ScenarioFactory factory) : IClassFixture<Scena
         var again = await finance.PostAsync($"/v1/admin/orders/{reference}/cancel");
         again.Response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
         again.Body.Str("code").ShouldBe(ErrorCodes.OrderCancelNotAllowed);
+        again.Body.GetProperty("status").GetInt32().ShouldBe(409);                                                 // API-1: RFC 9457 status stays numeric
+        again.Body.Str("orderStatus").ShouldBe("cancelled");
         (await finance.GetAsync($"/v1/admin/orders/{reference}")).Body.Str("cancelledBy").ShouldBe(finance.Email);
         (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.outbox_message WHERE type = 'OrderCancelled' AND payload->>'reference' = '{reference}'")).ShouldBe(1);
         (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.audit_log WHERE action = 'order.cancelled' AND actor = '{finance.Email}'")).ShouldBe(1);

@@ -67,7 +67,7 @@ public sealed class OrderTests
 
         var again = order.Cancel("admin@ta3lom.sa", Make.Now);
         again.Error.Code.ShouldBe(ErrorCodes.OrderCancelNotAllowed);
-        again.Error.Extensions!["status"].ShouldBe("cancelled");
+        again.Error.Extensions!["orderStatus"].ShouldBe("cancelled");
     }
 
     [Fact]
