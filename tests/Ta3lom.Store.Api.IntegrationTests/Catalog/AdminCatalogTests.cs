@@ -180,6 +180,42 @@ public sealed class AdminCatalogTests(ScenarioFactory factory) : IClassFixture<S
         (await admin.GetAsync($"/v1/admin/projects/{Guid.NewGuid()}")).Response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
+    /// API-3: malformed option lists are 400 `validation.failed` with field errors, never 500.
+    [Fact]
+    public async Task Malformed_option_lists_are_validation_errors_never_500()
+    {
+        var (admin, build) = await AdminAsync();
+        var category = await build.CategoryAsync();
+        var draft = await build.DraftAsync(Guid.Parse(category.Str("id")));
+        var path = $"/v1/admin/projects/{draft.Str("id")}/options";
+        var version = draft.GetProperty("version").GetUInt32();
+        static object Item(string? labelAr, string? amount) =>
+            new { id = (Guid?)null, labelAr, labelEn = (string?)null, amount, sort = 0, isActive = true };
+
+        var bodies = new (object Body, string Field)[]
+        {
+            (new { version }, "options"),
+            (new { options = (object?)null, version }, "options"),
+            (new { options = new object?[] { null }, version }, "options[0]"),
+            (new { options = new[] { Item(null, "4.00") }, version }, "options[0].labelAr"),
+            (new { options = new[] { Item("نسخة", null) }, version }, "options[0].amount"),
+            (new { options = new[] { Item("نسخة", "4.00"), Item(" نسخة ", "5.00") }, version }, "options"),
+        };
+
+        foreach (var (body, field) in bodies)
+        {
+            var response = await admin.SendAsync(HttpMethod.Put, path, body);
+
+            response.Response.StatusCode.ShouldBe(HttpStatusCode.BadRequest, field);
+            response.Body.Str("code").ShouldBe(ErrorCodes.ValidationFailed, field);
+            response.Body.GetProperty("errors").EnumerateObject().Select(p => p.Name).ShouldContain(field, field);
+        }
+
+        var ok = await admin.SendAsync(HttpMethod.Put, path, new { options = new[] { Item("نسخة", "4.00"), Item("خمس", "5.00") }, version });
+        ok.Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        ok.Body.GetProperty("options").GetArrayLength().ShouldBe(2);
+    }
+
     [Fact]
     public async Task Options_are_replaced_as_a_list_and_a_published_project_keeps_an_amount()
     {

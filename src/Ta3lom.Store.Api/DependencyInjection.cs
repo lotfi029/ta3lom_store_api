@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Localization;
+using Microsoft.Extensions.Options;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -29,12 +30,13 @@ public static class DependencyInjection
         services.AddOptions<StoreOptions>()
             .BindConfiguration(StoreOptions.Section)
             .ValidateDataAnnotations()
-            .Validate(o => o.Validate().Count == 0, "Store options are invalid; see StoreOptions.Validate()")
             .ValidateOnStart();
+        services.AddSingleton<IValidateOptions<StoreOptions>, StoreOptionsValidator>();
 
         services.AddEndpoints(typeof(DependencyInjection).Assembly);
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentActor, HttpCurrentActor>();
+        services.AddSingleton<IOtpLimits, StoreOtpLimits>();
         services.AddSingleton<CartCookie>();
         services.AddSingleton<IWebLinks, WebLinks>();
         services.AddStoreAuthentication();

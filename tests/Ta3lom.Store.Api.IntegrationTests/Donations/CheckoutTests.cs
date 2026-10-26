@@ -319,4 +319,27 @@ public sealed partial class CheckoutTests(ScenarioFactory factory) : IClassFixtu
         (await anonymous.SendJsonAsync(HttpMethod.Get, path)).Body.Str("code").ShouldBe(ErrorCodes.OrderNotFound);
         (await (await factory.CustomerAsync()).GetAsync(path)).Response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
+
+    /// API-2: a reference matches in any case and with surrounding spaces; the lookup still uses the stored upper-case value.
+    [Fact]
+    public async Task References_match_in_any_case_for_the_status_page_and_my_donations()
+    {
+        var (_, donor) = await DonorWithCartAsync();
+        var placed = (await donor.PostAsync("/v1/checkout", new { fullName = "D", email = "d@example.com" }, HttpJson.Key())).Body;
+        var reference = placed.Str("reference");
+        var loose = Uri.EscapeDataString("  " + reference.ToLowerInvariant() + " ");
+        var anonymous = factory.Anonymous();
+
+        var byToken = await anonymous.SendJsonAsync(HttpMethod.Get, $"/v1/orders/{loose}/status?t={placed.Str("statusToken")}");
+        byToken.Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        byToken.Body.Str("reference").ShouldBe(reference);
+        (await donor.GetAsync($"/v1/orders/{loose}/status")).Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var mine = await donor.GetAsync($"/v1/me/donations/{loose}");
+        mine.Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        mine.Body.Str("reference").ShouldBe(reference);
+
+        (await donor.GetAsync("/v1/me/donations/t3-00-999999")).Response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await (await factory.CustomerAsync()).GetAsync($"/v1/me/donations/{loose}")).Response.StatusCode.ShouldBe(HttpStatusCode.NotFound);   // never another donor's
+        (await anonymous.SendJsonAsync(HttpMethod.Get, $"/v1/orders/{loose}/status?t=wrong")).Response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
 }

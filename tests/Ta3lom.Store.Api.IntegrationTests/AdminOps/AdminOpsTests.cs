@@ -87,6 +87,8 @@ public sealed class AdminOpsTests(ScenarioFactory factory) : IClassFixture<Scena
         var again = await finance.PostAsync($"/v1/admin/orders/{reference}/cancel");
         again.Response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
         again.Body.Str("code").ShouldBe(ErrorCodes.OrderCancelNotAllowed);
+        again.Body.GetProperty("status").GetInt32().ShouldBe(409);                                                 // API-1: RFC 9457 status stays numeric
+        again.Body.Str("orderStatus").ShouldBe("cancelled");
         (await finance.GetAsync($"/v1/admin/orders/{reference}")).Body.Str("cancelledBy").ShouldBe(finance.Email);
         (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.outbox_message WHERE type = 'OrderCancelled' AND payload->>'reference' = '{reference}'")).ShouldBe(1);
         (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.audit_log WHERE action = 'order.cancelled' AND actor = '{finance.Email}'")).ShouldBe(1);
@@ -144,8 +146,11 @@ public sealed class AdminOpsTests(ScenarioFactory factory) : IClassFixture<Scena
         var (_, _, reference) = await OrderAsync();
         var finance = await factory.StaffAsync(Roles.Finance);
 
-        (await finance.GetAsync($"/v1/admin/orders/{reference.ToLowerInvariant()}")).Response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        var cancelled = await finance.PostAsync($"/v1/admin/orders/{reference.ToLowerInvariant()}/cancel");
+        var loose = Uri.EscapeDataString(" " + reference.ToLowerInvariant() + " ");                                   // API-2: padded too
+        (await finance.GetAsync($"/v1/admin/orders/{loose}")).Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await finance.GetAsync($"/v1/admin/orders?reference={loose}")).Body.GetProperty("total").GetInt32().ShouldBe(1);
+        (await finance.GetAsync("/v1/admin/orders/t3-00-999999")).Response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        var cancelled = await finance.PostAsync($"/v1/admin/orders/{loose}/cancel");
 
         cancelled.Response.StatusCode.ShouldBe(HttpStatusCode.OK);
         cancelled.Body.Str("reference").ShouldBe(reference);

@@ -47,12 +47,23 @@ jobs:
         run: dotnet test --project tests/Ta3lom.Store.ArchitectureTests --no-build
 
       # Integration tests use Testcontainers postgres:18 (Docker is available on GitHub runners).
+      # API-7: the integration tests also write the OpenAPI document (OpenApiDocumentTests); a generation failure fails CI.
       - name: Tests with coverage (Cobertura)
+        env:
+          OPENAPI_OUT: ${{ github.workspace }}/artifacts/openapi/store-api.v1.json
         run: |
           for project in Domain.Tests Application.Tests Api.IntegrationTests; do
             dotnet test --project "tests/Ta3lom.Store.$project" --no-build \
               --coverage --coverage-output-format cobertura --coverage-output "$project.cobertura.xml" --results-directory coverage
           done
+
+      - name: Upload OpenAPI document
+        uses: actions/upload-artifact@v4
+        with:
+          name: store-api-openapi
+          path: artifacts/openapi/store-api.v1.json
+          retention-days: 30
+          if-no-files-found: error
 
       - name: Coverage gate (Domain >= 90 %, Application >= 80 %)
         shell: python

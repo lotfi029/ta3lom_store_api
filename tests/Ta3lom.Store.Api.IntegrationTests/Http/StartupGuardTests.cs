@@ -6,13 +6,26 @@ using Ta3lom.Store.Infrastructure.Services.Security;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Http;
 
-/// Production with one setting replaced (null removes it).
-public sealed class GuardedProductionFactory(string key, string? value, string environment = "Production") : ProductionApiFactory
+/// Production with one setting replaced (null removes it); the value may be derived from the other settings.
+public sealed class GuardedProductionFactory(string key, Func<IReadOnlyDictionary<string, string?>, string?> value, string environment = "Production")
+    : ProductionApiFactory
 {
+    public GuardedProductionFactory(string key, string? value, string environment = "Production")
+        : this(key, _ => value, environment)
+    {
+    }
+
     protected override string EnvironmentName => environment;
 
-    protected override IReadOnlyDictionary<string, string?> Settings =>
-        base.Settings.Where(s => s.Key != key).Concat(value is null ? [] : [new KeyValuePair<string, string?>(key, value)]).ToDictionary();
+    protected override IReadOnlyDictionary<string, string?> Settings
+    {
+        get
+        {
+            var settings = base.Settings;
+            var replaced = value(settings);
+            return settings.Where(s => s.Key != key).Concat(replaced is null ? [] : [new KeyValuePair<string, string?>(key, replaced)]).ToDictionary();
+        }
+    }
 }
 
 /// Every environment except Development refuses missing or DEV ONLY keys at start-up.
@@ -41,11 +54,35 @@ public sealed class StartupGuardTests
         failure.ToString().ShouldContain(key);
     }
 
+    /// API-4: Production never accepts the staging site; Staging and Production accept https origins only.
+    [Theory]
+    [InlineData("Production", "https://store-staging.ta3lom.sa")]
+    [InlineData("Production", "http://store.ta3lom.sa")]
+    [InlineData("Staging", "http://store-staging.ta3lom.sa")]
+    public void A_staging_or_plain_http_origin_stops_the_host(string environment, string origin)
+    {
+        using var factory = new GuardedProductionFactory("Store:Cors:Origins:0", origin, environment);
+
+        var failure = Should.Throw<Exception>(() => factory.CreateClient());
+
+        failure.ToString().ShouldContain("Store:Cors:Origins");
+        failure.ToString().ShouldContain(origin);
+    }
+
+    /// API-4 (P-1): the https rule is for Staging and Production only; the test host keeps accepting a local http origin.
+    [Fact]
+    public void Testing_accepts_a_local_http_origin()
+    {
+        using var factory = new GuardedProductionFactory("Store:Cors:Origins:0", "http://localhost:4200", "Testing");
+
+        Should.NotThrow(() => factory.CreateClient());
+    }
+
     /// R12-4: the same key bytes written differently (here with a trailing newline) are still the same key.
     [Fact]
     public void The_customer_and_staff_keys_must_differ_as_bytes()
     {
-        using var factory = new GuardedProductionFactory("Store:Jwt:StaffSigningKeyBase64", StoreApiFactory.TestKey(1) + "\n");
+        using var factory = new GuardedProductionFactory("Store:Jwt:StaffSigningKeyBase64", s => s["Store:Jwt:CustomerSigningKeyBase64"] + "\n");
 
         var failure = Should.Throw<Exception>(() => factory.CreateClient());
 

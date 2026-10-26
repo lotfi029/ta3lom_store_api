@@ -67,5 +67,5 @@ public static class OrderErrors
     public static Error NotFound => Error.NotFound(ErrorCodes.OrderNotFound, "Order not found.");
 
     public static Error CancelNotAllowed(OrderStatus status) =>
-        Error.Conflict(ErrorCodes.OrderCancelNotAllowed, "Only a pending order can be cancelled.").With("status", status.ToWire());
+        Error.Conflict(ErrorCodes.OrderCancelNotAllowed, "Only a pending order can be cancelled.").With("orderStatus", status.ToWire());
 }

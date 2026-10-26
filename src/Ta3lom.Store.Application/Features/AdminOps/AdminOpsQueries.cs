@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Ta3lom.Store.Application.Abstractions.Data;
 using Ta3lom.Store.Application.Abstractions.Pagination;
 using Ta3lom.Store.Application.DTOs.AdminOps;
+using Ta3lom.Store.Domain.Entities.Donations;
 
 namespace Ta3lom.Store.Application.Features.AdminOps;
 
@@ -133,7 +134,7 @@ internal sealed class ListOrdersQueryHandler(IApplicationDbContext db) : IQueryH
         var orders = db.Orders.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(query.Reference))
         {
-            var reference = query.Reference.Trim().ToUpperInvariant();
+            var reference = Order.NormalizeReference(query.Reference);
             orders = orders.Where(o => o.Reference == reference);
         }
 
@@ -186,7 +187,7 @@ internal sealed class GetAdminOrderQueryHandler(IApplicationDbContext db) : IQue
 {
     public async Task<Result<AdminOrderDetail>> HandleAsync(GetAdminOrderQuery query, CancellationToken ct = default)
     {
-        var reference = query.Reference.Trim().ToUpperInvariant();                   // L-17: references are stored upper-case
+        var reference = Order.NormalizeReference(query.Reference);                   // L-17/API-2: references are stored upper-case
         var o = await db.Orders.AsNoTracking().Include(x => x.Lines).FirstOrDefaultAsync(x => x.Reference == reference, ct);
         return o is null
             ? OrderErrors.NotFound

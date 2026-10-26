@@ -148,9 +148,12 @@ public sealed record GetMyDonationQuery(Guid CustomerId, string Reference) : IQu
 
 internal sealed class GetMyDonationQueryHandler(IApplicationDbContext db) : IQueryHandler<GetMyDonationQuery, DonationDetail>
 {
-    public async Task<Result<DonationDetail>> HandleAsync(GetMyDonationQuery query, CancellationToken ct = default) =>
-        await db.Orders.AsNoTracking().Include(o => o.Lines)
-            .FirstOrDefaultAsync(o => o.Reference == query.Reference && o.CustomerId == query.CustomerId, ct) is { } order
+    public async Task<Result<DonationDetail>> HandleAsync(GetMyDonationQuery query, CancellationToken ct = default)
+    {
+        var reference = Order.NormalizeReference(query.Reference);
+        return await db.Orders.AsNoTracking().Include(o => o.Lines)
+            .FirstOrDefaultAsync(o => o.Reference == reference && o.CustomerId == query.CustomerId, ct) is { } order
             ? MeMapping.ToDetail(order)
             : OrderErrors.NotFound;
+    }
 }

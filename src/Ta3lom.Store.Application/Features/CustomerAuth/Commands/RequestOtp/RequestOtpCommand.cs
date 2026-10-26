@@ -11,7 +11,8 @@ using Ta3lom.Store.Domain.Events;
 
 namespace Ta3lom.Store.Application.Features.CustomerAuth.Commands.RequestOtp;
 
-/// D-10: a 6-digit code valid 5 minutes; at most 3 per mobile per 15 minutes and 10 per IP per hour, counted under an advisory
+/// D-10: a 6-digit code valid 5 minutes; at most 3 per mobile per 15 minutes and 10 per IP per hour (`IOtpLimits`; raised only
+/// in Development, API-8), counted under an advisory
 /// lock on the mobile so parallel requests cannot slip past; at most `OtpDailyGlobalCap` store-wide per Riyadh day (SMS
 /// pumping) with one staff alert at half of it. The answer is the same whether the mobile has an account or not. The plain
 /// code is only in the SMS, sent after the challenge commits, so it is never stored or logged.
@@ -25,6 +26,7 @@ internal sealed class RequestOtpCommandHandler(
     ISmsSender sms,
     IPseudonymizer pseudonymizer,
     ICurrentActor actor,
+    IOtpLimits limits,
     IApplicationDbContext db,
     IOutbox outbox,
     IUnitOfWork uow,
@@ -70,7 +72,7 @@ internal sealed class RequestOtpCommandHandler(
         await otps.LockMobileAsync(mobile, ct);
         var now = clock.UtcNow;
         var byMobile = await otps.IssuedForMobileSinceAsync(mobile, now - SessionPolicy.OtpMobileWindow, ct);
-        if (byMobile.Count >= SessionPolicy.OtpMaxPerMobile)
+        if (byMobile.Count >= limits.MaxPerMobile)
         {
             return OtpErrors.RateLimited(byMobile[0] + SessionPolicy.OtpMobileWindow - now);
         }
@@ -78,7 +80,7 @@ internal sealed class RequestOtpCommandHandler(
         if (actor.IpHash is { } ipHash)
         {
             var byIp = await otps.IssuedForIpSinceAsync(ipHash, now - SessionPolicy.OtpIpWindow, ct);
-            if (byIp.Count >= SessionPolicy.OtpMaxPerIp)
+            if (byIp.Count >= limits.MaxPerIp)
             {
                 return OtpErrors.RateLimited(byIp[0] + SessionPolicy.OtpIpWindow - now);
             }

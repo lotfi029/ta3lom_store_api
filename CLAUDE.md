@@ -57,6 +57,8 @@ sign-in by SMS code, checkout into `pending_payment` orders, donor account, staf
   in that transaction; no external call inside it.
 - Concurrency: `xmin` row version + `version` in update bodies → 409 `concurrency.conflict`. Cart writes and checkout
   lock the cart row (`FOR UPDATE`); locks and SQL live in Infrastructure only.
+- Lock before you modify: `CustomerRepository.LockForUpdateAsync` reloads the tracked donor, discarding unsaved changes;
+  take every lock (customer → cart) before changing an entity.
 - Money: `decimal`/`Money` only, `numeric(12,2)`, two decimals, `MidpointRounding.AwayFromZero`, JSON strings. No
   float or double in Domain or SharedKernel.
 - Time only from `IClock` (`DateTime.Now`/`UtcNow` are banned in `src/`); business dates are Asia/Riyadh; timestamps
@@ -85,7 +87,13 @@ dotnet test --solution Ta3lom.Store.slnx                       # Testcontainers 
 dotnet ef migrations add <Intent> -p src/Ta3lom.Store.Infrastructure -s src/Ta3lom.Store.Infrastructure -o Persistence/Migrations
 dotnet ef migrations has-pending-model-changes -p src/Ta3lom.Store.Infrastructure -s src/Ta3lom.Store.Infrastructure
 ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/Ta3lom.Store.Api   # Scalar UI at /docs
+OPENAPI_OUT=artifacts/openapi/store-api.v1.json dotnet test --project tests/Ta3lom.Store.Api.IntegrationTests -- --filter-class "*OpenApiDocumentTests"
 ```
+
+- OpenAPI: CI writes `/openapi/v1.json` (OpenApiDocumentTests, `OPENAPI_OUT`) and uploads it as the artifact
+  `store-api-openapi` (30 days); nothing is committed (`artifacts/` is ignored).
+- Development only: `Store__Otp__Development__MaxPerMobile` / `Store__Otp__Development__MaxPerIp` raise the D-10 OTP caps
+  for local end-to-end runs; every other environment refuses them at start-up.
 
 ## Quality gates (every PR)
 

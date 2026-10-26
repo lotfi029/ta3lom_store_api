@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -86,13 +87,16 @@ public sealed class RateLimitedApiFactory : ProbeApiFactory
     };
 }
 
-/// Production environment: appsettings.Production.json, no /docs, HSTS on.
+/// Production environment: appsettings.json + appsettings.Production.json (their CORS list is the real one), no /docs,
+/// HSTS on. Keys are random per factory and SMS/SMTP/site-rebuild settings are dummies, all in memory (no secret in a file).
 public class ProductionApiFactory : StoreApiFactory
 {
+    private readonly Dictionary<string, string?> _keys = TestKeys.ToDictionary(k => k.Key, _ => (string?)Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
+
     protected override string EnvironmentName => "Production";
 
     /// Production also requires the site-rebuild, SMS and SMTP settings (throw-away values; the outbox is off, nothing is sent).
-    protected override IReadOnlyDictionary<string, string?> Settings => new Dictionary<string, string?>(base.Settings)
+    protected override IReadOnlyDictionary<string, string?> Settings => new Dictionary<string, string?>(base.Settings.Concat(_keys).GroupBy(s => s.Key).ToDictionary(g => g.Key, g => g.Last().Value))
     {
         ["Store:SiteRebuild:Repository"] = "example/web",
         ["Store:SiteRebuild:Token"] = "test-token-not-real",
@@ -112,7 +116,7 @@ public sealed class ProductionWithoutRebuildFactory : ProductionApiFactory
 }
 
 /// Development environment: `/dev` and OpenAPI are mapped, DEV ONLY keys are accepted.
-public sealed class DevelopmentApiFactory : StoreApiFactory
+public class DevelopmentApiFactory : StoreApiFactory
 {
     protected override string EnvironmentName => "Development";
 

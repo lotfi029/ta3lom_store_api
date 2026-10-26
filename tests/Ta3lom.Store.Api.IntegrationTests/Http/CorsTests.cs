@@ -3,7 +3,8 @@ using Ta3lom.Store.Api.IntegrationTests.Infrastructure;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Http;
 
-/// CORS on the /v1 group: the allow-list is the store web site and its staging copy, exercised through the test-only probe route.
+/// CORS on the /v1 group: the allow-list of the base configuration is the store web site only (API-4: the staging copy has
+/// its own list in appsettings.Staging.json), exercised through the test-only probe route.
 public sealed class CorsTests(ProbeApiFactory factory) : IClassFixture<ProbeApiFactory>
 {
     private const string Ping = "/v1/__test/ping";
@@ -12,7 +13,6 @@ public sealed class CorsTests(ProbeApiFactory factory) : IClassFixture<ProbeApiF
 
     [Theory]
     [InlineData(StoreApiFactory.WebOrigin)]
-    [InlineData(StoreApiFactory.StagingOrigin)]
     public async Task Preflight_from_the_site_is_allowed_with_credentials(string origin)
     {
         var response = await factory.CreateClient().SendAsync(Preflight(origin), Ct);
@@ -32,6 +32,7 @@ public sealed class CorsTests(ProbeApiFactory factory) : IClassFixture<ProbeApiF
     [InlineData("https://ta3lom.sa")]
     [InlineData("https://store.ta3lom.sa.evil.example")]
     [InlineData("http://localhost:4200")]
+    [InlineData(StoreApiFactory.StagingOrigin)]
     public async Task Preflight_from_any_other_origin_is_refused(string origin)
     {
         var response = await factory.CreateClient().SendAsync(Preflight(origin), Ct);

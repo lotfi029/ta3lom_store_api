@@ -193,12 +193,21 @@ internal sealed class GetCartQueryHandler(CartReader reader, CartPricer pricer, 
 /// `GET /v1/cart/summary`: line count and the indicative total.
 public sealed record GetCartSummaryQuery(CartOwner Owner) : IQuery<CartSummaryResponse>;
 
-internal sealed class GetCartSummaryQueryHandler(CartReader reader) : IQueryHandler<GetCartSummaryQuery, CartSummaryResponse>
+/// API-5: the total is re-priced with the same `CartPricer` as GET /v1/cart (the catalogue as it is now; a constant number
+/// of queries), so the header badge and the cart page always show the same amount.
+internal sealed class GetCartSummaryQueryHandler(CartReader reader, CartPricer pricer, IStoreSettings settings)
+    : IQueryHandler<GetCartSummaryQuery, CartSummaryResponse>
 {
     public async Task<Result<CartSummaryResponse>> HandleAsync(GetCartSummaryQuery query, CancellationToken ct = default)
     {
         var cart = await reader.FindAsync(query.Owner, ct);
-        return cart is null ? new CartSummaryResponse(0, Money.Zero.ToWire()) : new CartSummaryResponse(cart.Lines.Count, cart.Total.ToWire());
+        if (cart is null || cart.Lines.Count == 0)
+        {
+            return new CartSummaryResponse(0, Money.Zero.ToWire());
+        }
+
+        var priced = await pricer.PriceAsync(cart.Lines, await settings.GetAsync(ct), ct);
+        return new CartSummaryResponse(cart.Lines.Count, priced.Total.ToWire());
     }
 }
 
