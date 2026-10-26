@@ -116,7 +116,7 @@ public sealed class ProductionWithoutRebuildFactory : ProductionApiFactory
 }
 
 /// Development environment: `/dev` and OpenAPI are mapped, DEV ONLY keys are accepted.
-public sealed class DevelopmentApiFactory : StoreApiFactory
+public class DevelopmentApiFactory : StoreApiFactory
 {
     protected override string EnvironmentName => "Development";
 
