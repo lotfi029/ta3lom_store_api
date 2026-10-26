@@ -208,16 +208,21 @@ internal sealed class ReplaceProjectOptionsCommandValidator : AbstractValidator<
 {
     public ReplaceProjectOptionsCommandValidator()
     {
-        RuleFor(c => c.Input.Options).NotNull().Must(o => o.Count <= 50).WithMessage("At most 50 options.")
-            .Must(o => o.Select(x => x.LabelAr.Trim()).Distinct(StringComparer.Ordinal).Count() == o.Count).WithMessage("Option labels must be unique.")
-            .Must(o => o.Where(x => x.Id is not null).GroupBy(x => x.Id).All(g => g.Count() == 1)).WithMessage("Option ids must be unique.");
-        RuleForEach(c => c.Input.Options).ChildRules(o =>
-        {
-            o.RuleFor(x => x.LabelAr).NotEmpty().Length(2, ProjectOption.LabelMax);
-            o.RuleFor(x => x.LabelEn).MaximumLength(ProjectOption.LabelMax);
-            o.RuleFor(x => x.Amount).Must(MoneyInput.IsPositive).WithMessage("amount must be a positive \"50.00\" string.");
-            o.RuleFor(x => x.Sort).InclusiveBetween(0, 10_000);
-        });
+        // API-3: a missing list, a null item or a null label is a field error (400), never a NullReferenceException (500).
+        RuleFor(c => c.Input.Options).Cascade(CascadeMode.Stop).NotNull().WithMessage("options is required.")
+            .Must(o => o.Count <= 50).WithMessage("At most 50 options.")
+            .Must(o => o.Where(x => x?.LabelAr is not null).Select(x => x.LabelAr.Trim()).GroupBy(l => l, StringComparer.Ordinal).All(g => g.Count() == 1))
+            .WithMessage("Option labels must be unique.")
+            .Must(o => o.Where(x => x?.Id is not null).GroupBy(x => x.Id).All(g => g.Count() == 1)).WithMessage("Option ids must be unique.");
+        RuleForEach(c => c.Input.Options).Cascade(CascadeMode.Stop).NotNull().WithMessage("An option is required.")
+            .ChildRules(o =>
+            {
+                o.RuleFor(x => x.LabelAr).Cascade(CascadeMode.Stop).NotEmpty().Length(2, ProjectOption.LabelMax);
+                o.RuleFor(x => x.LabelEn).MaximumLength(ProjectOption.LabelMax);
+                o.RuleFor(x => x.Amount).Cascade(CascadeMode.Stop).NotEmpty().Must(MoneyInput.IsPositive).WithMessage("amount must be a positive \"50.00\" string.");
+                o.RuleFor(x => x.Sort).InclusiveBetween(0, 10_000);
+            })
+            .When(c => c.Input.Options is not null);
     }
 }
 
