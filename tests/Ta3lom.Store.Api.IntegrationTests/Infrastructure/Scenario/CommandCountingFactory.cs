@@ -1,5 +1,4 @@
 using System.Data.Common;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Ta3lom.Store.Infrastructure.Persistence;
