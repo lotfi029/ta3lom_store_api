@@ -104,7 +104,8 @@ internal sealed class GetOrderStatusQueryHandler(IApplicationDbContext db, IOrde
 {
     public async Task<Result<OrderStatusResponse>> HandleAsync(GetOrderStatusQuery query, CancellationToken ct = default)
     {
-        var order = await db.Orders.AsNoTracking().FirstOrDefaultAsync(o => o.Reference == query.Reference, ct);
+        var reference = Order.NormalizeReference(query.Reference);
+        var order = await db.Orders.AsNoTracking().FirstOrDefaultAsync(o => o.Reference == reference, ct);
         var allowed = order is not null
                       && ((query.CustomerId is { } customerId && order.CustomerId == customerId)
                           || (query.Token is { } token && tokens.Matches(token, order.StatusTokenHash)));

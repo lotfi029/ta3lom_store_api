@@ -61,6 +61,10 @@ public sealed class Order : AggregateRoot
 
     public IReadOnlyList<OrderLine> Lines => _lines;
 
+    /// API-2: a reference as typed (any case, surrounding spaces) → the stored upper-case form, so lookups keep using the
+    /// unique index on `reference`.
+    public static string NormalizeReference(string reference) => (reference ?? string.Empty).Trim().ToUpperInvariant();
+
     /// D-09: `T3-YY-NNNNNN` — the Riyadh year and the next value of `order_ref_seq`.
     public static string FormatReference(int riyadhYear, long sequence) =>
         string.Create(CultureInfo.InvariantCulture, $"T3-{riyadhYear % 100:D2}-{sequence:D6}");
