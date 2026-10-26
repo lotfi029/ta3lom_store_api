@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Net;
+using Microsoft.Extensions.Options;
 
 namespace Ta3lom.Store.Api.Options;
 
@@ -24,9 +25,11 @@ public sealed class StoreOptions
 
     public TelemetrySettings Telemetry { get; set; } = new();
 
-    /// Returns every problem found, or an empty list (used by ValidateOnStart).
-    public IReadOnlyList<string> Validate()
+    /// Returns every problem found for <paramref name="environment"/>, or an empty list (used by ValidateOnStart).
+    /// API-4: Staging and Production accept https origins only, and Production never the staging site.
+    public IReadOnlyList<string> Validate(string environment)
     {
+        var strict = environment is "Production" or "Staging";
         var problems = new List<string>();
         if (Cors.Origins.Count == 0)
         {
@@ -38,6 +41,15 @@ public sealed class StoreOptions
             if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) || uri.PathAndQuery != "/" || origin.EndsWith('/'))
             {
                 problems.Add($"Store:Cors:Origins entry '{origin}' must be a scheme://host[:port] origin");
+            }
+            else if (strict && uri.Scheme != Uri.UriSchemeHttps)
+            {
+                problems.Add($"Store:Cors:Origins entry '{origin}' must be https in {environment}");
+            }
+
+            if (environment == "Production" && origin.Contains("staging", StringComparison.OrdinalIgnoreCase))
+            {
+                problems.Add($"Store:Cors:Origins entry '{origin}' is a staging origin; Production accepts the store site only");
             }
         }
 
@@ -129,4 +141,15 @@ public sealed class TelemetrySettings
 {
     /// OTLP collector; empty = no export.
     public string? OtlpEndpoint { get; set; }
+}
+
+/// Runs <see cref="StoreOptions.Validate(string)"/> for the host environment and reports every problem.
+internal sealed class StoreOptionsValidator(IHostEnvironment environment) : IValidateOptions<StoreOptions>
+{
+    public ValidateOptionsResult Validate(string? name, StoreOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        var problems = options.Validate(environment.EnvironmentName);
+        return problems.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(problems);
+    }
 }
