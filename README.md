@@ -63,6 +63,12 @@ refuses to start when a key is missing, shorter than 32 bytes or equal to its DE
 
 Real values never go into the repository.
 
+## Errors
+
+Every error is an RFC 9457 problem document with a stable `code` (e.g. `cart.total_exceeded`) and, for `validation.failed`,
+`errors` keyed by field. Messages (`title`, `detail`, validation messages) stay English; clients map by `code` and field,
+never by message text.
+
 ## Test
 
 ```bash
