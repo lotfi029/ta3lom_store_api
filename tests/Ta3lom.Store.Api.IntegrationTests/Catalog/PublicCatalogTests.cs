@@ -161,6 +161,49 @@ public sealed class PublicCatalogTests(ScenarioFactory factory) : IClassFixture<
         (await admin.GetAsync($"/v1/admin/projects?q=well{tag}&category={two.Str("id")}&page=2&pageSize=40")).Body.GetProperty("total").GetInt32().ShouldBe(100);
     }
 
+    /// API-9: a card lists the active options of its project (sort, id), the same as the detail; none → [].
+    [Fact]
+    public async Task Cards_carry_the_active_options_of_the_detail()
+    {
+        var (_, build) = await AdminAsync();
+        var category = await build.CategoryAsync();
+        var categoryId = Guid.Parse(category.Str("id"));
+        var withOptions = await build.PublishAsync(await build.OptionsAsync(await build.DraftAsync(categoryId),
+            ("نسخة", "4.00", true), ("مخفي", "7.00", false), ("مئة نسخة", "400.00", true)));
+        var openOnly = await build.PublishAsync(await build.DraftAsync(categoryId));
+
+        var cards = (await GetAsync($"/v1/catalog/projects?category={category.Str("slug")}")).Body.GetProperty("items").EnumerateArray().ToList();
+        var detail = (await GetAsync($"/v1/catalog/projects/{withOptions.Str("slug")}")).Body;
+
+        var card = cards.Single(c => c.Str("id") == withOptions.Str("id"));
+        card.GetProperty("options").GetRawText().ShouldBe(detail.GetProperty("options").GetRawText());
+        card.GetProperty("options").EnumerateArray().Select(o => o.Str("labelAr")).ShouldBe(["نسخة", "مئة نسخة"]);
+        card.Str("fromAmount").ShouldBe("4.00");
+        var open = cards.Single(c => c.Str("id") == openOnly.Str("id"));
+        open.GetProperty("options").GetArrayLength().ShouldBe(0);
+        open.GetProperty("fromAmount").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    /// API-9: the listing's ETag follows its options (a label change alone changes the card).
+    [Fact]
+    public async Task The_listing_ETag_changes_when_an_option_changes()
+    {
+        var (admin, build) = await AdminAsync();
+        var category = await build.CategoryAsync();
+        var project = await build.PublishAsync(await build.OptionsAsync(await build.DraftAsync(Guid.Parse(category.Str("id"))), ("نسخة", "4.00", true)));
+        var listing = $"/v1/catalog/projects?category={category.Str("slug")}";
+        var before = (await GetAsync(listing)).Response.Headers.ETag!.ToString();
+        var option = project.GetProperty("options")[0];
+
+        (await admin.SendAsync(HttpMethod.Put, $"/v1/admin/projects/{project.Str("id")}/options", new
+        {
+            options = new[] { new { id = (Guid?)Guid.Parse(option.Str("id")), labelAr = "نسخة واحدة", labelEn = (string?)null, amount = "4.00", sort = 0, isActive = true } },
+            version = project.GetProperty("version").GetUInt32(),
+        })).Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        (await GetAsync(listing)).Response.Headers.ETag!.ToString().ShouldNotBe(before);
+    }
+
     [Fact]
     public async Task The_default_listing_orders_by_sort_then_newest_published_then_id()
     {
@@ -242,6 +285,7 @@ public sealed class PublicCatalogTests(ScenarioFactory factory) : IClassFixture<
 
         var home = (await GetAsync("/v1/catalog/home")).Body;
         home.GetProperty("featured").GetArrayLength().ShouldBeGreaterThan(0);
+        home.GetProperty("featured").EnumerateArray().ShouldAllBe(card => card.GetProperty("options").ValueKind == JsonValueKind.Array);   // API-9
         home.GetProperty("amountPresets").GetArrayLength().ShouldBeGreaterThan(0);
         var summary = (await GetAsync("/v1/catalog/categories")).Body.EnumerateArray().Single(c => c.Str("slug") == category.Str("slug"));
         summary.GetProperty("projectCount").GetInt32().ShouldBe(1);

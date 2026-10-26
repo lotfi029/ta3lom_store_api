@@ -4,8 +4,8 @@ using Ta3lom.Store.Application.DTOs.Catalog;
 
 namespace Ta3lom.Store.Application.Features.Catalog;
 
-/// Shared projections of the public catalogue: a project row with its category, cover and active option amounts in one
-/// SQL query (a LEFT JOIN for the options), so a listing page is one round trip.
+/// Shared projections of the public catalogue: a project row with its category, cover and active options in one SQL query
+/// (a LEFT JOIN for the options), so a listing page is one round trip.
 internal sealed class CatalogReader(IApplicationDbContext db, IFileUrls urls)
 {
     /// A member-init projection (not a constructor), so EF Core can still filter and sort on its members.
@@ -39,7 +39,19 @@ internal sealed class CatalogReader(IApplicationDbContext db, IFileUrls urls)
 
         public DateTimeOffset? PublishedAt { get; init; }
 
-        public List<Money> OptionAmounts { get; init; } = [];
+        public List<CardOption> Options { get; init; } = [];
+    }
+
+    /// An active option of a card row (API-9), loaded in the listing's own query.
+    internal sealed class CardOption
+    {
+        public Guid Id { get; init; }
+
+        public string LabelAr { get; init; } = string.Empty;
+
+        public string? LabelEn { get; init; }
+
+        public Money Amount { get; init; }
     }
 
     /// Published projects in active categories (D-05/D-07: archived and draft projects drop out of the listings).
@@ -65,13 +77,15 @@ internal sealed class CatalogReader(IApplicationDbContext db, IFileUrls urls)
             MinAmount = p.MinAmount,
             Sort = p.Sort,
             PublishedAt = p.PublishedAt,
-            OptionAmounts = p.Options.Where(o => o.IsActive).Select(o => o.Amount).ToList(),
+            Options = p.Options.Where(o => o.IsActive).OrderBy(o => o.Sort).ThenBy(o => o.Id)
+                .Select(o => new CardOption { Id = o.Id, LabelAr = o.LabelAr, LabelEn = o.LabelEn, Amount = o.Amount }).ToList(),
         };
 
     public ProjectCard ToCard(CardRow r, Money minGift) =>
         new(r.Id, r.Slug, r.TitleAr, r.TitleEn, r.SummaryAr, r.SummaryEn, r.CoverKey is null ? null : urls.Public(r.CoverKey), r.CoverAltAr,
             r.Badge?.ToWire(), r.CategorySlug, r.AllowOpenAmount, (r.MinAmount ?? minGift).ToWire(),
-            r.OptionAmounts.Count == 0 ? null : r.OptionAmounts.Min().ToWire());
+            r.Options.Count == 0 ? null : r.Options.Min(o => o.Amount).ToWire(),
+            [.. r.Options.Select(o => new ProjectOptionView(o.Id, o.LabelAr, o.LabelEn, o.Amount.ToWire()))]);
 
     /// Active categories with the number of their published projects.
     public async Task<List<CategorySummary>> ActiveCategoriesAsync(CancellationToken ct)
@@ -116,7 +130,7 @@ internal sealed class CatalogReader(IApplicationDbContext db, IFileUrls urls)
                 CoverKey = cover != null ? cover.StorageKey : null,
                 CoverAltAr = cover != null ? cover.AltAr : null,
                 CoverAltEn = cover != null ? cover.AltEn : null,
-                Options = p.Options.Where(o => o.IsActive).OrderBy(o => o.Sort).Select(o => new { o.Id, o.LabelAr, o.LabelEn, o.Amount }).ToList(),
+                Options = p.Options.Where(o => o.IsActive).OrderBy(o => o.Sort).ThenBy(o => o.Id).Select(o => new { o.Id, o.LabelAr, o.LabelEn, o.Amount }).ToList(),
             };
         var row = await query.FirstOrDefaultAsync(ct);
         if (row is null)
