@@ -1,5 +1,6 @@
 # CI gates: build (warnings as errors), format, tests on Testcontainers postgres:18 with a line-coverage gate
-# (Domain >= 90 %, Application >= 80 %, merged over the test projects), vulnerable packages. No image, no deploy.
+# (Domain >= 90 %, Application >= 80 %, merged over the test projects), vulnerable packages, and the deploy images build
+# (not pushed) with a valid compose file. No deploy.
 name: ci
 
 on:
@@ -102,3 +103,9 @@ jobs:
           if grep -qE '\b(High|Critical)\b' vulnerable.txt; then
             echo "::error::High or Critical vulnerable package found"; exit 1
           fi
+
+      - name: Deploy images build (api, migrate) and compose file is valid
+        run: |
+          docker build --target api -t ta3lom-store-api:ci .
+          docker build --target migrate -t ta3lom-store-migrate:ci .
+          ACME_EMAIL=ci@example.invalid docker compose -f deploy/compose.yaml config -q

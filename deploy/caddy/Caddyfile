@@ -1,0 +1,39 @@
+# TLS ends here (automatic certificates). The API trusts the X-Forwarded-* headers Caddy sets (docker network only).
+{
+	email {$ACME_EMAIL}
+}
+
+{$API_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy api:8080
+}
+
+{$WEB_DOMAIN} {
+	root * /srv/store-web/site
+	# The web repo's deploy/caddy-headers.conf (CSP, HSTS, no-referrer on order pages). Copied next to the site on each
+	# web deploy; until the first web deploy nothing matches and the site only serves 404s.
+	import /srv/store-web/*.conf
+
+	redir / /ar/ 302
+
+	@ar path /ar/*
+	handle @ar {
+		try_files {path} {path}/index.html /ar/index.csr.html
+		file_server
+	}
+	@en path /en/*
+	handle @en {
+		try_files {path} {path}/index.html /en/index.csr.html
+		file_server
+	}
+	handle {
+		file_server
+	}
+
+	# Fingerprinted assets never change; HTML must be revalidated so a deploy is visible at once.
+	@assets path_regexp \.(js|css|woff2)$
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+	@html path *.html */
+	header @html Cache-Control "no-cache"
+	encode zstd gzip
+}

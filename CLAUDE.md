@@ -86,10 +86,13 @@ dotnet format Ta3lom.Store.slnx --verify-no-changes
 dotnet test --solution Ta3lom.Store.slnx                       # Testcontainers postgres:18 (needs Docker)
 dotnet ef migrations add <Intent> -p src/Ta3lom.Store.Infrastructure -s src/Ta3lom.Store.Infrastructure -o Persistence/Migrations
 dotnet ef migrations has-pending-model-changes -p src/Ta3lom.Store.Infrastructure -s src/Ta3lom.Store.Infrastructure
-ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/Ta3lom.Store.Api   # Scalar UI at /docs
+docker compose -f compose.dev.yaml up -d --wait                  # postgres:18 on :5440
+dotnet run --project src/Ta3lom.Store.Api                          # Development on http://localhost:5080, Scalar UI at /docs
 OPENAPI_OUT=artifacts/openapi/store-api.v1.json dotnet test --project tests/Ta3lom.Store.Api.IntegrationTests -- --filter-class "*OpenApiDocumentTests"
 ```
 
+- Deploy: `Dockerfile` (targets `api`, `migrate`) + `deploy/compose.yaml`; runbook `deploy/README.md`; secrets are key-per-file
+  under `/run/secrets` (`deploy/secrets.md`), never in the repository.
 - OpenAPI: CI writes `/openapi/v1.json` (OpenApiDocumentTests, `OPENAPI_OUT`) and uploads it as the artifact
   `store-api-openapi` (30 days); nothing is committed (`artifacts/` is ignored).
 - Development only: `Store__Otp__Development__MaxPerMobile` / `Store__Otp__Development__MaxPerIp` raise the D-10 OTP caps

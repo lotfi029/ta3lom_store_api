@@ -21,7 +21,7 @@ public sealed class ConfigurationOriginsTests
     {
         Origins("Production").ShouldBe(["https://store.ta3lom.sa"]);
         Origins("Staging").ShouldBe(["https://store-staging.ta3lom.sa"]);
-        Origins("Development").ShouldBe(["https://store.ta3lom.sa", "https://store-staging.ta3lom.sa", "http://localhost:4200"]);
+        Origins("Development").ShouldBe(["https://store.ta3lom.sa", "https://store-staging.ta3lom.sa", "http://localhost:4200", "http://localhost:4201", "http://localhost:4320"]);
     }
 }
 

@@ -11,3 +11,7 @@ TestResults/
 
 
 __pycache__/
+
+# Production secrets and settings (deploy/secrets.md)
+deploy/secrets/
+deploy/.env

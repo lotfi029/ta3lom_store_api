@@ -118,6 +118,31 @@ public sealed class KeyRingGuardTests
     }
 }
 
+/// Staging and Production refuse a `Store:Files:Root` that cannot be written (the uploads volume is not mounted).
+public sealed class FilesRootGuardTests
+{
+    [Theory]
+    [InlineData("Production")]
+    [InlineData("Staging")]
+    public void An_unwritable_files_root_stops_the_host(string environment)
+    {
+        var file = Path.GetTempFileName();                      // a file cannot hold a directory
+        try
+        {
+            using var factory = new GuardedProductionFactory("Store:Files:Root", Path.Combine(file, "files"), environment);
+
+            var failure = Should.Throw<Exception>(() => factory.CreateClient()).ToString();
+
+            failure.ShouldContain("Store:Files:Root");
+            failure.ShouldContain("is not writable");
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+}
+
 /// A-4: citext and pg_trgm live in `public`; a search path without it breaks case-insensitive e-mail lookups.
 public sealed class SearchPathGuardTests
 {

@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+artifacts/
+TestResults/
+tests/
+deploy/
+.git/
+.github/
+.vs/
+.idea/
+*.user
+*.md

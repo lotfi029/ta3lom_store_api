@@ -13,6 +13,7 @@ if (args.Length > 0 && args[0] == CreateAdminCommand.Verb)
 }
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddStoreSecretFiles();
 builder.WebHost.ConfigureKestrel(k => k.AddServerHeader = false);
 
 // ── Layers (DMS chaining: AddApi → AddInfrastructure → AddApplication → AddDomain) ─────────────

@@ -1,3 +1,4 @@
+using Ta3lom.Store.Api.Extensions;
 using Ta3lom.Store.Api.Options;
 using Ta3lom.Store.Api.Security;
 using Ta3lom.Store.Application;
@@ -44,6 +45,7 @@ internal static class CreateAdminCommand
             EnvironmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? Environments.Production,
             ContentRootPath = AppContext.BaseDirectory,
         });
+        builder.Configuration.AddStoreSecretFiles();
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
         builder.Services.AddInfrastructure(builder.Configuration).AddApplication().AddDomain();
         builder.Services.AddSingleton<ICurrentActor, CliActor>();

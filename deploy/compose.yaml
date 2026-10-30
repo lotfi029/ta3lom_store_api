@@ -1,0 +1,100 @@
+# Production on one VPS: PostgreSQL 18, the migration job, the API and Caddy (TLS, reverse proxy, static store web).
+# Runbook: deploy/README.md. Settings that are not secrets: deploy/.env (copy of .env.example).
+# Secrets: deploy/secrets/ (git-ignored; see deploy/secrets.md) — never in this file, the image or the repository.
+name: ta3lom-store
+
+services:
+  db:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: store
+      POSTGRES_DB: ta3lom_store
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password]
+    volumes:
+      - pg-data:/var/lib/postgresql
+    networks: [store]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U store -d ta3lom_store"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  # One-shot: applies the idempotent migration script, then exits. The API starts only after it succeeded.
+  migrate:
+    build: { context: .., target: migrate }
+    image: ta3lom-store-migrate:${STORE_VERSION:-local}
+    environment:
+      PGHOST: db
+      PGDATABASE: ta3lom_store
+      PGUSER: store
+    secrets: [db_password]
+    networks: [store]
+    depends_on:
+      db: { condition: service_healthy }
+    restart: "no"
+
+  api:
+    build: { context: .., target: api }
+    image: ta3lom-store-api:${STORE_VERSION:-local}
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${STORE_ENVIRONMENT:-Production}
+      Store__PublicBaseUrl: https://${API_DOMAIN:-store-api.ta3lom.sa}
+      Store__WebBaseUrl: https://${WEB_DOMAIN:-store.ta3lom.sa}
+      Store__Cors__Origins__0: https://${WEB_DOMAIN:-store.ta3lom.sa}
+      Store__Files__PublicBaseUrl: https://${API_DOMAIN:-store-api.ta3lom.sa}/files/public
+      Store__SiteRebuild__Repository: ${SITE_REBUILD_REPOSITORY:-lotfi029/ta3lom_store_web}
+      Store__Sms__SenderId: ${SMS_SENDER_ID:-}
+      Store__Email__User: ${SMTP_USER:-store@ta3lom.sa}
+      Store__Telemetry__OtlpEndpoint: ${OTLP_ENDPOINT:-}
+    volumes:
+      # Key-per-file secrets (Store__Jwt__…, ConnectionStrings__Store, …): read-only, loaded by SecretFilesSetup.
+      - ./secrets/api:/run/secrets:ro
+      - api-keys:/srv/store/keys
+      - api-files:/srv/store/files
+    networks: [store]
+    depends_on:
+      db: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      API_DOMAIN: ${API_DOMAIN:-store-api.ta3lom.sa}
+      WEB_DOMAIN: ${WEB_DOMAIN:-store.ta3lom.sa}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in deploy/.env}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # The store web: <WEB_DIR>/site = dist/store-web/browser, <WEB_DIR>/caddy-headers.conf = the web repo's CSP file.
+      - ${WEB_DIR:-/srv/store-web}:/srv/store-web:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [store]
+    depends_on:
+      api: { condition: service_healthy }
+
+# The API trusts X-Forwarded-For/Proto only from Store:ForwardedHeaders:KnownNetworks (172.16.0.0/12): keep this subnet
+# inside that range, or the per-IP rate limits see Caddy's address instead of the donor's.
+networks:
+  store:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+secrets:
+  db_password:
+    file: ./secrets/db_password
+
+volumes:
+  pg-data:
+  api-keys:
+  api-files:
+  caddy-data:
+  caddy-config:

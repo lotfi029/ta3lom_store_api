@@ -105,6 +105,7 @@ public class ProductionApiFactory : StoreApiFactory
         ["Store:Email:User"] = "store@ta3lom.sa",
         ["Store:Email:Password"] = "test-password-not-real",
         ["Store:Outbox:Enabled"] = "false",
+        ["Store:Files:Root"] = Path.Combine(Path.GetTempPath(), $"ta3lom-store-prod-files-{Environment.ProcessId}"),
     };
 }
 
