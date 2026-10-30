@@ -7,7 +7,7 @@ using Ta3lom.Store.Domain.ValueObjects;
 namespace Ta3lom.Store.Infrastructure.Services.Sms;
 
 /// Real SMS provider behind `Store:Sms:Provider = unifonic`. Not used until the owner supplies the
-/// AppSid and the approved sender id; the keys stay empty in the repository (REVIEW in DECISIONS.md).
+/// AppSid and the approved sender id; the keys stay empty in the repository (secret files on the server: deploy/secrets.md).
 internal sealed partial class UnifonicSmsSender(HttpClient http, IOptions<SmsOptions> options, ILogger<UnifonicSmsSender> logger) : ISmsSender
 {
     public async Task<SmsSendResult> SendAsync(string mobileE164, string body, CancellationToken ct = default)

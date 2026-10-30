@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Hosting;
 using Ta3lom.Store.Api.Cli;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Contract;
@@ -14,5 +15,15 @@ public sealed class CreateAdminCommandTests
 
         exitCode.ShouldBe(CreateAdminCommand.UsageExitCode);
         output.ToString().ShouldContain("--name");
+    }
+
+    /// Development validates every service at build time: the CLI host must register what the API layer adds for the
+    /// Application handlers (web links, OTP limits), or `create-admin` crashes before it runs.
+    [Fact]
+    public void The_cli_host_builds_with_development_service_validation()
+    {
+        using var host = CreateAdminCommand.BuildHost(Environments.Development);
+
+        host.ShouldNotBeNull();
     }
 }

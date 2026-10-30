@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 namespace Ta3lom.Store.Infrastructure.Services.Sms;
 
 /// `Store:Sms`. `Provider = sink` writes to the log and `/dev/sms`; `unifonic` calls the provider.
-/// Keys are empty in the repo: the real provider needs the approved sender id (launch checklist).
+/// Keys are empty in the repo: the real provider needs the approved sender id (go-live checklist in deploy/README.md).
 public sealed class SmsOptions
 {
     public const string Section = "Store:Sms";

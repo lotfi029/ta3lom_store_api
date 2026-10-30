@@ -4,7 +4,8 @@ using Microsoft.Extensions.Options;
 
 namespace Ta3lom.Store.Infrastructure.Services.Security;
 
-/// Signing keys and peppers. Real values come from the environment (or files under /run/secrets).
+/// Signing keys and peppers. Real values come from the environment or Docker secret files under /run/secrets
+/// (`SecretFilesSetup`).
 /// In Development an empty key falls back to its DEV ONLY value; every other environment refuses to start when a key
 /// is missing, equals its DEV ONLY value or is shorter than 32 bytes.
 public sealed class JwtOptions

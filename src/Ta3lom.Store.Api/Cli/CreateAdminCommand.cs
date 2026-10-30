@@ -1,3 +1,4 @@
+using Ta3lom.Store.Api.Extensions;
 using Ta3lom.Store.Api.Options;
 using Ta3lom.Store.Api.Security;
 using Ta3lom.Store.Application;
@@ -39,19 +40,7 @@ internal static class CreateAdminCommand
 
     private static async Task<int> RunAsync(string email, string name, TextWriter output)
     {
-        var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
-        {
-            EnvironmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? Environments.Production,
-            ContentRootPath = AppContext.BaseDirectory,
-        });
-        builder.Logging.SetMinimumLevel(LogLevel.Warning);
-        builder.Services.AddInfrastructure(builder.Configuration).AddApplication().AddDomain();
-        builder.Services.AddSingleton<ICurrentActor, CliActor>();
-        // Application services need the web links; without them the Development host's service validation refuses to build.
-        builder.Services.AddOptions<StoreOptions>().BindConfiguration(StoreOptions.Section);
-        builder.Services.AddSingleton<IWebLinks, WebLinks>();
-
-        using var host = builder.Build();
+        using var host = BuildHost(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? Environments.Production);
         await using var scope = host.Services.CreateAsyncScope();
         var handler = scope.ServiceProvider.GetRequiredService<ICommandHandler<CreateStaffCommand, CreateStaffResponse>>();
         var result = await handler.HandleAsync(new CreateStaffCommand(email, name, [Roles.Admin]));
@@ -65,6 +54,25 @@ internal static class CreateAdminCommand
         await output.WriteLineAsync($"One-time password (shown once): {result.Value.OneTimePassword}");
         await output.WriteLineAsync("At the first sign-in: enrol an authenticator (/v1/admin/auth/totp/enrol), then change the password (/v1/admin/auth/password).");
         return 0;
+    }
+
+    /// The layers without the web host. Application services also need the API's web links and OTP limits; without them
+    /// the Development host's service validation refuses to build.
+    internal static IHost BuildHost(string environmentName)
+    {
+        var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+        {
+            EnvironmentName = environmentName,
+            ContentRootPath = AppContext.BaseDirectory,
+        });
+        builder.Configuration.AddStoreSecretFiles();
+        builder.Logging.SetMinimumLevel(LogLevel.Warning);
+        builder.Services.AddInfrastructure(builder.Configuration).AddApplication().AddDomain();
+        builder.Services.AddSingleton<ICurrentActor, CliActor>();
+        builder.Services.AddOptions<StoreOptions>().BindConfiguration(StoreOptions.Section);
+        builder.Services.AddSingleton<IWebLinks, WebLinks>();
+        builder.Services.AddSingleton<IOtpLimits, StoreOtpLimits>();
+        return builder.Build();
     }
 
     private static string? Option(IReadOnlyList<string> args, string name)

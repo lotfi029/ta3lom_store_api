@@ -180,7 +180,8 @@ public static class DependencyInjection
 
     private static void AddFiles(IServiceCollection services)
     {
-        services.AddOptions<FileStorageOptions>().BindConfiguration(FileStorageOptions.Section);
+        services.AddOptions<FileStorageOptions>().BindConfiguration(FileStorageOptions.Section).ValidateOnStart();
+        services.AddSingleton<IValidateOptions<FileStorageOptions>, FileStorageRootValidator>();
         services.AddSingleton<IFileUrls, FileUrls>();
         services.AddSingleton<LocalFileStorage>();
         services.AddSingleton<IFileStorage>(sp => sp.GetRequiredService<LocalFileStorage>());
@@ -236,17 +237,46 @@ internal sealed class DataProtectionKeysValidator(IHostEnvironment environment) 
         }
 
         var directory = Path.GetFullPath(Path.Combine(environment.ContentRootPath, options.KeysPath));
+        return WritableDirectory.Check(directory) is { } error
+            ? ValidateOptionsResult.Fail($"Store:DataProtection:KeysPath '{directory}' is not writable: {error}")
+            : ValidateOptionsResult.Success;
+    }
+}
+
+/// Uploaded covers and update images live under `Store:Files:Root` (a volume in production). In Staging and Production
+/// the host refuses to start when the folder cannot be written, instead of failing at the first upload.
+internal sealed class FileStorageRootValidator(IHostEnvironment environment) : IValidateOptions<FileStorageOptions>
+{
+    public ValidateOptionsResult Validate(string? name, FileStorageOptions options)
+    {
+        if (!environment.IsProduction() && !environment.IsStaging())
+        {
+            return ValidateOptionsResult.Success;
+        }
+
+        var directory = options.ResolveRoot(environment.ContentRootPath);
+        return WritableDirectory.Check(directory) is { } error
+            ? ValidateOptionsResult.Fail($"Store:Files:Root '{directory}' is not writable: {error}")
+            : ValidateOptionsResult.Success;
+    }
+}
+
+internal static class WritableDirectory
+{
+    /// Creates the folder, writes and deletes a probe file; returns the failure message, or null when writable.
+    public static string? Check(string directory)
+    {
         try
         {
             Directory.CreateDirectory(directory);
             var probe = Path.Combine(directory, $".write-probe-{Guid.CreateVersion7():N}");
             File.WriteAllText(probe, "probe");
             File.Delete(probe);
-            return ValidateOptionsResult.Success;
+            return null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return ValidateOptionsResult.Fail($"Store:DataProtection:KeysPath '{directory}' is not writable: {ex.Message}");
+            return ex.Message;
         }
     }
 }
