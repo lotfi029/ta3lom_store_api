@@ -5,6 +5,7 @@ using Ta3lom.Store.Application.Abstractions.Messaging;
 using Ta3lom.Store.Application.Abstractions.Pagination;
 using Ta3lom.Store.Application.DTOs.Donations;
 using Ta3lom.Store.Application.Features.Donations;
+using Ta3lom.Store.Application.Features.Payments;
 using Ta3lom.Store.Domain.Constants;
 using Ta3lom.Store.SharedKernel;
 
@@ -37,6 +38,12 @@ internal sealed class DonationEndpoints : IEndpoint
 
         app.MapGet("/orders/{reference}/status", OrderStatusAsync).WithTags("Orders").RequireAuthorization(Policies.CustomerOptional)
             .RequireRateLimiting(RatePolicies.Public).Produces<OrderStatusResponse>().ProducesProblem(StatusCodes.Status404NotFound);
+
+        // Plan §3.3: a new payment attempt (the donor, or the status token holder). Idempotent per key.
+        app.MapPost("/orders/{reference}/pay", PayAsync).WithTags("Orders").RequireAuthorization(Policies.CustomerOptional)
+            .RequireRateLimiting(RatePolicies.Pay).RequireSameOrigin().RequireIdempotencyKey("pay")
+            .Produces<PayOrderResponse>().ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status503ServiceUnavailable);
     }
 
     private static CartOwner Owner(HttpContext http, CartCookie cookie) =>
@@ -88,6 +95,10 @@ internal sealed class DonationEndpoints : IEndpoint
         [FromServices] ICommandHandler<CheckoutCommand, CheckoutResponse> handler, CancellationToken ct) =>
         (await handler.HandleAsync(new CheckoutCommand(user.SubjectId(), request, idempotencyKey), ct))
             .ToHttp(o => TypedResults.Created(CheckoutReplay.Location(o.Reference), o));
+
+    private static async Task<IResult> PayAsync(string reference, ClaimsPrincipal user,
+        [FromServices] ICommandHandler<PayOrderCommand, PayOrderResponse> handler, CancellationToken ct, string? t = null) =>
+        (await handler.HandleAsync(new PayOrderCommand(reference, t, CustomerId(user)), ct)).ToHttp();
 
     private static async Task<IResult> OrderStatusAsync(string reference, ClaimsPrincipal user,
         [FromServices] IQueryHandler<GetOrderStatusQuery, OrderStatusResponse> handler, CancellationToken ct, string? t = null) =>
@@ -146,6 +157,10 @@ internal sealed class CheckoutReplay : IIdempotentResponseShaper
     public static string Location(string reference) => $"/v1/orders/{reference}/status";
 
     public object ForStorage(object value) => value is CheckoutResponse r ? r with { StatusToken = string.Empty } : value;
+
+    /// A-1: an order placed while the gateway was down (`payment: null`) is not a final answer — a retry with the same key
+    /// finds the order (A-5) and asks the gateway again.
+    public bool ShouldStore(object value) => value is not CheckoutResponse { Payment: null, PaymentError: not null };
 
     /// L-12: the replay carries the same `Location` as the original 201.
     public string ForReplay(string storedJson, System.Text.Json.JsonSerializerOptions json, HttpContext http)

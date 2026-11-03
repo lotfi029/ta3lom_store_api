@@ -115,7 +115,7 @@ public sealed class FakePayment(string id, string invoiceId, long amountHalalas)
     public string? Message { get; set; }
 }
 
-internal sealed class FakePaymentGateway(FakePaymentStore store, IOptions<PaymentOptions> options) : IPaymentGateway
+public sealed class FakePaymentGateway(FakePaymentStore store, IOptions<PaymentOptions> options) : IPaymentGateway
 {
     public const string ProviderName = "fake";
 

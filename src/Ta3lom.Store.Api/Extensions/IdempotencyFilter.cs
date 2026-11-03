@@ -65,7 +65,8 @@ internal sealed class IdempotencyFilter(string scopePrefix, bool required, IIdem
         }
 
         var code = (result as IStatusCodeHttpResult)?.StatusCode ?? StatusCodes.Status200OK;
-        if (code is < 200 or > 299)
+        var value0 = (result as IValueHttpResult)?.Value;
+        if (code is < 200 or > 299 || (value0 is not null && shaper?.ShouldStore(value0) == false))
         {
             await store.ReleaseAsync(scope, key, CancellationToken.None);
         }
@@ -84,6 +85,9 @@ internal sealed class IdempotencyFilter(string scopePrefix, bool required, IIdem
 internal interface IIdempotentResponseShaper
 {
     object ForStorage(object value);
+
+    /// False = answer this 2xx but do not keep it: the same key re-runs the handler (A-1: checkout without a payment page).
+    bool ShouldStore(object value) => true;
 
     string ForReplay(string storedJson, JsonSerializerOptions json, HttpContext http);
 }

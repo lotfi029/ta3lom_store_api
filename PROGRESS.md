@@ -7,7 +7,7 @@
 | Baseline (`main` e5435c1) | — | build, format, 590 tests on postgres:18 (Testcontainers; `STORE_TEST_DB` unset) | green |
 | F2a — schema and domain | F2a — schema and domain | 624 (domain 137) | done |
 | F2b — gateway port and adapters | F2b — gateway port and adapters | 663 (+ 39 payments, 1 sandbox skipped) | done |
-| F2c — checkout, webhook, settlement | — | — | pending |
+| F2c — checkout, webhook, settlement | F2c — checkout, webhook, settlement | 677 (+ 14 settlement) | done |
 | F2d — jobs and status | — | — | pending |
 | F3a — receipts | — | — | pending |
 | F3b — refunds and review | — | — | pending |

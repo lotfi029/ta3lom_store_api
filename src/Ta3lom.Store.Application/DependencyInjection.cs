@@ -32,6 +32,8 @@ public static class DependencyInjection
         services.AddScoped<Features.Donations.CartWriter>();
         services.AddScoped<Features.Donations.CartReader>();
         services.AddScoped<Features.Notifications.NotificationDispatch>();
+        services.AddScoped<Features.Payments.PaymentStarter>();
+        services.AddScoped<Features.Payments.PaymentSettlement>();
         services.AddScoped<Features.StaffAuth.StaffSessions>();
         services.AddScoped<Features.StaffAuth.StaffFailures>();
         services.AddScoped<Features.Catalog.CatalogReader>();

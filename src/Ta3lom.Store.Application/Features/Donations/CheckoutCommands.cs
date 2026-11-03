@@ -10,16 +10,36 @@ namespace Ta3lom.Store.Application.Features.Donations;
 /// transaction under the cart lock: the donor must be active, every line is re-priced from the database (any problem →
 /// 422 `checkout.lines_invalid`), the order and its line snapshots are created in `pending_payment` with the reference
 /// `T3-YY-NNNNNN` (YY = the Riyadh year), the cart is emptied and `OrderPlaced` is queued in the outbox. The order keeps the
-/// `Idempotency-Key`; a retry whose stored response was lost (A-5) gets the order that key placed.
+/// `Idempotency-Key`; a retry whose stored response was lost (A-5) gets the order that key placed. R5-Payments: AFTER the
+/// commit, payment attempt 1 is opened on the gateway (outside the transaction); a gateway failure keeps the order and
+/// answers `payment: null` + `paymentError` — a replay with the same key retries the gateway (A-1).
 public sealed record CheckoutCommand(Guid CustomerId, CheckoutRequest Request, string? IdempotencyKey = null) : ICommand<CheckoutResponse>;
 
 internal sealed class CheckoutCommandHandler(ICustomerRepository customers, ICartRepository carts, IOrderRepository orders, CartPricer pricer,
-    IStoreSettings settings, IOrderStatusTokens statusTokens, IUnitOfWork uow, IClock clock) : ICommandHandler<CheckoutCommand, CheckoutResponse>
+    IStoreSettings settings, IOrderStatusTokens statusTokens, IUnitOfWork uow, IClock clock, Payments.PaymentStarter payments)
+    : ICommandHandler<CheckoutCommand, CheckoutResponse>
 {
-    public Task<Result<CheckoutResponse>> HandleAsync(CheckoutCommand command, CancellationToken ct = default) =>
-        uow.ExecuteInTransactionAsync(token => PlaceAsync(command, token), ct);
+    public async Task<Result<CheckoutResponse>> HandleAsync(CheckoutCommand command, CancellationToken ct = default)
+    {
+        var placed = await uow.ExecuteInTransactionAsync(token => PlaceAsync(command, token), ct);
+        if (placed.IsFailure)
+        {
+            return placed.Error;
+        }
 
-    private async Task<Result<CheckoutResponse>> PlaceAsync(CheckoutCommand command, CancellationToken ct)
+        var (response, orderId, payable) = placed.Value;
+        if (!payable)
+        {
+            return response;
+        }
+
+        var payment = await payments.StartAsync(orderId, newAttempt: false, ct);
+        return payment.IsSuccess
+            ? response with { Payment = payment.Value }
+            : response with { PaymentError = payment.Error.Code };
+    }
+
+    private async Task<Result<Placed>> PlaceAsync(CheckoutCommand command, CancellationToken ct)
     {
         await customers.LockForUpdateAsync(command.CustomerId, ct);          // R12-3: customer → cart
         var customer = await customers.GetByIdAsync(command.CustomerId, ct);
@@ -31,7 +51,8 @@ internal sealed class CheckoutCommandHandler(ICustomerRepository customers, ICar
         var cart = await carts.GetForCustomerForUpdateAsync(customer.Id, ct);                // the lock serialises checkouts of the donor
         if (command.IdempotencyKey is { } key && await orders.FindByIdempotencyKeyAsync(customer.Id, key, ct) is { } placed)
         {
-            return new CheckoutResponse(placed.Reference, placed.Status.ToWire(), placed.TotalAmount.ToWire(), statusTokens.Create(placed.Reference).Token, null);
+            return new Placed(new CheckoutResponse(placed.Reference, placed.Status.ToWire(), placed.TotalAmount.ToWire(), statusTokens.Create(placed.Reference).Token, null),
+                placed.Id, placed.IsPayable(clock.UtcNow));
         }
 
         var name = Blank(command.Request.FullName) ?? customer.FullName;
@@ -62,8 +83,10 @@ internal sealed class CheckoutCommandHandler(ICustomerRepository customers, ICar
             [.. priced.Lines.Select(l => l.ToDraft())], hash, now.AddMinutes(s.PaymentWindowMinutes), now, command.IdempotencyKey);
         orders.Add(order);
         cart.Clear(now);
-        return new CheckoutResponse(order.Reference, order.Status.ToWire(), order.TotalAmount.ToWire(), token, null);
+        return new Placed(new CheckoutResponse(order.Reference, order.Status.ToWire(), order.TotalAmount.ToWire(), token, null), order.Id, true);
     }
+
+    private sealed record Placed(CheckoutResponse Response, Guid OrderId, bool Payable);
 
     private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

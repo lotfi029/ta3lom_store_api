@@ -50,6 +50,7 @@ app.UseOutputCache();
 // ── Endpoints ───────────────────────────────────────────────────────────────────────────────────
 var v1 = app.MapGroup("/v1").RequireCors(CorsSetup.WebPolicy);
 app.MapEndpoints(v1);
+app.MapPaymentWebhooks();                                          // outside the CORS group (server-to-server, A-2)
 app.MapDevEndpoints();
 app.MapHealthEndpoints();
 

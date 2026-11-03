@@ -109,6 +109,11 @@ public static class DependencyInjection
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<ICartRepository, CartRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<IPaymentRepository, PaymentRepository>();
+        services.AddScoped<IPaymentEventRepository, PaymentEventRepository>();
+        services.AddScoped<IReceiptRepository, ReceiptRepository>();
+        services.AddScoped<IRefundRepository, RefundRepository>();
+        services.AddScoped<IDocumentNumbers, Services.Payments.DocumentNumbers>();
         services.AddScoped<IProjectRepository, ProjectRepository>();
         services.AddScoped<ISettingRepository, SettingRepository>();
         services.AddScoped<ICatalogSearch, Services.Catalog.CatalogSearch>();

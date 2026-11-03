@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Ta3lom.Store.Domain.Entities.Donations;
+using Ta3lom.Store.Domain.Enums;
 using Ta3lom.Store.Domain.IRepositories;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Repositories;
@@ -42,4 +43,31 @@ internal sealed class OrderRepository(StoreDbContext db) : GenericRepository<Ord
 
     public Task<Order?> FindByIdempotencyKeyAsync(Guid customerId, string idempotencyKey, CancellationToken ct = default) =>
         Set.FirstOrDefaultAsync(o => o.CustomerId == customerId && o.IdempotencyKey == idempotencyKey, ct);
+
+    public async Task<Order?> GetForUpdateAsync(Guid orderId, CancellationToken ct = default)
+    {
+        var locked = await Db.Database.SqlQuery<Guid>($"""SELECT id AS "Value" FROM store.orders WHERE id = {orderId} FOR UPDATE""").ToListAsync(ct);
+        return locked.Count == 0 ? null : await LoadLockedAsync(orderId, ct);
+    }
+
+    public async Task<Order?> GetByReferenceForUpdateAsync(string reference, CancellationToken ct = default)
+    {
+        var locked = await Db.Database.SqlQuery<Guid>($"""SELECT id AS "Value" FROM store.orders WHERE reference = {reference} FOR UPDATE""").ToListAsync(ct);
+        return locked.Count == 0 ? null : await LoadLockedAsync(locked[0], ct);
+    }
+
+    public async Task<IReadOnlyList<Guid>> OverdueIdsAsync(DateTimeOffset now, int max, CancellationToken ct = default) =>
+        await Set.AsNoTracking().Where(o => o.Status == OrderStatus.PendingPayment && o.PaymentDueAt <= now)
+            .OrderBy(o => o.PaymentDueAt).Select(o => o.Id).Take(max).ToListAsync(ct);
+
+    /// After the row lock: a tracked copy is reloaded so no value read before the lock survives.
+    private async Task<Order> LoadLockedAsync(Guid orderId, CancellationToken ct)
+    {
+        if (Db.ChangeTracker.Entries<Order>().FirstOrDefault(e => e.Entity.Id == orderId) is { } tracked)
+        {
+            await tracked.ReloadAsync(ct);
+        }
+
+        return await Set.Include(o => o.Lines).FirstAsync(o => o.Id == orderId, ct);
+    }
 }
