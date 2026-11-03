@@ -29,6 +29,9 @@ public interface IReceiptRepository : IGenericRepository<DonationReceipt>
 {
     /// The order's donation receipt (DR), tracked.
     Task<DonationReceipt?> DonationReceiptForOrderAsync(Guid orderId, CancellationToken ct = default);
+
+    /// Every receipt (DR and DRC) of these orders, tracked (D-14 anonymisation).
+    Task<IReadOnlyList<DonationReceipt>> ForOrdersAsync(IReadOnlyCollection<Guid> orderIds, CancellationToken ct = default);
 }
 
 public interface IRefundRepository : IGenericRepository<Refund>

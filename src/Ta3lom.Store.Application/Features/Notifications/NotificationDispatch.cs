@@ -22,7 +22,7 @@ internal sealed class NotificationDispatch(
     /// `alertOnUnknown` is false for the unknown-outcome alert itself, so a lost alert does not alert again; `subject` names
     /// what the message was about (R12-5: e.g. the original alert's kind and reference) in that alert.
     public async Task SendOnceAsync(OutboxEnvelope envelope, MessageChannel channel, string recipient, string templateKey, string locale,
-        object model, CancellationToken ct, bool alertOnUnknown = true, string? subject = null)
+        object model, CancellationToken ct, bool alertOnUnknown = true, string? subject = null, IReadOnlyList<EmailAttachment>? attachments = null)
     {
         ArgumentNullException.ThrowIfNull(envelope);
         string recipientHash;
@@ -68,7 +68,7 @@ internal sealed class NotificationDispatch(
 
         var result = channel == MessageChannel.Sms
             ? ToDelivery(await sms.SendAsync(recipient, message.Body, ct))
-            : await email.SendAsync(new EmailMessage(recipient, message.Subject ?? templateKey, message.Body, []), ct);
+            : await email.SendAsync(new EmailMessage(recipient, message.Subject ?? templateKey, message.Body, attachments ?? []), ct);
         if (result.Sent)
         {
             row.MarkSent(result.ProviderMessageId);

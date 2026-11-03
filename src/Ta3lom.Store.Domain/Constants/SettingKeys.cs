@@ -13,6 +13,15 @@ public static class SettingKeys
     public const string SiteNameEn = "site_name_en";
     public const string SupportMobile = "support_mobile";
 
+    // Donation receipts (F-D4; texts printed on the DR/DRC PDF, all optional)
+    public const string ReceiptOrgNameAr = "receipt_org_name_ar";
+    public const string ReceiptOrgNameEn = "receipt_org_name_en";
+    public const string ReceiptLicenceNo = "receipt_licence_no";
+    public const string ReceiptVatNoteAr = "receipt_vat_note_ar";
+    public const string ReceiptVatNoteEn = "receipt_vat_note_en";
+    public const string ReceiptSignatureAssetId = "receipt_signature_asset_id";
+
     public static IReadOnlyList<string> All { get; } =
-        [MinGiftAmount, MaxLineAmount, CartMaxLines, CartMaxTotal, PaymentWindowMinutes, AmountPresets, SiteNameAr, SiteNameEn, SupportMobile];
+        [MinGiftAmount, MaxLineAmount, CartMaxLines, CartMaxTotal, PaymentWindowMinutes, AmountPresets, SiteNameAr, SiteNameEn, SupportMobile,
+         ReceiptOrgNameAr, ReceiptOrgNameEn, ReceiptLicenceNo, ReceiptVatNoteAr, ReceiptVatNoteEn, ReceiptSignatureAssetId];
 }

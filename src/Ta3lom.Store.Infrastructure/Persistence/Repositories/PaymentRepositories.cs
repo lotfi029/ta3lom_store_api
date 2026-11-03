@@ -50,6 +50,9 @@ internal sealed class ReceiptRepository(StoreDbContext db) : GenericRepository<D
 {
     public Task<DonationReceipt?> DonationReceiptForOrderAsync(Guid orderId, CancellationToken ct = default) =>
         Set.FirstOrDefaultAsync(r => r.OrderId == orderId && r.Series == ReceiptSeries.Dr, ct);
+
+    public async Task<IReadOnlyList<DonationReceipt>> ForOrdersAsync(IReadOnlyCollection<Guid> orderIds, CancellationToken ct = default) =>
+        await Set.Where(r => orderIds.Contains(r.OrderId)).ToListAsync(ct);
 }
 
 internal sealed class RefundRepository(StoreDbContext db) : GenericRepository<Refund>(db), IRefundRepository

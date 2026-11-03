@@ -36,9 +36,11 @@ public sealed class SeedRunnerTests
     }
 
     [Fact]
-    public void The_OTP_and_staff_alert_templates_exist_in_both_languages() =>
+    public void Every_template_exists_in_both_languages() =>
         SeedData.Templates.Select(t => $"{t.Key}/{t.Channel}/{t.Locale}")
-            .ShouldBe(["otp/sms/ar", "otp/sms/en", "staff_alert/email/ar", "staff_alert/email/en"], ignoreOrder: true);
+            .ShouldBe(["otp/sms/ar", "otp/sms/en", "staff_alert/email/ar", "staff_alert/email/en",
+                "order_paid/sms/ar", "order_paid/sms/en", "order_paid/email/ar", "order_paid/email/en",
+                "refund_processed/sms/ar", "refund_processed/sms/en", "refund_processed/email/ar", "refund_processed/email/en"], ignoreOrder: true);
 }
 
 /// The Development demo catalogue: 3 categories, 6 published projects, real WebP placeholders; safe to run twice.

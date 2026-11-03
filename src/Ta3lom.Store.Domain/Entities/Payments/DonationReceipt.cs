@@ -84,6 +84,13 @@ public sealed class DonationReceipt : Entity
 
     public void StorePdf(string storageKey) => PdfStorageKey = Guard.NotEmpty(storageKey);
 
-    /// D-14: deleting a donor anonymises the receipt's name snapshot (the receipt and its number stay).
-    public void AnonymiseDonor() => DonorNameSnapshot = Donations.Order.AnonymisedName;
+    /// D-14: deleting a donor anonymises the receipt's name snapshot (the receipt, its number and amount stay). The stored
+    /// PDF carried the name: its key is cleared and returned so the caller deletes the file (re-rendered on demand).
+    public string? AnonymiseDonor()
+    {
+        DonorNameSnapshot = Donations.Order.AnonymisedName;
+        var pdf = PdfStorageKey;
+        PdfStorageKey = null;
+        return pdf;
+    }
 }

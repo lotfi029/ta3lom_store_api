@@ -1,6 +1,9 @@
 using System.Globalization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Ta3lom.Store.Application.Abstractions.Data;
 using Ta3lom.Store.Application.Features.Notifications;
+using Ta3lom.Store.Application.Features.Receipts;
 using Ta3lom.Store.Domain.Events;
 
 namespace Ta3lom.Store.Application.Features.Outbox.Handlers;
@@ -36,28 +39,38 @@ internal sealed partial class OrderExpiredHandler(ILogger<OrderExpiredHandler> l
     private static partial void LogExpired(ILogger logger, string reference);
 }
 
-/// A settled order (reference and amount only). The donor SMS/e-mail with the receipt is sent by F3's handler.
-internal sealed partial class OrderPaidHandler(ILogger<OrderPaidHandler> logger) : OutboxHandler<OrderPaid>
+/// A settled order (plan §4): the donor gets an SMS (template `order_paid`, link to the order page with its status token)
+/// and, when the order has an e-mail, the same with the DR receipt PDF attached. Each once per channel and recipient
+/// (`notification.dedupe_key`). An anonymised donor gets nothing.
+internal sealed class OrderPaidHandler(IApplicationDbContext db, NotificationDispatch dispatch, ReceiptFiles receipts,
+    IOrderStatusTokens tokens, IWebLinks links) : OutboxHandler<OrderPaid>
 {
-    protected override Task HandleAsync(OrderPaid message, OutboxEnvelope envelope, CancellationToken ct)
+    protected override async Task HandleAsync(OrderPaid message, OutboxEnvelope envelope, CancellationToken ct)
     {
-        LogPaid(logger, message.Reference, message.TotalAmount);
-        return Task.CompletedTask;
+        var order = await db.Orders.AsNoTracking().Where(o => o.Id == message.OrderId)
+            .Select(o => new { o.Reference, o.DonorMobile, o.DonorEmail, o.Locale, o.TotalAmount }).FirstAsync(ct);
+        var file = await receipts.GetOrRenderAsync(message.ReceiptId, ct);
+        var number = Path.GetFileNameWithoutExtension(file.FileName);
+        var model = new
+        {
+            reference = order.Reference,
+            amount = order.TotalAmount.ToWire(),
+            receiptNumber = number,
+            link = links.OrderStatus(order.Locale, order.Reference, tokens.Create(order.Reference).Token),
+        };
+        await dispatch.SendOnceAsync(envelope, MessageChannel.Sms, order.DonorMobile, "order_paid", order.Locale, model, ct,
+            subject: $"order_paid {order.Reference}");
+        if (order.DonorEmail != Domain.Entities.Donations.Order.AnonymisedEmail)
+        {
+            await dispatch.SendOnceAsync(envelope, MessageChannel.Email, order.DonorEmail, "order_paid", order.Locale, model, ct,
+                subject: $"order_paid {order.Reference}", attachments: [new EmailAttachment(file.FileName, "application/pdf", file.Pdf)]);
+        }
     }
-
-    [LoggerMessage(Level = LogLevel.Information, Message = "Order {Reference} paid: {TotalAmount} SAR")]
-    private static partial void LogPaid(ILogger logger, string reference, string totalAmount);
 }
 
-/// A receipt was issued (its PDF is rendered by F3's handler).
-internal sealed partial class ReceiptIssuedHandler(ILogger<ReceiptIssuedHandler> logger) : OutboxHandler<ReceiptIssued>
+/// RenderReceipt (plan §4): a receipt was issued — render its PDF once into private storage (idempotent).
+internal sealed class ReceiptIssuedHandler(ReceiptFiles receipts) : OutboxHandler<ReceiptIssued>
 {
-    protected override Task HandleAsync(ReceiptIssued message, OutboxEnvelope envelope, CancellationToken ct)
-    {
-        LogIssued(logger, message.Number);
-        return Task.CompletedTask;
-    }
-
-    [LoggerMessage(Level = LogLevel.Information, Message = "Receipt {Number} issued")]
-    private static partial void LogIssued(ILogger logger, string number);
+    protected override Task HandleAsync(ReceiptIssued message, OutboxEnvelope envelope, CancellationToken ct) =>
+        receipts.GetOrRenderAsync(message.ReceiptId, ct);
 }

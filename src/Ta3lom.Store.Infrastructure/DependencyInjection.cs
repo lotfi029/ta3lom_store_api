@@ -117,6 +117,7 @@ public static class DependencyInjection
         services.AddScoped<IReceiptRepository, ReceiptRepository>();
         services.AddScoped<IRefundRepository, RefundRepository>();
         services.AddScoped<IDocumentNumbers, Services.Payments.DocumentNumbers>();
+        services.AddSingleton<IReceiptRenderer, Services.Receipts.QuestPdfReceiptRenderer>();
         services.AddScoped<IProjectRepository, ProjectRepository>();
         services.AddScoped<ISettingRepository, SettingRepository>();
         services.AddScoped<ICatalogSearch, Services.Catalog.CatalogSearch>();

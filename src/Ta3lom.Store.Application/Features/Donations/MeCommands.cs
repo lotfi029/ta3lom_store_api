@@ -65,10 +65,24 @@ internal sealed class UpdateMeCommandValidator : AbstractValidator<UpdateMeComma
 public sealed record DeleteMeCommand(Guid CustomerId) : ICommand;
 
 internal sealed class DeleteMeCommandHandler(ICustomerRepository customers, IOrderRepository orders, ICartRepository carts,
-    IRefreshTokenRepository refreshTokens, IAuditTrail audit, IUnitOfWork uow, IClock clock) : ICommandHandler<DeleteMeCommand>
+    IRefreshTokenRepository refreshTokens, IReceiptRepository receipts, IFileStorage files, IAuditTrail audit, IUnitOfWork uow, IClock clock)
+    : ICommandHandler<DeleteMeCommand>
 {
-    public Task<Result> HandleAsync(DeleteMeCommand command, CancellationToken ct = default) =>
-        uow.ExecuteInTransactionAsync(token => DeleteAsync(command.CustomerId, token), ct);
+    private readonly List<string> _receiptPdfs = [];
+
+    public async Task<Result> HandleAsync(DeleteMeCommand command, CancellationToken ct = default)
+    {
+        var result = await uow.ExecuteInTransactionAsync(token => DeleteAsync(command.CustomerId, token), ct);
+        if (result.IsSuccess)
+        {
+            foreach (var key in _receiptPdfs)
+            {
+                await files.DeleteAsync(key, isPublic: false, ct);                // the PDFs carried the name (D-14)
+            }
+        }
+
+        return result;
+    }
 
     private async Task<Result> DeleteAsync(Guid customerId, CancellationToken ct)
     {
@@ -81,9 +95,19 @@ internal sealed class DeleteMeCommandHandler(ICustomerRepository customers, IOrd
 
         var now = clock.UtcNow;
         customer.Anonymise(now);
-        foreach (var order in await orders.ForCustomerAsync(customerId, ct))
+        var donorOrders = await orders.ForCustomerAsync(customerId, ct);
+        foreach (var order in donorOrders)
         {
             order.AnonymiseDonor(now);
+        }
+
+        _receiptPdfs.Clear();
+        foreach (var receipt in await receipts.ForOrdersAsync([.. donorOrders.Select(o => o.Id)], ct))
+        {
+            if (receipt.AnonymiseDonor() is { } pdf)
+            {
+                _receiptPdfs.Add(pdf);
+            }
         }
 
         if (await carts.GetForCustomerForUpdateAsync(customerId, ct) is { } cart)

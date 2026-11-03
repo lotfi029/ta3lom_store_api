@@ -9,7 +9,7 @@
 | F2b — gateway port and adapters | F2b — gateway port and adapters | 663 (+ 39 payments, 1 sandbox skipped) | done |
 | F2c — checkout, webhook, settlement | F2c — checkout, webhook, settlement | 677 (+ 14 settlement) | done |
 | F2d — jobs and status | F2d — jobs and status | full suite (+ 9: jobs, concurrency, expiry, late capture, status, dev routes) | done |
-| F3a — receipts | — | — | pending |
+| F3a — receipts | F3a — receipts | 706 (+ 15 PDF/words, 5 receipt flows) | done |
 | F3b — refunds and review | — | — | pending |
 | F3c — finance views and export | — | — | pending |
 | F4 — hosting | — | — | pending |
