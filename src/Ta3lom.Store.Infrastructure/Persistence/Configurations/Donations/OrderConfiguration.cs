@@ -3,17 +3,20 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Ta3lom.Store.Domain.Entities.Catalog;
 using Ta3lom.Store.Domain.Entities.Donations;
 using Ta3lom.Store.Domain.Entities.Identity;
+using Ta3lom.Store.Domain.ValueObjects;
 
 namespace Ta3lom.Store.Infrastructure.Persistence.Configurations.Donations;
 
-/// `orders` (BR-A08, D-09). The status CHECK already lists the R5-Payments values, so payments need no enum migration.
+/// `orders` (BR-A08, D-09). R5-Payments adds `refunded` to the status CHECK and the payment columns (migration `Payments`).
 internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
 {
     public void Configure(EntityTypeBuilder<Order> e)
     {
         e.ToTable("orders", t =>
         {
-            t.HasCheckConstraint("ck_orders_status", "status IN ('pending_payment', 'paid', 'payment_review', 'cancelled', 'expired')");
+            t.HasCheckConstraint("ck_orders_status", "status IN ('pending_payment', 'paid', 'payment_review', 'cancelled', 'expired', 'refunded')");
+            t.HasCheckConstraint("ck_orders_refunded", "refunded_amount >= 0");
+            t.HasCheckConstraint("ck_orders_review_reason", "review_reason IS NULL OR review_reason IN ('amount_mismatch', 'late_capture', 'double_payment')");
             t.HasCheckConstraint("ck_orders_locale", "locale IN ('ar', 'en')");
             t.HasCheckConstraint("ck_orders_reference", "reference ~ '^T3-[0-9]{2}-[0-9]{6,}$'");
             t.HasCheckConstraint("ck_orders_total", "total_amount > 0 AND line_count > 0");
@@ -32,6 +35,8 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         e.Property(x => x.PaymentDueAt).IsRequired();
         e.Property(x => x.CancelledBy).HasColumnType("text");
         e.Property(x => x.IdempotencyKey).HasColumnType("text").HasMaxLength(64);
+        e.Property(x => x.RefundedAmount).IsRequired().HasDefaultValue(Money.Zero);
+        e.Property(x => x.ReviewReason).HasColumnType("text");
         e.Property(x => x.Version).IsRowVersion();
         e.HasIndex(x => x.Reference).IsUnique().HasDatabaseName("ux_orders_reference");
         e.HasIndex(x => new { x.CustomerId, x.IdempotencyKey }).IsUnique().HasFilter("idempotency_key IS NOT NULL").HasDatabaseName("ux_orders_idempotency");

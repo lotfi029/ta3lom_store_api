@@ -80,6 +80,18 @@ public static class ErrorCodes
     public const string OrderNotFound = "order.not_found";
     public const string OrderCancelNotAllowed = "order.cancel_not_allowed";
 
+    // Payments, receipts, refunds (R5-Payments, ADR-S05)
+    public const string PaymentGatewayUnavailable = "payment.gateway_unavailable";
+    public const string PaymentNotPayable = "payment.not_payable";
+    public const string PaymentWebhookInvalid = "payment.webhook_invalid";
+    public const string PaymentUnknownProvider = "payment.unknown_provider";
+    public const string PaymentRefundExceeds = "payment.refund_exceeds";
+    public const string PaymentRefundFailed = "payment.refund_failed";
+    public const string PaymentRefundNotAllowed = "payment.refund_not_allowed";
+    public const string PaymentReviewRequired = "payment.review_required";
+    public const string PaymentNotInReview = "payment.not_in_review";
+    public const string ReceiptNotAvailable = "receipt.not_available";
+
     // Idempotency and templates
     public const string IdempotencyKeyRequired = "idempotency.key_required";
     public const string IdempotencyKeyReused = "idempotency.key_reused";

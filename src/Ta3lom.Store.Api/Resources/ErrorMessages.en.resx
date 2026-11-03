@@ -397,4 +397,64 @@
   <data name="template.render_failed.detail" xml:space="preserve">
     <value>The template has a syntax error; see line and column.</value>
   </data>
+  <data name="payment.gateway_unavailable" xml:space="preserve">
+    <value>Payment gateway unavailable</value>
+  </data>
+  <data name="payment.gateway_unavailable.detail" xml:space="preserve">
+    <value>The payment gateway cannot be reached right now. Try again shortly; your donation is saved.</value>
+  </data>
+  <data name="payment.not_payable" xml:space="preserve">
+    <value>This order cannot be paid</value>
+  </data>
+  <data name="payment.not_payable.detail" xml:space="preserve">
+    <value>This order is no longer awaiting payment, or its payment time has passed.</value>
+  </data>
+  <data name="payment.webhook_invalid" xml:space="preserve">
+    <value>Unverified payment notification</value>
+  </data>
+  <data name="payment.webhook_invalid.detail" xml:space="preserve">
+    <value>The payment gateway notification could not be verified.</value>
+  </data>
+  <data name="payment.unknown_provider" xml:space="preserve">
+    <value>Unknown payment provider</value>
+  </data>
+  <data name="payment.unknown_provider.detail" xml:space="preserve">
+    <value>The requested payment provider is not known.</value>
+  </data>
+  <data name="payment.refund_exceeds" xml:space="preserve">
+    <value>Refund exceeds the refundable amount</value>
+  </data>
+  <data name="payment.refund_exceeds.detail" xml:space="preserve">
+    <value>The amount is more than can still be refunded for this order.</value>
+  </data>
+  <data name="payment.refund_failed" xml:space="preserve">
+    <value>The gateway refused the refund</value>
+  </data>
+  <data name="payment.refund_failed.detail" xml:space="preserve">
+    <value>The payment gateway did not accept the refund; nothing changed on the order.</value>
+  </data>
+  <data name="payment.refund_not_allowed" xml:space="preserve">
+    <value>Refund not allowed</value>
+  </data>
+  <data name="payment.refund_not_allowed.detail" xml:space="preserve">
+    <value>This order has no captured payment that can be refunded.</value>
+  </data>
+  <data name="payment.review_required" xml:space="preserve">
+    <value>Payment in review</value>
+  </data>
+  <data name="payment.review_required.detail" xml:space="preserve">
+    <value>This payment is in review; use the review actions (accept or refund).</value>
+  </data>
+  <data name="payment.not_in_review" xml:space="preserve">
+    <value>Order not in payment review</value>
+  </data>
+  <data name="payment.not_in_review.detail" xml:space="preserve">
+    <value>This order has no payment in review.</value>
+  </data>
+  <data name="receipt.not_available" xml:space="preserve">
+    <value>Receipt not available</value>
+  </data>
+  <data name="receipt.not_available.detail" xml:space="preserve">
+    <value>No receipt is available for this order yet.</value>
+  </data>
 </root>

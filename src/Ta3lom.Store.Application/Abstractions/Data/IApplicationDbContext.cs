@@ -5,6 +5,7 @@ using Ta3lom.Store.Domain.Entities.Donations;
 using Ta3lom.Store.Domain.Entities.Identity;
 using Ta3lom.Store.Domain.Entities.Media;
 using Ta3lom.Store.Domain.Entities.Notifications;
+using Ta3lom.Store.Domain.Entities.Payments;
 using Ta3lom.Store.Domain.Entities.Settings;
 using Ta3lom.Store.Domain.ReadModels;
 
@@ -52,4 +53,12 @@ public interface IApplicationDbContext
     DbSet<OutboxMessage> OutboxMessages { get; }
 
     DbSet<Setting> Settings { get; }
+
+    DbSet<Payment> Payments { get; }
+
+    DbSet<PaymentEvent> PaymentEvents { get; }
+
+    DbSet<Refund> Refunds { get; }
+
+    DbSet<DonationReceipt> DonationReceipts { get; }
 }
