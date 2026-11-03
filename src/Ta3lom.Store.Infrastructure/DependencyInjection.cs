@@ -12,6 +12,9 @@ using Ta3lom.Store.Application.Abstractions.Data;
 using Ta3lom.Store.Application.Abstractions.Time;
 using Ta3lom.Store.Application.Interfaces;
 using Ta3lom.Store.Domain.IRepositories;
+using Ta3lom.Store.Infrastructure.Payments;
+using Ta3lom.Store.Infrastructure.Payments.Fake;
+using Ta3lom.Store.Infrastructure.Payments.Moyasar;
 using Ta3lom.Store.Infrastructure.Persistence;
 using Ta3lom.Store.Infrastructure.Persistence.Interceptors;
 using Ta3lom.Store.Infrastructure.Persistence.Repositories;
@@ -48,6 +51,7 @@ public static class DependencyInjection
         AddRepositories(services);
         AddSecurity(services);
         AddMessaging(services);
+        AddPayments(services, configuration);
         AddFiles(services);
 
         // Jobs: RAM store, in-process, Riyadh cron. Each is a thin shell around one Application command.
@@ -139,6 +143,28 @@ public static class DependencyInjection
         services.AddSingleton<IUsedTokenStore, MemoryUsedTokenStore>();
         services.AddSingleton<IOrderStatusTokens, OrderStatusTokens>();
         services.AddScoped<IAuditTrail, Services.Auditing.AuditTrail>();
+    }
+
+    /// Payment gateways (F-D1): Moyasar (typed HttpClient) and the fake (Development/tests only), behind the registry.
+    private static void AddPayments(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<PaymentOptions>().BindConfiguration(PaymentOptions.Section)
+            .PostConfigure(o =>
+            {
+                if (string.IsNullOrWhiteSpace(o.Fake.ApiBaseUrl))
+                {
+                    o.Fake.ApiBaseUrl = configuration["Store:PublicBaseUrl"] is { Length: > 0 } api ? api : "http://localhost:5080";
+                }
+            })
+            .ValidateOnStart();
+        services.AddSingleton<IValidateOptions<PaymentOptions>, PaymentOptionsValidator>();
+        services.AddHttpClient<MoyasarGateway>((sp, c) =>
+            c.Timeout = TimeSpan.FromSeconds(sp.GetRequiredService<IOptions<PaymentOptions>>().Value.Moyasar.TimeoutSeconds));
+        services.AddSingleton<FakePaymentStore>();
+        services.AddScoped<FakePaymentGateway>();
+        services.AddScoped<IPaymentGateway>(sp => sp.GetRequiredService<MoyasarGateway>());
+        services.AddScoped<IPaymentGateway>(sp => sp.GetRequiredService<FakePaymentGateway>());
+        services.AddScoped<IPaymentGatewayRegistry, PaymentGatewayRegistry>();
     }
 
     /// SMS (sink unless `Store:Sms:Provider = unifonic`), e-mail (sink unless `Store:Email:Mode = smtp`), templates, outbox, settings.
