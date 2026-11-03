@@ -8,7 +8,7 @@
 | F2a — schema and domain | F2a — schema and domain | 624 (domain 137) | done |
 | F2b — gateway port and adapters | F2b — gateway port and adapters | 663 (+ 39 payments, 1 sandbox skipped) | done |
 | F2c — checkout, webhook, settlement | F2c — checkout, webhook, settlement | 677 (+ 14 settlement) | done |
-| F2d — jobs and status | — | — | pending |
+| F2d — jobs and status | F2d — jobs and status | full suite (+ 9: jobs, concurrency, expiry, late capture, status, dev routes) | done |
 | F3a — receipts | — | — | pending |
 | F3b — refunds and review | — | — | pending |
 | F3c — finance views and export | — | — | pending |

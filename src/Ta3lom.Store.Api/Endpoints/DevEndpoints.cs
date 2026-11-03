@@ -9,6 +9,7 @@ using Ta3lom.Store.Application.Features.Payments;
 using Ta3lom.Store.Application.Interfaces;
 using Ta3lom.Store.Infrastructure.Payments;
 using Ta3lom.Store.Infrastructure.Payments.Fake;
+using Ta3lom.Store.Infrastructure.Services.Time;
 
 namespace Ta3lom.Store.Api.Endpoints;
 
@@ -26,7 +27,27 @@ internal sealed class DevEndpoints : IDevEndpoint
 
         app.MapGet("/payments/{id}", FakePaymentPage);
         app.MapPost("/payments/{id}/{action}", FakePaymentActionAsync).DisableAntiforgery();
+
+        // Time travel for the expiry e2e: `{ "advanceMinutes": 61 }` or `{ "reset": true }`.
+        app.MapGet("/clock", ([FromServices] IClock clock, [FromServices] DevClockOffset offset) =>
+            TypedResults.Ok(new { utcNow = clock.UtcNow, offsetMinutes = offset.Value.TotalMinutes }));
+        app.MapPost("/clock", ([FromBody] DevClockChange request, [FromServices] IClock clock, [FromServices] DevClockOffset offset) =>
+        {
+            if (request.Reset)
+            {
+                offset.Reset();
+            }
+
+            if (request.AdvanceMinutes is { } minutes)
+            {
+                offset.Advance(TimeSpan.FromMinutes(Math.Clamp(minutes, -60 * 24 * 30, 60 * 24 * 30)));
+            }
+
+            return TypedResults.Ok(new { utcNow = clock.UtcNow, offsetMinutes = offset.Value.TotalMinutes });
+        }).DisableAntiforgery();
     }
+
+    internal sealed record DevClockChange(double? AdvanceMinutes, bool Reset);
 
     private static async Task<IResult> RunJobAsync(string name, [FromServices] IJobRunner jobs, CancellationToken ct) =>
         await jobs.TriggerAsync(name, ct) ? TypedResults.Accepted((string?)null) : TypedResults.NotFound();

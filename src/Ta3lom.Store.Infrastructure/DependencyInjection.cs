@@ -44,6 +44,7 @@ public static class DependencyInjection
         ArgumentNullException.ThrowIfNull(configuration);
 
         services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<DevClockOffset>();
         services.TryAddSingleton<IClock, SystemClock>();
 
         AddPersistence(services);
@@ -62,6 +63,8 @@ public static class DependencyInjection
             q.AddStoreJob<ExpireGuestCartsJob>(ExpireGuestCartsJob.Cron);
             q.AddStoreJob<RetentionJob>(RetentionJob.Cron);
             q.AddStoreJob<IntegrityChecksJob>(IntegrityChecksJob.Cron);
+            q.AddStoreJob<ReconcilePaymentsJob>(ReconcilePaymentsJob.Cron);
+            q.AddStoreJob<ExpireUnpaidOrdersJob>(ExpireUnpaidOrdersJob.Cron);
         });
         services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
         services.AddScoped<JobRuns>();

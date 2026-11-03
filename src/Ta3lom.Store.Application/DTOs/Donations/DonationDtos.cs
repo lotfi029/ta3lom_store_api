@@ -41,7 +41,25 @@ public sealed record PayOrderResponse(string Reference, CheckoutPayment Payment)
 
 /// `GET /v1/orders/{reference}/status?t=` (the donor or the holder of the status token).
 public sealed record OrderStatusResponse(string Reference, string Status, string TotalAmount, int LineCount, DateTimeOffset CreatedAt,
-    DateTimeOffset PaymentDueAt);
+    DateTimeOffset PaymentDueAt)
+{
+    /// The latest attempt's state (`initiated`, `captured`, `failed`, `cancelled`, `review`, `refunded`); null before any.
+    public string? PaymentStatus { get; init; }
+
+    /// `pending_payment`, before `paymentDueAt`, and no attempt is waiting on the gateway's page: show "pay again".
+    public bool CanRetryPayment { get; init; }
+
+    /// A donation receipt (DR) exists for this order: `GET …/receipt` returns its PDF.
+    public bool ReceiptAvailable { get; init; }
+
+    /// `DR-2026-000001`, when available.
+    public string? ReceiptNumber { get; init; }
+
+    public DateTimeOffset? PaidAt { get; init; }
+
+    /// Sum of refunds (`"0.00"` when none).
+    public string RefundedAmount { get; init; } = "0.00";
+}
 
 // ── Donor account ────────────────────────────────────────────────────────────────────────────────────────────────────
 

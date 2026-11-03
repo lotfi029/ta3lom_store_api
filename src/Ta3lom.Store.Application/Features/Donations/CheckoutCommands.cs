@@ -123,7 +123,7 @@ internal sealed class QuoteCheckoutQueryHandler(CartReader reader, CartPricer pr
 /// (whether the reference exists is not revealed).
 public sealed record GetOrderStatusQuery(string Reference, string? Token, Guid? CustomerId) : IQuery<OrderStatusResponse>;
 
-internal sealed class GetOrderStatusQueryHandler(IApplicationDbContext db, IOrderStatusTokens tokens) : IQueryHandler<GetOrderStatusQuery, OrderStatusResponse>
+internal sealed class GetOrderStatusQueryHandler(IApplicationDbContext db, IOrderStatusTokens tokens, IClock clock) : IQueryHandler<GetOrderStatusQuery, OrderStatusResponse>
 {
     public async Task<Result<OrderStatusResponse>> HandleAsync(GetOrderStatusQuery query, CancellationToken ct = default)
     {
@@ -132,8 +132,24 @@ internal sealed class GetOrderStatusQueryHandler(IApplicationDbContext db, IOrde
         var allowed = order is not null
                       && ((query.CustomerId is { } customerId && order.CustomerId == customerId)
                           || (query.Token is { } token && tokens.Matches(token, order.StatusTokenHash)));
-        return allowed
-            ? new OrderStatusResponse(order!.Reference, order.Status.ToWire(), order.TotalAmount.ToWire(), order.LineCount, order.CreatedAt, order.PaymentDueAt)
-            : OrderErrors.NotFound;
+        if (!allowed)
+        {
+            return OrderErrors.NotFound;
+        }
+
+        var latest = await db.Payments.AsNoTracking().Where(p => p.OrderId == order!.Id).OrderByDescending(p => p.AttemptNo)
+            .Select(p => new { p.Status, p.RedirectUrl }).FirstOrDefaultAsync(ct);
+        var receipt = await db.DonationReceipts.AsNoTracking().Where(r => r.OrderId == order!.Id && r.Series == ReceiptSeries.Dr)
+            .Select(r => new { r.Year, r.Number }).FirstOrDefaultAsync(ct);
+        var waiting = latest is { Status: PaymentStatus.Initiated, RedirectUrl: not null };
+        return new OrderStatusResponse(order!.Reference, order.Status.ToWire(), order.TotalAmount.ToWire(), order.LineCount, order.CreatedAt, order.PaymentDueAt)
+        {
+            PaymentStatus = latest?.Status.ToWire(),
+            CanRetryPayment = order.IsPayable(clock.UtcNow) && !waiting,
+            ReceiptAvailable = receipt is not null,
+            ReceiptNumber = receipt is null ? null : Domain.Entities.Payments.DonationReceipt.FormatNumber(ReceiptSeries.Dr, receipt.Year, receipt.Number),
+            PaidAt = order.PaidAt,
+            RefundedAmount = order.RefundedAmount.ToWire(),
+        };
     }
 }
