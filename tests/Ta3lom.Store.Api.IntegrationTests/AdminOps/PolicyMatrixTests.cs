@@ -51,6 +51,8 @@ public sealed class PolicyMatrixTests(ScenarioFactory factory) : IClassFixture<S
         ["POST /v1/admin/orders/{reference}/refunds"] = Finance,
         ["POST /v1/admin/orders/{reference}/review/accept"] = Finance,
         ["POST /v1/admin/orders/{reference}/review/refund"] = Finance,
+        ["POST /v1/admin/orders/{reference}/receipt/resend"] = Finance,
+        ["GET /v1/admin/reports/donations.csv"] = Finance,
         ["GET /v1/admin/templates"] = Templates,
         ["POST /v1/admin/templates/test"] = Templates,
         ["PUT /v1/admin/templates/{key}/{channel}/{locale}"] = Templates,
