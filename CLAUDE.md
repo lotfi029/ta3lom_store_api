@@ -1,15 +1,18 @@
 # CLAUDE.md — ta3lom store API
 
 .NET backend of the ta3lom.sa donations store: catalogue of donation projects and categories, donation cart, donor
-sign-in by SMS code, checkout into `pending_payment` orders, donor account, staff admin. Read this file first.
+sign-in by SMS code, checkout with payment on Moyasar's hosted page, receipts, refunds, donor account, staff admin.
+Read this file first.
 
 ## Scope
 
-- In: catalogue, media, cart, checkout (orders in `pending_payment`, `payment: null`), order status, donor account (export,
-  delete = anonymise), staff auth (password + TOTP), admin operations, outbox, jobs.
-- Out until **R5-Payments**: payment gateway, webhook, payment tables, settlement (`paid`), receipts/PDF, giving totals,
-  reconciliation, unpaid-order expiry, refunds, finance reports. **Keep `IPaymentInitiator` absent**: no payment port,
-  client or table is added before that release.
+- In: catalogue, media, cart, checkout, order status, donor account (export, delete = anonymise), staff auth (password
+  + TOTP), admin operations, outbox, jobs — and since **R5-Payments** (final session, DECISIONS.md): the
+  `IPaymentGateway` port (Moyasar hosted invoices; a fake gateway in Development and tests only), webhook (verified,
+  idempotent, re-fetch before settle), settlement (`paid` / `payment_review`), reconciliation and unpaid-order expiry
+  jobs, DR/DRC receipts (QuestPDF, gapless numbers), refunds (finance), finance views and the donations CSV.
+- The webhook or the reconciliation is the only proof of payment (ADR-S05); a return URL never is. Card data never
+  reaches the API.
 - Business rules D-01 … D-14 are never invented or "fixed" in code. A rule that is missing or ambiguous → stop and ask.
 
 ## Platform
@@ -37,6 +40,7 @@ sign-in by SMS code, checkout into `pending_payment` orders, donor account, staf
 | Entities and aggregates | `Domain/Entities/<Module>/` · enums `Domain/Enums/` · `Money`, `Slug`, `SaudiMobile` in `Domain/ValueObjects/` |
 | Errors | `Domain/Errors/ErrorCodes.cs` + `Domain/Errors/<Area>Errors.cs` |
 | Repository ports, unit of work | `Domain/IRepositories/` (no EF types) |
+| Payment adapters | `Infrastructure/Payments/<Provider>/` behind `Application/Interfaces/IPaymentGateway` |
 | Commands, queries, handlers, validators | `Application/Features/<Module>/` |
 | DTOs | `Application/DTOs/<Module>/` (sealed records; money as `"50.00"` strings, enums as wire strings) |
 | Ports for external services | `Application/Interfaces/` |
@@ -91,8 +95,10 @@ dotnet run --project src/Ta3lom.Store.Api                          # Development
 OPENAPI_OUT=artifacts/openapi/store-api.v1.json dotnet test --project tests/Ta3lom.Store.Api.IntegrationTests -- --filter-class "*OpenApiDocumentTests"
 ```
 
-- Deploy: `Dockerfile` (targets `api`, `migrate`) + `deploy/compose.yaml`; runbook `deploy/README.md`; secrets are key-per-file
-  under `/run/secrets` (`deploy/secrets.md`), never in the repository.
+- Deploy: GHCR images from `Dockerfile` (targets `api`, `migrate`; `docker run … api self-check` renders a receipt) +
+  `deploy/compose.yaml` behind the shared edge Caddy (no proxy or port here; `.env.production` / `.env.staging`, one file
+  two projects); `.github/workflows/deploy.yml` after CI; runbook `deploy/README.md`; backups `deploy/backup.sh` +
+  `deploy/restore-test.sh`; secrets are key-per-file under `/run/secrets` (`deploy/secrets.md`), never in the repository.
 - OpenAPI: CI writes `/openapi/v1.json` (OpenApiDocumentTests, `OPENAPI_OUT`) and uploads it as the artifact
   `store-api-openapi` (30 days); nothing is committed (`artifacts/` is ignored).
 - Development only: `Store__Otp__Development__MaxPerMobile` / `Store__Otp__Development__MaxPerIp` raise the D-10 OTP caps

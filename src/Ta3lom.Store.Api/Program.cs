@@ -12,6 +12,11 @@ if (args.Length > 0 && args[0] == CreateAdminCommand.Verb)
     return CreateAdminCommand.Run(args[1..], Console.Out);
 }
 
+if (args.Length > 0 && args[0] == SelfCheckCommand.Verb)
+{
+    return SelfCheckCommand.Run(Console.Out);
+}
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddStoreSecretFiles();
 builder.WebHost.ConfigureKestrel(k => k.AddServerHeader = false);
@@ -50,6 +55,7 @@ app.UseOutputCache();
 // ── Endpoints ───────────────────────────────────────────────────────────────────────────────────
 var v1 = app.MapGroup("/v1").RequireCors(CorsSetup.WebPolicy);
 app.MapEndpoints(v1);
+app.MapPaymentWebhooks();                                          // outside the CORS group (server-to-server, A-2)
 app.MapDevEndpoints();
 app.MapHealthEndpoints();
 

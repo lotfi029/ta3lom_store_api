@@ -41,6 +41,7 @@ public class StoreApiFactory : WebApplicationFactory<Program>
     protected virtual IReadOnlyDictionary<string, string?> Settings => new Dictionary<string, string?>(TestKeys)
     {
         ["Store:PublicBaseUrl"] = PublicBaseUrl,
+        ["Store:Payments:Provider"] = "fake",
         ["Store:ForwardedHeaders:KnownNetworks:0"] = "10.0.0.0/8",
         ["Serilog:MinimumLevel:Default"] = "Fatal",
     };
@@ -105,6 +106,9 @@ public class ProductionApiFactory : StoreApiFactory
         ["Store:Email:User"] = "store@ta3lom.sa",
         ["Store:Email:Password"] = "test-password-not-real",
         ["Store:Outbox:Enabled"] = "false",
+        ["Store:Payments:Provider"] = "moyasar",
+        ["Store:Payments:Moyasar:SecretKey"] = "sk_live_test_not_real",
+        ["Store:Payments:Moyasar:WebhookSecret"] = "test-webhook-secret-not-real",
         ["Store:Files:Root"] = Path.Combine(Path.GetTempPath(), $"ta3lom-store-prod-files-{Environment.ProcessId}"),
     };
 }

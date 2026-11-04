@@ -530,6 +530,10 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("donor_name");
 
+                    b.Property<DateTimeOffset?>("ExpiredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expired_at");
+
                     b.Property<string>("IdempotencyKey")
                         .HasMaxLength(64)
                         .HasColumnType("text")
@@ -556,6 +560,21 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("reference");
+
+                    b.Property<decimal>("RefundedAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("refunded_amount");
+
+                    b.Property<DateTimeOffset?>("RefundedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("refunded_at");
+
+                    b.Property<string>("ReviewReason")
+                        .HasColumnType("text")
+                        .HasColumnName("review_reason");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -607,7 +626,11 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("ck_orders_reference", "reference ~ '^T3-[0-9]{2}-[0-9]{6,}$'");
 
-                            t.HasCheckConstraint("ck_orders_status", "status IN ('pending_payment', 'paid', 'payment_review', 'cancelled', 'expired')");
+                            t.HasCheckConstraint("ck_orders_refunded", "refunded_amount >= 0");
+
+                            t.HasCheckConstraint("ck_orders_review_reason", "review_reason IS NULL OR review_reason IN ('amount_mismatch', 'late_capture', 'double_payment')");
+
+                            t.HasCheckConstraint("ck_orders_status", "status IN ('pending_payment', 'paid', 'payment_review', 'cancelled', 'expired', 'refunded')");
 
                             t.HasCheckConstraint("ck_orders_total", "total_amount > 0 AND line_count > 0");
                         });
@@ -1231,6 +1254,349 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                     b.ToTable("outbox_message", "store");
                 });
 
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Payments.DonationReceipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<string>("DonorNameSnapshot")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("donor_name_snapshot");
+
+                    b.Property<DateTimeOffset>("IssuedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("issued_at");
+
+                    b.Property<string>("LinesSnapshot")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("lines_snapshot");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("integer")
+                        .HasColumnName("number");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_id");
+
+                    b.Property<string>("PdfStorageKey")
+                        .HasColumnType("text")
+                        .HasColumnName("pdf_storage_key");
+
+                    b.Property<string>("Series")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("series");
+
+                    b.Property<Guid?>("VoidedByReceiptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("voided_by_receipt_id");
+
+                    b.Property<Guid?>("VoidsReceiptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("voids_receipt_id");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer")
+                        .HasColumnName("year");
+
+                    b.HasKey("Id")
+                        .HasName("pk_donation_receipt");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_receipt_order")
+                        .HasFilter("series = 'DR'");
+
+                    b.HasIndex("Series", "Year", "Number")
+                        .IsUnique()
+                        .HasDatabaseName("ux_receipt_number");
+
+                    b.ToTable("donation_receipt", "store", t =>
+                        {
+                            t.HasCheckConstraint("ck_receipt_number", "number > 0 AND year BETWEEN 2000 AND 2999");
+
+                            t.HasCheckConstraint("ck_receipt_series", "series IN ('DR', 'DRC')");
+
+                            t.HasCheckConstraint("ck_receipt_voids", "(series = 'DRC') = (voids_receipt_id IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Payments.Payment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<int>("AttemptNo")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempt_no");
+
+                    b.Property<decimal>("CapturedAmount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("captured_amount");
+
+                    b.Property<DateTimeOffset?>("CapturedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("captured_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency");
+
+                    b.Property<string>("FailureCode")
+                        .HasColumnType("text")
+                        .HasColumnName("failure_code");
+
+                    b.Property<string>("FailureMessage")
+                        .HasColumnType("text")
+                        .HasColumnName("failure_message");
+
+                    b.Property<DateTimeOffset>("InitiatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("initiated_at");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("method");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_id");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("ProviderInvoiceId")
+                        .HasColumnType("text")
+                        .HasColumnName("provider_invoice_id");
+
+                    b.Property<string>("ProviderPaymentId")
+                        .HasColumnType("text")
+                        .HasColumnName("provider_payment_id");
+
+                    b.Property<DateTimeOffset?>("RedirectExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("redirect_expires_at");
+
+                    b.Property<string>("RedirectUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("redirect_url");
+
+                    b.Property<decimal>("RefundedAmount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("refunded_amount");
+
+                    b.Property<string>("ReviewReason")
+                        .HasColumnType("text")
+                        .HasColumnName("review_reason");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_payment");
+
+                    b.HasIndex("OrderId", "AttemptNo")
+                        .IsUnique()
+                        .HasDatabaseName("ux_payment_attempt");
+
+                    b.HasIndex("Provider", "ProviderInvoiceId")
+                        .HasDatabaseName("ix_payment_provider_invoice")
+                        .HasFilter("provider_invoice_id IS NOT NULL");
+
+                    b.HasIndex("Provider", "ProviderPaymentId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_payment_provider_id")
+                        .HasFilter("provider_payment_id IS NOT NULL");
+
+                    b.HasIndex("Status", "InitiatedAt")
+                        .HasDatabaseName("ix_payment_status");
+
+                    b.ToTable("payment", "store", t =>
+                        {
+                            t.HasCheckConstraint("ck_payment_amounts", "amount > 0 AND captured_amount >= 0 AND refunded_amount >= 0 AND refunded_amount <= captured_amount");
+
+                            t.HasCheckConstraint("ck_payment_attempt", "attempt_no >= 1");
+
+                            t.HasCheckConstraint("ck_payment_currency", "currency = 'SAR'");
+
+                            t.HasCheckConstraint("ck_payment_method", "method IN ('unknown', 'mada', 'creditcard', 'applepay', 'stcpay')");
+
+                            t.HasCheckConstraint("ck_payment_review_reason", "review_reason IS NULL OR review_reason IN ('amount_mismatch', 'late_capture', 'double_payment')");
+
+                            t.HasCheckConstraint("ck_payment_status", "status IN ('initiated', 'captured', 'failed', 'cancelled', 'review', 'refunded')");
+                        });
+                });
+
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Payments.PaymentEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Outcome")
+                        .HasColumnType("text")
+                        .HasColumnName("outcome");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("payload_json");
+
+                    b.Property<Guid?>("PaymentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("payment_id");
+
+                    b.Property<DateTimeOffset?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("processed_at");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("ProviderEventId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("provider_event_id");
+
+                    b.Property<string>("ProviderPaymentId")
+                        .HasColumnType("text")
+                        .HasColumnName("provider_payment_id");
+
+                    b.Property<DateTimeOffset>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("received_at");
+
+                    b.Property<bool>("SignatureValid")
+                        .HasColumnType("boolean")
+                        .HasColumnName("signature_valid");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("type");
+
+                    b.HasKey("Id")
+                        .HasName("pk_payment_event");
+
+                    b.HasIndex("PaymentId")
+                        .HasDatabaseName("ix_payment_event_payment");
+
+                    b.HasIndex("Provider", "ProviderEventId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_payment_event_provider");
+
+                    b.ToTable("payment_event", "store");
+                });
+
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Payments.Refund", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<string>("FailureMessage")
+                        .HasColumnType("text")
+                        .HasColumnName("failure_message");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("text")
+                        .HasColumnName("idempotency_key");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_id");
+
+                    b.Property<Guid>("PaymentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("payment_id");
+
+                    b.Property<string>("ProviderRefundId")
+                        .HasColumnType("text")
+                        .HasColumnName("provider_refund_id");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("reason");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at");
+
+                    b.Property<string>("RequestedBy")
+                        .IsRequired()
+                        .HasColumnType("citext")
+                        .HasColumnName("requested_by");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id")
+                        .HasName("pk_refund");
+
+                    b.HasIndex("PaymentId")
+                        .HasDatabaseName("ix_refund_payment");
+
+                    b.HasIndex("OrderId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("ux_refund_idempotency");
+
+                    b.ToTable("refund", "store", t =>
+                        {
+                            t.HasCheckConstraint("ck_refund_amount", "amount > 0");
+
+                            t.HasCheckConstraint("ck_refund_status", "status IN ('requested', 'succeeded', 'failed')");
+                        });
+                });
+
             modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Settings.Setting", b =>
                 {
                     b.Property<string>("Key")
@@ -1280,6 +1646,29 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                     b.ToTable((string)null);
 
                     b.ToView("v_catalog_stats", "store");
+                });
+
+            modelBuilder.Entity("Ta3lom.Store.Infrastructure.Persistence.Records.DocumentCounterRecord", b =>
+                {
+                    b.Property<string>("Series")
+                        .HasColumnType("text")
+                        .HasColumnName("series");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer")
+                        .HasColumnName("year");
+
+                    b.Property<int>("NextNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("next_number");
+
+                    b.HasKey("Series", "Year")
+                        .HasName("pk_document_counter");
+
+                    b.ToTable("document_counter", "store", t =>
+                        {
+                            t.HasCheckConstraint("ck_document_counter_next", "next_number >= 1");
+                        });
                 });
 
             modelBuilder.Entity("Ta3lom.Store.Infrastructure.Persistence.Records.IdempotencyRecord", b =>
@@ -1468,6 +1857,58 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_order_line_project");
+                });
+
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Payments.DonationReceipt", b =>
+                {
+                    b.HasOne("Ta3lom.Store.Domain.Entities.Donations.Order", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_receipt_order");
+
+                    b.HasOne("Ta3lom.Store.Domain.Entities.Payments.DonationReceipt", null)
+                        .WithMany()
+                        .HasForeignKey("VoidsReceiptId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_receipt_voids");
+                });
+
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Payments.Payment", b =>
+                {
+                    b.HasOne("Ta3lom.Store.Domain.Entities.Donations.Order", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_payment_order");
+                });
+
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Payments.PaymentEvent", b =>
+                {
+                    b.HasOne("Ta3lom.Store.Domain.Entities.Payments.Payment", null)
+                        .WithMany()
+                        .HasForeignKey("PaymentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_payment_event_payment");
+                });
+
+            modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Payments.Refund", b =>
+                {
+                    b.HasOne("Ta3lom.Store.Domain.Entities.Donations.Order", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_refund_order");
+
+                    b.HasOne("Ta3lom.Store.Domain.Entities.Payments.Payment", null)
+                        .WithMany()
+                        .HasForeignKey("PaymentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_refund_payment");
                 });
 
             modelBuilder.Entity("Ta3lom.Store.Domain.Entities.Catalog.Project", b =>

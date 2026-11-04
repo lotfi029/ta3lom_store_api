@@ -4,7 +4,9 @@ using Ta3lom.Store.Domain.Events;
 namespace Ta3lom.Store.Domain.Entities.Donations;
 
 /// Table `orders` (BR-A08, D-09): a donation order with re-priced line snapshots. It starts in `pending_payment`; staff may
-/// cancel it while it is pending. The payment states arrive with R5-Payments.
+/// cancel it while it is pending. R5-Payments (ADR-S05): a captured payment of exactly the total settles it (`paid`); a
+/// mismatch, a late or a double payment sends it to `payment_review`; an unpaid order past `paymentDueAt` expires;
+/// refunds are recorded per amount (full → `refunded`, partial → stays `paid` with `refunded_amount > 0`).
 public sealed class Order : AggregateRoot
 {
     private readonly List<OrderLine> _lines = [];
@@ -52,6 +54,16 @@ public sealed class Order : AggregateRoot
     public DateTimeOffset UpdatedAt { get; private set; }
 
     public DateTimeOffset? PaidAt { get; private set; }
+
+    /// Sum of succeeded refunds (0.00 until the first one).
+    public Money RefundedAmount { get; private set; } = Money.Zero;
+
+    /// Why the order is (or was) in payment review.
+    public PaymentReviewReason? ReviewReason { get; private set; }
+
+    public DateTimeOffset? ExpiredAt { get; private set; }
+
+    public DateTimeOffset? RefundedAt { get; private set; }
 
     public DateTimeOffset? CancelledAt { get; private set; }
 
@@ -113,6 +125,94 @@ public sealed class Order : AggregateRoot
         CancelledBy = Guard.NotEmpty(cancelledBy);
         UpdatedAt = now;
         Raise(new OrderCancelled(Id, Reference, cancelledBy));
+        return Result.Success();
+    }
+
+    /// A pending order is payable until its due time.
+    public bool IsPayable(DateTimeOffset now) => Status == OrderStatus.PendingPayment && now < PaymentDueAt;
+
+    /// ADR-S05: a captured payment of exactly the total settles a pending order. Anything else is the caller's review case.
+    public Result MarkPaid(DateTimeOffset now)
+    {
+        if (Status != OrderStatus.PendingPayment)
+        {
+            return PaymentErrors.NotPayable(Status);
+        }
+
+        Status = OrderStatus.Paid;
+        PaidAt = now;
+        UpdatedAt = now;
+        return Result.Success();
+    }
+
+    /// RUL-29/35: a capture that cannot settle the order. A pending, expired or cancelled order moves to
+    /// `payment_review`; an order that is already paid (double payment) or refunded keeps its status — the payment row
+    /// carries the review. Returns true when the order status changed.
+    public bool FlagForReview(PaymentReviewReason reason, DateTimeOffset now)
+    {
+        if (Status is OrderStatus.Paid or OrderStatus.Refunded or OrderStatus.PaymentReview)
+        {
+            return false;
+        }
+
+        Status = OrderStatus.PaymentReview;
+        ReviewReason = reason;
+        UpdatedAt = now;
+        return true;
+    }
+
+    /// Finance accepts a reviewed payment: the order is settled in full (→ `paid`).
+    public Result AcceptReview(DateTimeOffset now)
+    {
+        if (Status != OrderStatus.PaymentReview)
+        {
+            return PaymentErrors.NotInReview(Status);
+        }
+
+        Status = OrderStatus.Paid;
+        PaidAt = now;
+        UpdatedAt = now;
+        return Result.Success();
+    }
+
+    /// An unpaid order past its due time expires.
+    public Result Expire(DateTimeOffset now)
+    {
+        if (Status != OrderStatus.PendingPayment || now < PaymentDueAt)
+        {
+            return PaymentErrors.NotPayable(Status);
+        }
+
+        Status = OrderStatus.Expired;
+        ExpiredAt = now;
+        UpdatedAt = now;
+        Raise(new OrderExpired(Id, Reference));
+        return Result.Success();
+    }
+
+    /// F-D5: a succeeded refund of `amount` out of `refundable` (what was captured for this order). Full (everything
+    /// captured is now refunded) → `refunded`; partial → the status stays. Only `paid` and `payment_review` orders.
+    public Result ApplyRefund(Money amount, Money captured, DateTimeOffset now)
+    {
+        if (Status is not (OrderStatus.Paid or OrderStatus.PaymentReview))
+        {
+            return PaymentErrors.RefundNotAllowed(Status);
+        }
+
+        Guard.Against(!amount.IsPositive, "refund.amount_positive");
+        if (RefundedAmount + amount > captured)
+        {
+            return PaymentErrors.RefundExceeds(captured - RefundedAmount);
+        }
+
+        RefundedAmount += amount;
+        UpdatedAt = now;
+        if (RefundedAmount == captured)
+        {
+            Status = OrderStatus.Refunded;
+            RefundedAt = now;
+        }
+
         return Result.Success();
     }
 

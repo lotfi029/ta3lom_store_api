@@ -19,7 +19,7 @@ public static class CorsSetup
                 .AllowCredentials()
                 .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE")
                 .WithHeaders("Authorization", "Content-Type", "Idempotency-Key", "Accept-Language")
-                .WithExposedHeaders("ETag", "Retry-After", "Location", "Idempotent-Replayed")
+                .WithExposedHeaders("ETag", "Retry-After", "Location", "Idempotent-Replayed", "Content-Disposition")
                 .SetPreflightMaxAge(TimeSpan.FromSeconds(600))));
         return services;
     }

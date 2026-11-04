@@ -12,6 +12,9 @@ using Ta3lom.Store.Application.Abstractions.Data;
 using Ta3lom.Store.Application.Abstractions.Time;
 using Ta3lom.Store.Application.Interfaces;
 using Ta3lom.Store.Domain.IRepositories;
+using Ta3lom.Store.Infrastructure.Payments;
+using Ta3lom.Store.Infrastructure.Payments.Fake;
+using Ta3lom.Store.Infrastructure.Payments.Moyasar;
 using Ta3lom.Store.Infrastructure.Persistence;
 using Ta3lom.Store.Infrastructure.Persistence.Interceptors;
 using Ta3lom.Store.Infrastructure.Persistence.Repositories;
@@ -41,6 +44,7 @@ public static class DependencyInjection
         ArgumentNullException.ThrowIfNull(configuration);
 
         services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<DevClockOffset>();
         services.TryAddSingleton<IClock, SystemClock>();
 
         AddPersistence(services);
@@ -48,6 +52,7 @@ public static class DependencyInjection
         AddRepositories(services);
         AddSecurity(services);
         AddMessaging(services);
+        AddPayments(services, configuration);
         AddFiles(services);
 
         // Jobs: RAM store, in-process, Riyadh cron. Each is a thin shell around one Application command.
@@ -58,6 +63,8 @@ public static class DependencyInjection
             q.AddStoreJob<ExpireGuestCartsJob>(ExpireGuestCartsJob.Cron);
             q.AddStoreJob<RetentionJob>(RetentionJob.Cron);
             q.AddStoreJob<IntegrityChecksJob>(IntegrityChecksJob.Cron);
+            q.AddStoreJob<ReconcilePaymentsJob>(ReconcilePaymentsJob.Cron);
+            q.AddStoreJob<ExpireUnpaidOrdersJob>(ExpireUnpaidOrdersJob.Cron);
         });
         services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
         services.AddScoped<JobRuns>();
@@ -105,6 +112,12 @@ public static class DependencyInjection
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<ICartRepository, CartRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<IPaymentRepository, PaymentRepository>();
+        services.AddScoped<IPaymentEventRepository, PaymentEventRepository>();
+        services.AddScoped<IReceiptRepository, ReceiptRepository>();
+        services.AddScoped<IRefundRepository, RefundRepository>();
+        services.AddScoped<IDocumentNumbers, Services.Payments.DocumentNumbers>();
+        services.AddSingleton<IReceiptRenderer, Services.Receipts.QuestPdfReceiptRenderer>();
         services.AddScoped<IProjectRepository, ProjectRepository>();
         services.AddScoped<ISettingRepository, SettingRepository>();
         services.AddScoped<ICatalogSearch, Services.Catalog.CatalogSearch>();
@@ -139,6 +152,28 @@ public static class DependencyInjection
         services.AddSingleton<IUsedTokenStore, MemoryUsedTokenStore>();
         services.AddSingleton<IOrderStatusTokens, OrderStatusTokens>();
         services.AddScoped<IAuditTrail, Services.Auditing.AuditTrail>();
+    }
+
+    /// Payment gateways (F-D1): Moyasar (typed HttpClient) and the fake (Development/tests only), behind the registry.
+    private static void AddPayments(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<PaymentOptions>().BindConfiguration(PaymentOptions.Section)
+            .PostConfigure(o =>
+            {
+                if (string.IsNullOrWhiteSpace(o.Fake.ApiBaseUrl))
+                {
+                    o.Fake.ApiBaseUrl = configuration["Store:PublicBaseUrl"] is { Length: > 0 } api ? api : "http://localhost:5080";
+                }
+            })
+            .ValidateOnStart();
+        services.AddSingleton<IValidateOptions<PaymentOptions>, PaymentOptionsValidator>();
+        services.AddHttpClient<MoyasarGateway>((sp, c) =>
+            c.Timeout = TimeSpan.FromSeconds(sp.GetRequiredService<IOptions<PaymentOptions>>().Value.Moyasar.TimeoutSeconds));
+        services.AddSingleton<FakePaymentStore>();
+        services.AddScoped<FakePaymentGateway>();
+        services.AddScoped<IPaymentGateway>(sp => sp.GetRequiredService<MoyasarGateway>());
+        services.AddScoped<IPaymentGateway>(sp => sp.GetRequiredService<FakePaymentGateway>());
+        services.AddScoped<IPaymentGatewayRegistry, PaymentGatewayRegistry>();
     }
 
     /// SMS (sink unless `Store:Sms:Provider = unifonic`), e-mail (sink unless `Store:Email:Mode = smtp`), templates, outbox, settings.

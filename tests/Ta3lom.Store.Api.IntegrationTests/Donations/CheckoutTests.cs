@@ -6,7 +6,7 @@ using Ta3lom.Store.Domain.Errors;
 
 namespace Ta3lom.Store.Api.IntegrationTests.Donations;
 
-/// `POST /v1/checkout` (BR-A08, D-09): idempotent, re-priced, `pending_payment`, `payment: null`.
+/// `POST /v1/checkout` (BR-A08, D-09): idempotent, re-priced, `pending_payment`, with the hosted payment page (R5-Payments).
 public sealed partial class CheckoutTests(ScenarioFactory factory) : IClassFixture<ScenarioFactory>
 {
     [GeneratedRegex(@"^T3-\d{2}-\d{6}$")]
@@ -36,7 +36,7 @@ public sealed partial class CheckoutTests(ScenarioFactory factory) : IClassFixtu
         reference[3..5].ShouldBe((factory.Clock.UtcNow.ToOffset(TimeSpan.FromHours(3)).Year % 100).ToString("D2", System.Globalization.CultureInfo.InvariantCulture));
         placed.Body.Str("status").ShouldBe("pending_payment");
         placed.Body.Str("totalAmount").ShouldBe("32.00");
-        placed.Body.GetProperty("payment").ValueKind.ShouldBe(System.Text.Json.JsonValueKind.Null);
+        placed.Body.GetProperty("payment").Str("redirectUrl").ShouldContain("/dev/payments/");   // the fake gateway (test host)
         (await factory.ScalarAsync<string>($"SELECT string_agg(title_ar || ':' || quantity || ':' || unit_amount || ':' || amount, '|' ORDER BY line_no) FROM store.order_line l JOIN store.orders o ON o.id = l.order_id WHERE o.reference = '{reference}'"))
             .ShouldBe($"{c.Project.Str("titleAr")}:3:4.00:12.00|تعليم:1:20.00:20.00");
         (await factory.ScalarAsync<int>($"SELECT round(extract(epoch FROM payment_due_at - created_at) / 60)::int FROM store.orders WHERE reference = '{reference}'")).ShouldBe(60);

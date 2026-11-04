@@ -8,6 +8,7 @@ using Ta3lom.Store.Domain.Entities.Donations;
 using Ta3lom.Store.Domain.Entities.Identity;
 using Ta3lom.Store.Domain.Entities.Media;
 using Ta3lom.Store.Domain.Entities.Notifications;
+using Ta3lom.Store.Domain.Entities.Payments;
 using Ta3lom.Store.Domain.Entities.Settings;
 using Ta3lom.Store.Domain.ReadModels;
 using Ta3lom.Store.Domain.ValueObjects;
@@ -62,6 +63,14 @@ public sealed class StoreDbContext(DbContextOptions<StoreDbContext> options) : D
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     public DbSet<Setting> Settings => Set<Setting>();
+
+    public DbSet<Payment> Payments => Set<Payment>();
+
+    public DbSet<PaymentEvent> PaymentEvents => Set<PaymentEvent>();
+
+    public DbSet<Refund> Refunds => Set<Refund>();
+
+    public DbSet<DonationReceipt> DonationReceipts => Set<DonationReceipt>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

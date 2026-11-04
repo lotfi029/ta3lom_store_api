@@ -26,4 +26,9 @@ public static class AuditActions
     public const string CustomerUnblocked = "customer.unblocked";
     public const string CustomerDeleted = "customer.deleted";
     public const string OrderCancelled = "order.cancelled";
+    public const string OrderRefunded = "order.refunded";
+    public const string OrderRefundFailed = "order.refund_failed";
+    public const string PaymentReviewAccepted = "payment.review_accepted";
+    public const string PaymentReviewRefunded = "payment.review_refunded";
+    public const string ReceiptResent = "receipt.resent";
 }

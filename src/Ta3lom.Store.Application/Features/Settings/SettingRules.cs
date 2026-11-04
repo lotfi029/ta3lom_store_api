@@ -11,6 +11,10 @@ internal static partial class SettingRules
     private static readonly string[] MoneyKeys = [SettingKeys.MinGiftAmount, SettingKeys.MaxLineAmount, SettingKeys.CartMaxTotal];
     private static readonly string[] TextKeys = [SettingKeys.SiteNameAr, SettingKeys.SiteNameEn];
 
+    /// Receipt texts (F3a): null or 1–300 characters.
+    private static readonly string[] ReceiptTextKeys =
+        [SettingKeys.ReceiptOrgNameAr, SettingKeys.ReceiptOrgNameEn, SettingKeys.ReceiptLicenceNo, SettingKeys.ReceiptVatNoteAr, SettingKeys.ReceiptVatNoteEn];
+
     private static readonly Dictionary<string, (int Min, int Max)> IntKeys = new(StringComparer.Ordinal)
     {
         [SettingKeys.CartMaxLines] = (1, 50),
@@ -96,8 +100,15 @@ internal static partial class SettingRules
             return value.ValueKind == JsonValueKind.Null || (value.ValueKind == JsonValueKind.String && value.GetString()!.Length is > 0 and <= 120);
         }
 
+        if (ReceiptTextKeys.Contains(key))
+        {
+            return value.ValueKind == JsonValueKind.Null || (value.ValueKind == JsonValueKind.String && value.GetString()!.Trim().Length is > 0 and <= 300);
+        }
+
         return key switch
         {
+            SettingKeys.ReceiptSignatureAssetId => value.ValueKind == JsonValueKind.Null
+                                                   || (value.ValueKind == JsonValueKind.String && Guid.TryParse(value.GetString(), out _)),
             SettingKeys.AmountPresets => value.ValueKind == JsonValueKind.Array && value.GetArrayLength() is >= 1 and <= 6
                                          && value.EnumerateArray().All(IsMoney),
             SettingKeys.SupportMobile => value.ValueKind == JsonValueKind.Null

@@ -5,6 +5,8 @@ using Ta3lom.Store.Application.Abstractions.Messaging;
 using Ta3lom.Store.Application.Abstractions.Pagination;
 using Ta3lom.Store.Application.DTOs.Donations;
 using Ta3lom.Store.Application.Features.Donations;
+using Ta3lom.Store.Application.Features.Payments;
+using Ta3lom.Store.Application.Features.Receipts;
 using Ta3lom.Store.Domain.Constants;
 using Ta3lom.Store.SharedKernel;
 
@@ -37,6 +39,17 @@ internal sealed class DonationEndpoints : IEndpoint
 
         app.MapGet("/orders/{reference}/status", OrderStatusAsync).WithTags("Orders").RequireAuthorization(Policies.CustomerOptional)
             .RequireRateLimiting(RatePolicies.Public).Produces<OrderStatusResponse>().ProducesProblem(StatusCodes.Status404NotFound);
+
+        // Plan §4: the receipt PDF (DR, or the DRC with ?kind=drc) for the status-token holder or the donor.
+        app.MapGet("/orders/{reference}/receipt", OrderReceiptAsync).WithTags("Orders").RequireAuthorization(Policies.CustomerOptional)
+            .RequireRateLimiting(RatePolicies.Download).Produces(StatusCodes.Status200OK, contentType: "application/pdf")
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        // Plan §3.3: a new payment attempt (the donor, or the status token holder). Idempotent per key.
+        app.MapPost("/orders/{reference}/pay", PayAsync).WithTags("Orders").RequireAuthorization(Policies.CustomerOptional)
+            .RequireRateLimiting(RatePolicies.Pay).RequireSameOrigin().RequireIdempotencyKey("pay")
+            .Produces<PayOrderResponse>().ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status503ServiceUnavailable);
     }
 
     private static CartOwner Owner(HttpContext http, CartCookie cookie) =>
@@ -89,9 +102,34 @@ internal sealed class DonationEndpoints : IEndpoint
         (await handler.HandleAsync(new CheckoutCommand(user.SubjectId(), request, idempotencyKey), ct))
             .ToHttp(o => TypedResults.Created(CheckoutReplay.Location(o.Reference), o));
 
+    private static async Task<IResult> OrderReceiptAsync(string reference, ClaimsPrincipal user, HttpContext http,
+        [FromServices] ICommandHandler<DownloadReceiptCommand, ReceiptFile> handler, CancellationToken ct, string? t = null, string? kind = null) =>
+        ReceiptPdf.ToHttp(await handler.HandleAsync(new DownloadReceiptCommand(reference, t, CustomerId(user), kind), ct), http);
+
+    private static async Task<IResult> PayAsync(string reference, ClaimsPrincipal user,
+        [FromServices] ICommandHandler<PayOrderCommand, PayOrderResponse> handler, CancellationToken ct, string? t = null) =>
+        (await handler.HandleAsync(new PayOrderCommand(reference, t, CustomerId(user)), ct)).ToHttp();
+
     private static async Task<IResult> OrderStatusAsync(string reference, ClaimsPrincipal user,
         [FromServices] IQueryHandler<GetOrderStatusQuery, OrderStatusResponse> handler, CancellationToken ct, string? t = null) =>
         (await handler.HandleAsync(new GetOrderStatusQuery(reference, t, CustomerId(user)), ct)).ToHttp();
+}
+
+/// A receipt PDF response (plan §4): `application/pdf`, `Content-Disposition: attachment`, `Cache-Control: no-store`
+/// (personal data: never cached by a browser or a proxy).
+internal static class ReceiptPdf
+{
+    public static IResult ToHttp(Result<ReceiptFile> result, HttpContext http)
+    {
+        if (result.IsFailure)
+        {
+            return result.ToHttp();
+        }
+
+        http.Response.Headers.CacheControl = "no-store";
+        http.Response.Headers.Pragma = "no-cache";
+        return TypedResults.File(result.Value.Pdf, "application/pdf", result.Value.FileName);
+    }
 }
 
 /// `/v1/me` (BR-A10, D-13, D-14): the signed-in donor's profile, export, deletion and donation orders.
@@ -107,7 +145,13 @@ internal sealed class MeEndpoints : IEndpoint
         me.MapGet("/export", ExportAsync).Produces<MeExportResponse>().ProducesProblem(StatusCodes.Status404NotFound);
         me.MapGet("/donations", DonationsAsync).Produces<PagedResult<DonationSummary>>().ProducesProblem(StatusCodes.Status400BadRequest);
         me.MapGet("/donations/{reference}", DonationAsync).Produces<DonationDetail>().ProducesProblem(StatusCodes.Status404NotFound);
+        me.MapGet("/donations/{reference}/receipt", MyReceiptAsync).Produces(StatusCodes.Status200OK, contentType: "application/pdf")
+            .ProducesProblem(StatusCodes.Status404NotFound);
     }
+
+    private static async Task<IResult> MyReceiptAsync(string reference, ClaimsPrincipal user, HttpContext http,
+        [FromServices] ICommandHandler<DownloadReceiptCommand, ReceiptFile> handler, CancellationToken ct, string? kind = null) =>
+        ReceiptPdf.ToHttp(await handler.HandleAsync(new DownloadReceiptCommand(reference, null, user.SubjectId(), kind), ct), http);
 
     private static async Task<IResult> GetAsync(ClaimsPrincipal user, [FromServices] IQueryHandler<GetMeQuery, MeResponse> handler, CancellationToken ct) =>
         (await handler.HandleAsync(new GetMeQuery(user.SubjectId()), ct)).ToHttp();
@@ -146,6 +190,10 @@ internal sealed class CheckoutReplay : IIdempotentResponseShaper
     public static string Location(string reference) => $"/v1/orders/{reference}/status";
 
     public object ForStorage(object value) => value is CheckoutResponse r ? r with { StatusToken = string.Empty } : value;
+
+    /// A-1: an order placed while the gateway was down (`payment: null`) is not a final answer — a retry with the same key
+    /// finds the order (A-5) and asks the gateway again.
+    public bool ShouldStore(object value) => value is not CheckoutResponse { Payment: null, PaymentError: not null };
 
     /// L-12: the replay carries the same `Location` as the original 201.
     public string ForReplay(string storedJson, System.Text.Json.JsonSerializerOptions json, HttpContext http)

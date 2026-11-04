@@ -34,13 +34,41 @@ internal sealed class GetDashboardQueryHandler(IApplicationDbContext db, IClock 
             where s.TargetKind == TargetKind.Project
             orderby s.PendingAmount descending, p.Id
             select new { p.Id, p.Slug, p.TitleAr, s.PendingOrders, s.PendingAmount }).Take(TopCount).ToListAsync(ct);
+        var monthStart = RiyadhDay.Start(new DateOnly(today.Year, today.Month, 1));
+        var paid = db.Orders.AsNoTracking().Where(o => o.PaidAt != null && (o.Status == OrderStatus.Paid || o.Status == OrderStatus.Refunded));
+        var since = weekStart < monthStart ? weekStart : monthStart;            // a week can start in the previous month
+        var paidMonth = await paid.Where(o => o.PaidAt >= since).Select(o => new { o.PaidAt, o.TotalAmount, o.RefundedAmount }).ToListAsync(ct);
+        DashboardPaid Paid(DateTimeOffset from)
+        {
+            var rows = paidMonth.Where(o => o.PaidAt >= from).ToList();
+            return new DashboardPaid(rows.Select(o => o.TotalAmount - o.RefundedAmount).Sum().ToWire(), rows.Count);
+        }
+
+        var paidLines = await (
+            from l in db.OrderLines.AsNoTracking()
+            join o in db.Orders.AsNoTracking() on l.OrderId equals o.Id
+            where l.ProjectId != null && o.Status == OrderStatus.Paid
+            select new { ProjectId = l.ProjectId!.Value, l.OrderId, l.Amount }).ToListAsync(ct);
+        var topPaidIds = paidLines.GroupBy(l => l.ProjectId)
+            .Select(g => new { g.Key, Orders = g.Select(x => x.OrderId).Distinct().Count(), Amount = g.Select(x => x.Amount).Sum() })
+            .OrderByDescending(g => g.Amount.Amount).ThenBy(g => g.Key).Take(TopCount).ToList();
+        var keys = topPaidIds.Select(t => t.Key).ToList();
+        var projects = await db.Projects.AsNoTracking().Where(p => keys.Contains(p.Id)).Select(p => new { p.Id, p.Slug, p.TitleAr }).ToListAsync(ct);
         return new DashboardResponse(
             await db.Projects.CountAsync(p => p.Status == ProjectStatus.Published, ct),
             await db.Categories.CountAsync(c => c.IsActive, ct),
             await db.Customers.CountAsync(c => c.Status == CustomerStatus.Active, ct),
             await pending.CountAsync(o => o.CreatedAt >= dayStart, ct),
             await pending.CountAsync(o => o.CreatedAt >= weekStart, ct),
-            [.. top.Select(t => new DashboardProject(t.Id, t.Slug, t.TitleAr, t.PendingOrders, t.PendingAmount.ToWire()))]);
+            [.. top.Select(t => new DashboardProject(t.Id, t.Slug, t.TitleAr, t.PendingOrders, t.PendingAmount.ToWire()))])
+        {
+            PaidToday = Paid(dayStart),
+            PaidThisWeek = Paid(weekStart),
+            PaidThisMonth = Paid(monthStart),
+            PendingOrders = await pending.CountAsync(ct),
+            InReviewOrders = await db.Orders.CountAsync(o => o.Status == OrderStatus.PaymentReview, ct),
+            TopProjectsByPaidAmount = [.. topPaidIds.Join(projects, t => t.Key, p => p.Id, (t, p) => new DashboardPaidProject(p.Id, p.Slug, p.TitleAr, t.Orders, t.Amount.ToWire()))],
+        };
     }
 }
 
@@ -189,12 +217,37 @@ internal sealed class GetAdminOrderQueryHandler(IApplicationDbContext db) : IQue
     {
         var reference = Order.NormalizeReference(query.Reference);                   // L-17/API-2: references are stored upper-case
         var o = await db.Orders.AsNoTracking().Include(x => x.Lines).FirstOrDefaultAsync(x => x.Reference == reference, ct);
-        return o is null
-            ? OrderErrors.NotFound
-            : new AdminOrderDetail(o.Reference, o.Status.ToWire(), o.TotalAmount.ToWire(), o.CustomerId, o.DonorName, o.DonorEmail, o.DonorMobile, o.Locale,
-                o.CreatedAt, o.PaymentDueAt, o.CancelledAt, o.CancelledBy,
-                [.. o.Lines.OrderBy(l => l.LineNo).Select(l => new AdminOrderLine(l.LineNo, l.TargetKind.ToWire(), l.ProjectId, l.CategoryId, l.OptionId,
-                    l.TitleAr, l.TitleEn, l.OptionLabelAr, l.Quantity, l.UnitAmount.ToWire(), l.Amount.ToWire()))]);
+        if (o is null)
+        {
+            return OrderErrors.NotFound;
+        }
+
+        var payments = await db.Payments.AsNoTracking().Where(p => p.OrderId == o.Id).OrderBy(p => p.AttemptNo).ToListAsync(ct);
+        var ids = payments.Select(p => p.Id).ToList();
+        var events = await db.PaymentEvents.AsNoTracking().Where(e => e.PaymentId != null && ids.Contains(e.PaymentId.Value))
+            .OrderBy(e => e.ReceivedAt).Select(e => new AdminPaymentEventRow(e.Type, e.ReceivedAt, e.SignatureValid, e.Outcome)).ToListAsync(ct);
+        var refunds = await db.Refunds.AsNoTracking().Where(r => r.OrderId == o.Id).OrderBy(r => r.RequestedAt).ToListAsync(ct);
+        var receipts = await db.DonationReceipts.AsNoTracking().Where(r => r.OrderId == o.Id).OrderBy(r => r.IssuedAt).ToListAsync(ct);
+        var refundable = o.Status == OrderStatus.Paid
+            ? payments.Where(p => p.Status == PaymentStatus.Captured).Select(p => p.Refundable).Sum()
+            : Money.Zero;
+        return new AdminOrderDetail(o.Reference, o.Status.ToWire(), o.TotalAmount.ToWire(), o.CustomerId, o.DonorName, o.DonorEmail, o.DonorMobile, o.Locale,
+            o.CreatedAt, o.PaymentDueAt, o.CancelledAt, o.CancelledBy,
+            [.. o.Lines.OrderBy(l => l.LineNo).Select(l => new AdminOrderLine(l.LineNo, l.TargetKind.ToWire(), l.ProjectId, l.CategoryId, l.OptionId,
+                l.TitleAr, l.TitleEn, l.OptionLabelAr, l.Quantity, l.UnitAmount.ToWire(), l.Amount.ToWire()))])
+        {
+            Version = o.Version,
+            PaidAt = o.PaidAt,
+            RefundedAmount = o.RefundedAmount.ToWire(),
+            ReviewReason = o.ReviewReason?.ToWire(),
+            Refundable = refundable.ToWire(),
+            Payments = [.. payments.Select(p => new AdminPaymentRow(p.Id, p.AttemptNo, p.Provider, p.Status.ToWire(), p.Method.ToWire(), p.Amount.ToWire(),
+                p.CapturedAmount.ToWire(), p.RefundedAmount.ToWire(), p.ReviewReason?.ToWire(), p.FailureMessage, p.InitiatedAt, p.CapturedAt))],
+            Events = events,
+            Refunds = [.. refunds.Select(r => new AdminRefundRow(r.Id, r.Amount.ToWire(), r.Status.ToWire(), r.Reason, r.RequestedBy, r.RequestedAt, r.CompletedAt))],
+            Receipts = [.. receipts.Select(r => new AdminReceiptRow(r.DisplayNumber, r.Series.ToWire(), r.Amount.ToWire(), r.IssuedAt,
+                r.VoidedByReceiptId is { } v ? receipts.FirstOrDefault(x => x.Id == v)?.DisplayNumber : null))],
+        };
     }
 }
 

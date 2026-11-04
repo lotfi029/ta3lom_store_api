@@ -25,4 +25,14 @@ public interface IOrderRepository : IGenericRepository<Order>
 
     /// The order a checkout of this donor with this `Idempotency-Key` placed, if any (A-5).
     Task<Order?> FindByIdempotencyKeyAsync(Guid customerId, string idempotencyKey, CancellationToken ct = default);
+
+    /// The order with its lines, its row locked `FOR UPDATE` (settlement, retry payment, refunds, review, expiry
+    /// serialise on it); a tracked copy is reloaded so no stale value survives the lock.
+    Task<Order?> GetForUpdateAsync(Guid orderId, CancellationToken ct = default);
+
+    /// <see cref="GetForUpdateAsync"/> by reference (already normalised).
+    Task<Order?> GetByReferenceForUpdateAsync(string reference, CancellationToken ct = default);
+
+    /// Ids of `pending_payment` orders whose `payment_due_at` is at or before `now` (expiry job).
+    Task<IReadOnlyList<Guid>> OverdueIdsAsync(DateTimeOffset now, int max, CancellationToken ct = default);
 }

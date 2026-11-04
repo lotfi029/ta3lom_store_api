@@ -139,6 +139,12 @@ public sealed class RateLimitSettings
 
     public WindowSettings Admin { get; set; } = new() { PermitLimit = 300, WindowSeconds = 60 };
 
+    /// Retry payment: 10 new attempts per donor (or IP) per 10 minutes.
+    public WindowSettings Pay { get; set; } = new() { PermitLimit = 10, WindowSeconds = 600 };
+
+    /// Payment webhooks: 300 per minute per IP (Moyasar retries are far below this).
+    public WindowSettings Webhook { get; set; } = new() { PermitLimit = 300, WindowSeconds = 60 };
+
     /// D-b: 5 template test sends per staff member per hour.
     public WindowSettings TemplateTest { get; set; } = new() { PermitLimit = 5, WindowSeconds = 3600 };
 }

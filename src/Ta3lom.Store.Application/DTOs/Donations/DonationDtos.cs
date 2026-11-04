@@ -28,15 +28,38 @@ public sealed record UpdateCartLineRequest(int? Quantity, string? Amount);
 /// `POST /v1/checkout` (BR-A08): the donor confirms the name and e-mail (missing values come from the profile).
 public sealed record CheckoutRequest(string? FullName, string? Email, string? Locale);
 
-/// The created order. `payment` is null until R5-Payments adds the payment redirect.
-public sealed record CheckoutResponse(string Reference, string Status, string TotalAmount, string StatusToken, CheckoutPayment? Payment);
+/// The created order (`pending_payment`) and the gateway's hosted page to send the donor to. `payment` is null when the
+/// gateway could not be reached (`paymentError` = `payment.gateway_unavailable`): the order page offers "pay again".
+public sealed record CheckoutResponse(string Reference, string Status, string TotalAmount, string StatusToken, CheckoutPayment? Payment,
+    string? PaymentError = null);
 
-/// Placeholder for the payment redirect of R5-Payments (always null in this release).
-public sealed record CheckoutPayment(string RedirectUrl);
+/// The hosted payment page (ADR-S05). The web redirects only to allow-listed hosts; returning from it proves nothing.
+public sealed record CheckoutPayment(string RedirectUrl, DateTimeOffset? ExpiresAt);
+
+/// `POST /v1/orders/{reference}/pay`: a new attempt on the gateway's hosted page.
+public sealed record PayOrderResponse(string Reference, CheckoutPayment Payment);
 
 /// `GET /v1/orders/{reference}/status?t=` (the donor or the holder of the status token).
 public sealed record OrderStatusResponse(string Reference, string Status, string TotalAmount, int LineCount, DateTimeOffset CreatedAt,
-    DateTimeOffset PaymentDueAt);
+    DateTimeOffset PaymentDueAt)
+{
+    /// The latest attempt's state (`initiated`, `captured`, `failed`, `cancelled`, `review`, `refunded`); null before any.
+    public string? PaymentStatus { get; init; }
+
+    /// `pending_payment`, before `paymentDueAt`, and no attempt is waiting on the gateway's page: show "pay again".
+    public bool CanRetryPayment { get; init; }
+
+    /// A donation receipt (DR) exists for this order: `GET …/receipt` returns its PDF.
+    public bool ReceiptAvailable { get; init; }
+
+    /// `DR-2026-000001`, when available.
+    public string? ReceiptNumber { get; init; }
+
+    public DateTimeOffset? PaidAt { get; init; }
+
+    /// Sum of refunds (`"0.00"` when none).
+    public string RefundedAmount { get; init; } = "0.00";
+}
 
 // ── Donor account ────────────────────────────────────────────────────────────────────────────────────────────────────
 
