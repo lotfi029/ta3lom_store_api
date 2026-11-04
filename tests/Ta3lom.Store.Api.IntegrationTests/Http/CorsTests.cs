@@ -51,7 +51,7 @@ public sealed class CorsTests(ProbeApiFactory factory) : IClassFixture<ProbeApiF
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         response.Headers.GetValues("Access-Control-Allow-Origin").Single().ShouldBe(StoreApiFactory.WebOrigin);
         var exposed = string.Join(",", response.Headers.GetValues("Access-Control-Expose-Headers")).Split(',').Select(h => h.Trim());
-        exposed.ShouldBe(["ETag", "Retry-After", "Location", "Idempotent-Replayed"], ignoreOrder: true);
+        exposed.ShouldBe(["ETag", "Retry-After", "Location", "Idempotent-Replayed", "Content-Disposition"], ignoreOrder: true);
     }
 
     internal static HttpRequestMessage Preflight(string origin)
