@@ -13,6 +13,9 @@
 | F3b — refunds and review | F3b — refunds and review | + 7 refund/review, policy matrix rows | done |
 | F3c — finance views and export | F3c — finance views and export | + 11 (detail, resend, dashboard, CSV) | done |
 | F4 — hosting | F4 — hosting | + CORS, forwarded-headers binding; image self-check; compose config ×2; restore test on a real dump | done |
+| F4 fix | CORS exposes Content-Disposition | CORS exposed-headers test | done |
+| F5b support | template test send previews receipt_number and link | 728 (727 + 1 sandbox skipped without a key); Domain 96.6 %, Application 90.6 % | done |
+| F10 | — (web `scripts/full-stack-e2e.sh` builds this branch: 12/12 payment journeys through the edge Caddy) | — | done |
 
 ### Resume notes
 - Docker Hub answers 429 in the cloud session: `docker pull mirror.gcr.io/library/postgres:18 && docker tag … postgres:18`.
