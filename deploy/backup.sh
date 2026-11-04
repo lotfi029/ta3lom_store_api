@@ -47,8 +47,9 @@ wait "$PSQL_PID" || true
 
 # 2. Volumes: the Data Protection key ring and the uploaded/private files (receipts).
 for volume in api-keys api-files; do
-  docker run --rm -v "${PROJECT}_${volume}:/data:ro" -v "$DAILY:/backup" "$ALPINE_IMAGE" \
-    sh -c "umask 077 && tar -czf '/backup/${volume}-$STAMP.tar.gz' -C /data ."
+  # Streamed to the host: the file is created by THIS user under umask 077 (a file written inside the helper container
+  # would belong to its root, which a non-root backup user could not chmod).
+  docker run --rm -v "${PROJECT}_${volume}:/data:ro" "$ALPINE_IMAGE" tar -czf - -C /data . > "$DAILY/${volume}-$STAMP.tar.gz"
 done
 chmod 0600 "$DAILY/"*"-$STAMP"*
 
