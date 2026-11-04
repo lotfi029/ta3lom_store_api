@@ -1,0 +1,211 @@
+name: deploy
+
+# Runbook: deploy/README.md (edge model, plan §5). Images: ghcr.io/lotfi029/ta3lom-store-api and …-api-migrate
+# (private; the VPS pulls with its OWN read:packages token — no registry token is ever sent to the VPS).
+# A deploy starts only after CI succeeded on the same commit:
+#   CI ok on main                      → images :<sha>, :staging-<sha>  → staging (store-api-staging), smoke /health/ready
+#   CI ok on a tag vX.Y.Z (strict)     → images :<sha>, :X.Y.Z          → production after the `production` reviewer
+#   workflow_dispatch (environment, tag) → rollback to an existing tag, checked against the environment and the label
+# Missing SSH secrets → the deploy step is SKIPPED with a warning (the commands are printed), never a failure.
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to redeploy
+        type: choice
+        options: [staging, production]
+        required: true
+      tag:
+        description: Existing image tag (staging-<sha> for staging, X.Y.Z for production)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  API_IMAGE: ghcr.io/lotfi029/ta3lom-store-api
+  MIGRATE_IMAGE: ghcr.io/lotfi029/ta3lom-store-api-migrate
+
+jobs:
+  gate:
+    if: github.event_name == 'workflow_run'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      target: ${{ steps.decide.outputs.target }}
+      sha: ${{ steps.decide.outputs.sha }}
+      tag: ${{ steps.decide.outputs.tag }}
+    steps:
+      - name: Decide (CI must have succeeded on a push to main or a release tag)
+        id: decide
+        env:
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          EVENT: ${{ github.event.workflow_run.event }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          target=none tag=
+          if [ "$CONCLUSION" = success ] && [ "$EVENT" = push ]; then
+            if [ "$BRANCH" = main ]; then target=staging tag="staging-$SHA"
+            elif printf '%s' "$BRANCH" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then target=production tag="${BRANCH#v}"
+            fi
+          fi
+          case "$SHA" in *[!0-9a-f]*) echo "::error::invalid sha"; exit 1 ;; esac
+          { echo "target=$target"; echo "sha=$SHA"; echo "tag=$tag"; } >> "$GITHUB_OUTPUT"
+          echo "deploy target: $target ${tag:+($tag)}"
+
+  images:
+    needs: gate
+    if: needs.gate.outputs.target != 'none'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    concurrency:
+      group: images-${{ needs.gate.outputs.target }}
+      cancel-in-progress: false
+    env:
+      SHA: ${{ needs.gate.outputs.sha }}
+      TAG: ${{ needs.gate.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+          persist-credentials: false
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build, self-check, then push (api, migrate)
+        run: |
+          docker build --target api --build-arg VERSION="$TAG" --build-arg GIT_SHA="$SHA" -t "$API_IMAGE:$TAG" -t "$API_IMAGE:$SHA" .
+          docker build --target migrate --build-arg VERSION="$TAG" --build-arg GIT_SHA="$SHA" -t "$MIGRATE_IMAGE:$TAG" -t "$MIGRATE_IMAGE:$SHA" .
+          docker run --rm --read-only --tmpfs /tmp "$API_IMAGE:$TAG" self-check
+          for image in "$API_IMAGE" "$MIGRATE_IMAGE"; do docker push "$image:$TAG"; docker push "$image:$SHA"; done
+
+  staging:
+    needs: [gate, images]
+    if: needs.gate.outputs.target == 'staging'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: staging
+      url: https://store-api-staging.ta3lom.sa/health/ready
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: false
+    env:
+      TAG: ${{ needs.gate.outputs.tag }}
+      SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
+      SSH_USER: ${{ secrets.STAGING_SSH_USER }}
+      SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+      SSH_KNOWN_HOSTS: ${{ secrets.STAGING_SSH_KNOWN_HOSTS }}
+      DEPLOY_DIR: ${{ vars.STAGING_DEPLOY_DIR || '/srv/ta3lom-store/deploy' }}
+      HEALTH_URL: https://store-api-staging.ta3lom.sa/health/ready
+      ENV_FILE: .env.staging
+      PROJECT: ta3lom-store-staging
+    steps:
+      - &deploy
+        name: Deploy over SSH (pull, migrate, up --wait)
+        id: deploy
+        run: |
+          REMOTE="cd '$DEPLOY_DIR' && export STORE_VERSION='$TAG' && docker compose --env-file '$ENV_FILE' -p '$PROJECT' -f compose.yaml pull migrate api && docker compose --env-file '$ENV_FILE' -p '$PROJECT' -f compose.yaml up -d --wait api"
+          if [ -z "$SSH_HOST" ] || [ -z "$SSH_USER" ] || [ -z "$SSH_KEY" ] || [ -z "$SSH_KNOWN_HOSTS" ]; then
+            echo "::warning::SSH secrets for this environment are not set — deploy SKIPPED. Would run on the VPS:"
+            echo "  $REMOTE"
+            echo "deployed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "$REMOTE"
+          echo "deployed=true" >> "$GITHUB_OUTPUT"
+      - &smoke
+        name: Smoke /health/ready
+        if: steps.deploy.outputs.deployed == 'true'
+        run: |
+          for i in $(seq 1 20); do curl -fsS --max-time 10 "$HEALTH_URL" && exit 0; sleep 6; done
+          echo "::error::$HEALTH_URL did not become ready"; exit 1
+      - &cleanup
+        name: Remove the SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
+
+  production:
+    needs: [gate, images]
+    if: needs.gate.outputs.target == 'production'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # The `production` environment has a required reviewer and only allows v* tags (repository settings).
+    environment:
+      name: production
+      url: https://store-api.ta3lom.sa/health/ready
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    env:
+      TAG: ${{ needs.gate.outputs.tag }}
+      SSH_HOST: ${{ secrets.PRODUCTION_SSH_HOST }}
+      SSH_USER: ${{ secrets.PRODUCTION_SSH_USER }}
+      SSH_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+      SSH_KNOWN_HOSTS: ${{ secrets.PRODUCTION_SSH_KNOWN_HOSTS }}
+      DEPLOY_DIR: ${{ vars.PRODUCTION_DEPLOY_DIR || '/srv/ta3lom-store/deploy' }}
+      HEALTH_URL: https://store-api.ta3lom.sa/health/ready
+      ENV_FILE: .env.production
+      PROJECT: ta3lom-store
+    steps:
+      - *deploy
+      - *smoke
+      - *cleanup
+
+  # Run it from the TAG for production ("Use workflow from: <tag>"): the production environment only allows v* refs.
+  rollback:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: read
+    environment:
+      name: ${{ inputs.environment }}
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    env:
+      TARGET: ${{ inputs.environment }}
+      TAG: ${{ inputs.tag }}
+      SSH_HOST: ${{ inputs.environment == 'production' && secrets.PRODUCTION_SSH_HOST || secrets.STAGING_SSH_HOST }}
+      SSH_USER: ${{ inputs.environment == 'production' && secrets.PRODUCTION_SSH_USER || secrets.STAGING_SSH_USER }}
+      SSH_KEY: ${{ inputs.environment == 'production' && secrets.PRODUCTION_SSH_KEY || secrets.STAGING_SSH_KEY }}
+      SSH_KNOWN_HOSTS: ${{ inputs.environment == 'production' && secrets.PRODUCTION_SSH_KNOWN_HOSTS || secrets.STAGING_SSH_KNOWN_HOSTS }}
+      DEPLOY_DIR: ${{ inputs.environment == 'production' && (vars.PRODUCTION_DEPLOY_DIR || '/srv/ta3lom-store/deploy') || (vars.STAGING_DEPLOY_DIR || '/srv/ta3lom-store/deploy') }}
+      HEALTH_URL: ${{ inputs.environment == 'production' && 'https://store-api.ta3lom.sa/health/ready' || 'https://store-api-staging.ta3lom.sa/health/ready' }}
+      ENV_FILE: ${{ inputs.environment == 'production' && '.env.production' || '.env.staging' }}
+      PROJECT: ${{ inputs.environment == 'production' && 'ta3lom-store' || 'ta3lom-store-staging' }}
+    steps:
+      - name: The tag must belong to the environment
+        run: |
+          case "$TARGET" in
+            production) printf '%s' "$TAG" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "::error::production takes X.Y.Z tags only (got '$TAG')"; exit 1; } ;;
+            staging) printf '%s' "$TAG" | grep -Eq '^staging-[0-9a-f]{40}$' || { echo "::error::staging takes staging-<sha> tags only (got '$TAG')"; exit 1; } ;;
+            *) echo "::error::unknown environment"; exit 1 ;;
+          esac
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: The image label must carry the same tag (built for this environment)
+        run: |
+          label="$(docker buildx imagetools inspect "$API_IMAGE:$TAG" --format '{{ json .Image }}' | jq -r '.config.Labels["org.opencontainers.image.version"] // empty')"
+          [ "$label" = "$TAG" ] || { echo "::error::$API_IMAGE:$TAG carries version '${label:-none}', not $TAG"; exit 1; }
+      - *deploy
+      - *smoke
+      - *cleanup

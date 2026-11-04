@@ -15,3 +15,5 @@ __pycache__/
 # Production secrets and settings (deploy/secrets.md)
 deploy/secrets/
 deploy/.env
+deploy/.env.production
+deploy/.env.staging

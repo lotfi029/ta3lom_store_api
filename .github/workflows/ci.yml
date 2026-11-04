@@ -5,7 +5,9 @@ name: ci
 
 on:
   push:
-    branches: [main, "claude/**", "feat/**"]
+    branches: [main, "claude/**", "feat/**", "final/**"]
+    # Release tags run CI too: deploy.yml starts only after CI succeeded on the same commit.
+    tags: ["v*.*.*"]
   pull_request:
     branches: [main]
 
@@ -104,8 +106,12 @@ jobs:
             echo "::error::High or Critical vulnerable package found"; exit 1
           fi
 
-      - name: Deploy images build (api, migrate) and compose file is valid
+      - name: Deploy images build (api, migrate), receipt self-check, compose valid for production and staging (A-4)
         run: |
           docker build --target api -t ta3lom-store-api:ci .
           docker build --target migrate -t ta3lom-store-migrate:ci .
-          ACME_EMAIL=ci@example.invalid docker compose -f deploy/compose.yaml config -q
+          docker run --rm --read-only --tmpfs /tmp ta3lom-store-api:ci self-check
+          docker network create edge
+          for env in production staging; do
+            docker compose --env-file "deploy/.env.$env.example" -f deploy/compose.yaml config -q
+          done

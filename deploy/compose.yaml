@@ -1,7 +1,13 @@
-# Production on one VPS: PostgreSQL 18, the migration job, the API and Caddy (TLS, reverse proxy, static store web).
-# Runbook: deploy/README.md. Settings that are not secrets: deploy/.env (copy of .env.example).
-# Secrets: deploy/secrets/ (git-ignored; see deploy/secrets.md) — never in this file, the image or the repository.
-name: ta3lom-store
+# The store API on the shared VPS behind the EDGE Caddy (F-D6, plan §5). This file runs NO proxy and publishes NO port:
+# the edge (ta3lom-deploy/edge, the only Caddy on 80/443) reaches the API over the external `edge` network by its alias
+# (`store-api` in production, `store-api-staging` in staging). PostgreSQL and the migration job stay on the private
+# `store` network. One file, two projects, driven by an env file:
+#   docker compose --env-file .env.production -p ta3lom-store         -f compose.yaml up -d --wait
+#   docker compose --env-file .env.staging    -p ta3lom-store-staging -f compose.yaml up -d --wait
+# Images come from GHCR (built by .github/workflows/deploy.yml); the VPS holds no source code (F-D7).
+# Secrets: deploy/secrets/<environment>/ (see secrets.md) — never in this file, the env files, the image or the repo.
+# Runbook: deploy/README.md.
+name: ${COMPOSE_PROJECT_NAME:-ta3lom-store}
 
 services:
   db:
@@ -15,6 +21,7 @@ services:
     volumes:
       - pg-data:/var/lib/postgresql
     networks: [store]
+    mem_limit: 512m
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U store -d ta3lom_store"]
       interval: 5s
@@ -23,78 +30,63 @@ services:
 
   # One-shot: applies the idempotent migration script, then exits. The API starts only after it succeeded.
   migrate:
-    build: { context: .., target: migrate }
-    image: ta3lom-store-migrate:${STORE_VERSION:-local}
+    image: ${MIGRATE_IMAGE:-ghcr.io/lotfi029/ta3lom-store-api-migrate}:${STORE_VERSION:?set STORE_VERSION (image tag)}
     environment:
       PGHOST: db
       PGDATABASE: ta3lom_store
       PGUSER: store
     secrets: [db_password]
     networks: [store]
+    mem_limit: 256m
+    read_only: true
+    tmpfs: [/tmp]
     depends_on:
       db: { condition: service_healthy }
     restart: "no"
 
   api:
-    build: { context: .., target: api }
-    image: ta3lom-store-api:${STORE_VERSION:-local}
+    image: ${API_IMAGE:-ghcr.io/lotfi029/ta3lom-store-api}:${STORE_VERSION:?set STORE_VERSION (image tag)}
     restart: unless-stopped
     environment:
-      ASPNETCORE_ENVIRONMENT: ${STORE_ENVIRONMENT:-Production}
-      Store__PublicBaseUrl: https://${API_DOMAIN:-store-api.ta3lom.sa}
-      Store__WebBaseUrl: https://${WEB_DOMAIN:-store.ta3lom.sa}
-      Store__Cors__Origins__0: https://${WEB_DOMAIN:-store.ta3lom.sa}
-      Store__Files__PublicBaseUrl: https://${API_DOMAIN:-store-api.ta3lom.sa}/files/public
+      ASPNETCORE_ENVIRONMENT: ${STORE_ENVIRONMENT:?set STORE_ENVIRONMENT (Production or Staging)}
+      Store__PublicBaseUrl: https://${API_DOMAIN:?set API_DOMAIN}
+      Store__WebBaseUrl: https://${WEB_DOMAIN:?set WEB_DOMAIN}
+      Store__Cors__Origins__0: https://${WEB_DOMAIN}
+      Store__Files__PublicBaseUrl: https://${API_DOMAIN}/files/public
+      # Only the edge network may set X-Forwarded-For/Proto (its fixed subnet, created by ta3lom-deploy/edge/up.sh).
+      Store__ForwardedHeaders__KnownNetworks__0: ${EDGE_SUBNET:?set EDGE_SUBNET (the edge network IPv4 subnet)}
+      Store__Payments__Provider: moyasar
       Store__SiteRebuild__Repository: ${SITE_REBUILD_REPOSITORY:-lotfi029/ta3lom_store_web}
       Store__Sms__SenderId: ${SMS_SENDER_ID:-}
       Store__Email__User: ${SMTP_USER:-store@ta3lom.sa}
       Store__Telemetry__OtlpEndpoint: ${OTLP_ENDPOINT:-}
     volumes:
-      # Key-per-file secrets (Store__Jwt__…, ConnectionStrings__Store, …): read-only, loaded by SecretFilesSetup.
-      - ./secrets/api:/run/secrets:ro
+      # Key-per-file secrets (Store__Jwt__…, Store__Payments__Moyasar__SecretKey, …): read-only, loaded by SecretFilesSetup.
+      - ${SECRETS_DIR:?set SECRETS_DIR (e.g. ./secrets/production)}/api:/run/secrets:ro
       - api-keys:/srv/store/keys
       - api-files:/srv/store/files
-    networks: [store]
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 384m
+    networks:
+      store: {}
+      edge:
+        aliases: ["${EDGE_ALIAS:?set EDGE_ALIAS (store-api or store-api-staging)}"]
     depends_on:
       db: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }
 
-  caddy:
-    image: caddy:2
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    environment:
-      API_DOMAIN: ${API_DOMAIN:-store-api.ta3lom.sa}
-      WEB_DOMAIN: ${WEB_DOMAIN:-store.ta3lom.sa}
-      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in deploy/.env}
-    volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      # The store web: <WEB_DIR>/site = dist/store-web/browser, <WEB_DIR>/caddy-headers.conf = the web repo's CSP file.
-      - ${WEB_DIR:-/srv/store-web}:/srv/store-web:ro
-      - caddy-data:/data
-      - caddy-config:/config
-    networks: [store]
-    depends_on:
-      api: { condition: service_healthy }
-
-# The API trusts X-Forwarded-For/Proto only from Store:ForwardedHeaders:KnownNetworks (172.16.0.0/12): keep this subnet
-# inside that range, or the per-IP rate limits see Caddy's address instead of the donor's.
 networks:
-  store:
-    ipam:
-      config:
-        - subnet: 172.30.0.0/24
+  store: {}
+  # Created once by ta3lom-deploy (edge/up.sh) with a fixed IPv4 subnet; shared with the edge Caddy and the web.
+  edge:
+    external: true
 
 secrets:
   db_password:
-    file: ./secrets/db_password
+    file: ${SECRETS_DIR}/db_password
 
 volumes:
   pg-data:
   api-keys:
   api-files:
-  caddy-data:
-  caddy-config:

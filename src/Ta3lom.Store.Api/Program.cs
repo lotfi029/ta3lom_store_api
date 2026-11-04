@@ -12,6 +12,11 @@ if (args.Length > 0 && args[0] == CreateAdminCommand.Verb)
     return CreateAdminCommand.Run(args[1..], Console.Out);
 }
 
+if (args.Length > 0 && args[0] == SelfCheckCommand.Verb)
+{
+    return SelfCheckCommand.Run(Console.Out);
+}
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddStoreSecretFiles();
 builder.WebHost.ConfigureKestrel(k => k.AddServerHeader = false);

@@ -1,104 +1,114 @@
-# Deploying the store (API + web) on one server
+# Store API runbook (edge model)
 
-One Linux VPS with Docker runs everything through `deploy/compose.yaml`:
+The store API runs on the shared ta3lom VPS **behind the edge Caddy** of `ta3lom-deploy` (the only process on 80/443,
+F-D6). This folder starts PostgreSQL 18, the migration job and the API — **no proxy, no published port**. The edge
+reaches the API over the external `edge` Docker network by its alias. Images come from GHCR; the VPS holds no source.
 
-| Service | What it does |
-|---|---|
-| `db` | PostgreSQL 18, data in the `pg-data` volume, no published port |
-| `migrate` | one-shot: applies the idempotent migration script (`Dockerfile` target `migrate`), then exits |
-| `api` | the store API on `api:8080` (`Dockerfile` target `api`), starts only after `migrate` succeeded; key ring and uploaded files in the `api-keys` and `api-files` volumes |
-| `caddy` | TLS (Let's Encrypt) for `store-api.ta3lom.sa` → `api`, and the static store web for `store.ta3lom.sa` |
+```
+internet ─▶ edge Caddy (ta3lom-deploy, TLS, HSTS) ─▶ edge network ─▶ store-api:8080          (project ta3lom-store)
+                                                               └──▶ store-api-staging:8080  (project ta3lom-store-staging)
+                                                                     │  store network (private)
+                                                                     └─ db (postgres:18), migrate (one-shot)
+```
 
-> **The store web goes live only with R5-Payments (D-W2).** The web's `npm run build:prod` refuses to build while
-> `paymentsEnabled` is `false`. Until then the API can run here on its own (staff admin, catalogue preparation), and
-> `store.ta3lom.sa` answers 404.
+| | Production | Staging |
+|---|---|---|
+| Compose project | `ta3lom-store` | `ta3lom-store-staging` |
+| Env file | `.env.production` | `.env.staging` |
+| API host / edge alias | `store-api.ta3lom.sa` → `store-api` | `store-api-staging.ta3lom.sa` → `store-api-staging` |
+| Web origin (CORS) | `https://store.ta3lom.sa` (+ `https://ta3lom.sa`, `https://www.ta3lom.sa` for the cart badge) | `https://store-staging.ta3lom.sa` |
+| Image tag | `X.Y.Z` (git tag `vX.Y.Z`) | `staging-<sha>` |
+| Moyasar | live keys (`sk_live_…`) | **test** keys (`sk_test_…`) |
+| Secrets | `secrets/production/` | `secrets/staging/` |
 
-## 1. Server, once
+Memory limits: db 512 MB, api 384 MB, migrate 256 MB per environment (≈ 0.9 GB each). The API and migrate containers
+run read-only (tmpfs `/tmp`) as non-root.
 
-1. A VPS with Docker Engine and the compose plugin; ports 80 and 443 open; nothing else listening on them.
-2. DNS: `A`/`AAAA` records for `store-api.ta3lom.sa` and `store.ta3lom.sa` pointing at the server.
-3. Clone this repository (e.g. `/srv/ta3lom_store_api`) and create the settings:
+## 1. First install (once per VPS)
 
+1. **Edge network with a fixed subnet.** `ta3lom-deploy/edge/up.sh` creates `edge` with a fixed IPv4 subnet (e.g.
+   `172.31.0.0/24`). Put the same value in `EDGE_SUBNET` of both env files: the API trusts `X-Forwarded-For/Proto` only
+   from that subnet (per-IP rate limits and HSTS depend on it). If `edge` already exists without a fixed subnet, follow
+   ta3lom-deploy's README ("recreate the edge network") during a short planned restart of the edge.
+2. **Folders.** `/srv/ta3lom-store/deploy/` with `compose.yaml`, `backup.sh`, `restore-test.sh` from this folder, and
+   `.env.production` / `.env.staging` copied from the `.example` files and edited (no secrets in them).
+3. **Secrets.** `secrets/production/` and `secrets/staging/` exactly as in `secrets.md` (Moyasar keys included).
+4. **GHCR pull access.** The packages stay private. On a dedicated machine user, create a **classic** token with
+   `read:packages` only (GHCR does not accept fine-grained tokens), then as the deploy user:
+   `read -rs T && printf '%s' "$T" | docker login ghcr.io -u <machine-user> --password-stdin; unset T`
+   (prefer a credential helper; otherwise keep `~/.docker/config.json` at `0600`).
+5. **DNS**: `store-api.ta3lom.sa` and `store-api-staging.ta3lom.sa` → the VPS. **Edge routes**: the store block of
+   ta3lom-deploy (`conf/store.caddy`; a copy lives in the web repo `deploy/edge/store.caddy`) — body limit 21 MB on the
+   API, HSTS on production names only, `X-Robots-Tag: noindex` on staging names, the webhook path not cached.
+6. **First start** (staging first):
    ```bash
-   cd /srv/ta3lom_store_api/deploy
-   cp .env.example .env          # edit: ACME_EMAIL, SMS_SENDER_ID, SMTP_USER, STORE_VERSION …
+   cd /srv/ta3lom-store/deploy
+   export STORE_VERSION=staging-<sha>
+   docker compose --env-file .env.staging -p ta3lom-store-staging -f compose.yaml up -d --wait api
+   curl -fsS https://store-api-staging.ta3lom.sa/health/ready
+   docker compose --env-file .env.staging -p ta3lom-store-staging -f compose.yaml run --rm api create-admin --email <you> --name "<name>"
    ```
+7. **Moyasar dashboard** (each environment): webhook `https://<API_DOMAIN>/v1/payments/webhooks/moyasar`, POST, the
+   secret token = `Store__Payments__Moyasar__WebhookSecret`; enable mada, Visa, Mastercard, Apple Pay, STC Pay.
 
-4. Create the secrets as described in [secrets.md](secrets.md) (`deploy/secrets/`, git-ignored). Back them up.
-5. Create the web folder: `sudo mkdir -p /srv/store-web/site` (or set `WEB_DIR` in `.env`).
+## 2. Deploy (automatic)
 
-## 2. Deploy or update the API
+`.github/workflows/deploy.yml` starts only after **CI succeeded on the same commit**:
 
-```bash
-cd /srv/ta3lom_store_api && git pull
-cd deploy
-docker compose build                      # images ta3lom-store-api / ta3lom-store-migrate, tag $STORE_VERSION
-docker compose up -d                      # db → migrate → api → caddy
-docker compose ps                         # migrate: exited (0); api: healthy
-docker compose logs -f api                # JSON logs (no personal data)
-```
+- **main** → images `:staging-<sha>` (+ `:<sha>`), built, `self-check` (renders a receipt PDF in the image), pushed;
+  then on the VPS `docker compose … pull migrate api && docker compose … up -d --wait api` for staging, then a smoke of
+  `/health/ready`.
+- **tag `vX.Y.Z`** → images `:X.Y.Z`, same steps for production after the `production` environment reviewer approves.
+- Missing `*_SSH_*` secrets → the deploy step is skipped with a warning and prints the commands (never a red run).
 
-`migrate` runs on every `up`; the script is idempotent and only applies missing migrations. If it fails, the API
-is not started (or keeps the old container). A migration is never rolled back in production; fix forward with a new one.
+GitHub settings: environments `staging` and `production` (required reviewer; tags `v*` only); secrets per environment
+`STAGING_SSH_HOST|USER|KEY|KNOWN_HOSTS` and `PRODUCTION_…`; optional variables `STAGING_DEPLOY_DIR`,
+`PRODUCTION_DEPLOY_DIR` (default `/srv/ta3lom-store/deploy`).
 
-Check:
+The migration job (`migrate`) runs the idempotent script before every API start; it never drops anything (expand →
+migrate → contract). Never run a migration's `Down` in production — roll forward.
 
-```bash
-curl -fsS https://store-api.ta3lom.sa/health/ready                 # 200
-curl -fsS https://store-api.ta3lom.sa/v1/catalog/categories        # JSON
-```
+## 3. Rollback
 
-The API refuses to start (see `docker compose logs api`) when a secret is missing, too short or a DEV ONLY value,
-when SMS is not Unifonic with AppSid + sender id, when SMTP is incomplete, when `Store:SiteRebuild` is missing, or when
-the key ring or files volume is not writable.
+Actions → **deploy** → *Run workflow* — **for production choose "Use workflow from: the tag"** (the environment only
+allows `v*`). Environment + an earlier tag: production accepts only `X.Y.Z`, staging only `staging-<sha>`, and the
+image's `org.opencontainers.image.version` label must equal the tag. By hand on the VPS:
+`STORE_VERSION=<tag> docker compose --env-file .env.production -p ta3lom-store -f compose.yaml up -d --wait api`.
+A rollback across a migration keeps the newer schema (expand-only migrations stay compatible).
 
-## 3. First admin, once
-
-```bash
-docker compose run --rm --no-deps api create-admin --email admin@ta3lom.sa --name "Store admin"
-```
-
-It prints a one-time password once. At the first sign-in the admin enrols an authenticator (TOTP) and changes the
-password. Then create the catalogue (categories, projects, media) in the admin.
-
-## 4. Deploy or update the store web (after R5-Payments)
-
-On a machine with Node 24, in the web repo (`lotfi029/ta3lom_store_web`):
+## 4. Backups and restore test
 
 ```bash
-npm ci
-PRERENDER_API_URL=https://store-api.ta3lom.sa/v1 npm run build:prod     # needs the live API with ≥ 1 published project
-rsync -a --delete dist/store-web/browser/ server:/srv/store-web/site/
-rsync -a deploy/caddy-headers.conf server:/srv/store-web/caddy-headers.conf
-ssh server 'cd /srv/ta3lom_store_api/deploy && docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile'
+# nightly, 02:40 Riyadh (cron of the deploy user)
+40 2 * * * cd /srv/ta3lom-store/deploy && BACKUP_DIR=/var/backups/ta3lom-store OFFSITE_HOOK=/srv/ta3lom-deploy/offsite.sh ./backup.sh .env.production >> /var/log/ta3lom-store-backup.log 2>&1
+50 2 * * * cd /srv/ta3lom-store/deploy && BACKUP_DIR=/var/backups/ta3lom-store ./backup.sh .env.staging >> /var/log/ta3lom-store-backup.log 2>&1
+# monthly restore test into a throwaway container (row counts, migrations, gapless receipt numbers)
+0 4 1 * * cd /srv/ta3lom-store/deploy && ./restore-test.sh >> /var/log/ta3lom-store-backup.log 2>&1
 ```
 
-`caddy-headers.conf` (CSP, HSTS, `no-referrer` on order pages) stays owned by the web repo: its build checks every
-inline-script hash against it, so it must ship together with the build it belongs to.
+`backup.sh`: `pg_dump -Fc` + tar of the `api-keys` (Data Protection key ring) and `api-files` (uploads and private
+receipt PDFs) volumes; 14 daily / 8 weekly kept; `OFFSITE_HOOK` copies them off the VPS (ta3lom-deploy's `offsite.sh`).
+The `secrets/` folders are backed up by the owner offline.
 
-## 5. Backups and operations
+## 5. Operations
 
-- **Database:** `docker compose exec db pg_dump -U store -Fc ta3lom_store > ta3lom_store-$(date +%F).dump` daily, kept
-  off the server. Restore: `pg_restore -U store -d ta3lom_store --clean`.
-- **Volumes:** `api-keys` (Data Protection key ring — losing it breaks enrolled authenticators and guest carts) and
-  `api-files` (uploaded media). Back them up with the database.
-- **Secrets:** `deploy/secrets/`, kept in a password manager or vault.
-- **Client IPs:** the API trusts `X-Forwarded-For` only from the compose network (`172.30.0.0/24`, inside the
-  configured `172.16.0.0/12`). Keep Docker's default iptables port publishing; with `userland-proxy` or an extra proxy
-  in front, every donor would share one IP for the rate limits.
-- **Staging:** set `STORE_ENVIRONMENT=Staging`, other domains in `.env`, and the staging origin
-  (`https://store-staging.ta3lom.sa`) as `WEB_DOMAIN`. Staging accepts the SMS and e-mail sinks, but `/dev/sms` is not
-  mapped there, so sign-in by SMS code needs Unifonic configured.
+- Logs: `docker compose --env-file .env.production -p ta3lom-store -f compose.yaml logs --tail 200 api` (no PII: the
+  RedactingEnricher masks mobiles, e-mails and tokens).
+- Health: `/health/live` (process), `/health/ready` (database + outbox: dead letters or overdue messages → Degraded).
+- Jobs (Quartz, Riyadh time): reconcile payments and expire unpaid orders every 5 minutes; OTP/idempotency pruning
+  hourly; guest carts, integrity checks, retention nightly/weekly.
+- Payment webhook: `POST /v1/payments/webhooks/moyasar` (anonymous, verified by the shared secret, re-fetches the
+  payment before settling). A failed verification is recorded and answered 401 — check the secret in the dashboard.
+- Key rotation: see `secrets.md`. Moyasar keys: replace the file, `up -d api`; the webhook secret also in the dashboard.
 
-## Go-live checklist
+## Go-live checklist (owner)
 
-- [ ] DNS for both hosts points at the server; `https://store-api.ta3lom.sa/health/ready` is 200 with a valid certificate.
-- [ ] All secrets created from fresh random bytes (never a DEV ONLY value) and backed up; `.env` filled.
-- [ ] Unifonic: approved sender id in `SMS_SENDER_ID`, AppSid secret; a test code reaches a real phone.
-- [ ] SMTP: `SMTP_USER` + password secret; a template test mail arrives (admin → message templates).
-- [ ] `Store__SiteRebuild__Token`: fine-grained GitHub token for the web repo; the web repo has a workflow that handles
-      the `store-catalog-changed` dispatch (rebuild + publish).
-- [ ] First admin created, authenticator enrolled, password changed; other staff created with their roles.
-- [ ] Catalogue: categories and at least one published project with media.
-- [ ] Database backup job and volume backups in place; one restore tried.
-- [ ] **R5-Payments merged in API and web, `paymentsEnabled` true** — only then build and publish the store web (D-W2).
+- [ ] Edge network recreated with the fixed subnet; `EDGE_SUBNET` set in both env files.
+- [ ] Secrets for both environments (Moyasar **live** keys in production, **test** keys in staging).
+- [ ] Moyasar: association account, live keys, webhook URL + secret, payment methods enabled.
+- [ ] GHCR read token on the VPS; GitHub environments and secrets.
+- [ ] DNS for the four store names; edge store block deployed.
+- [ ] First staging deploy, a sandbox donation, its refund; then the first production tag and a **live 1-SAR donation
+      and its refund**.
+- [ ] Backups in cron; the first restore test run.
+- [ ] Receipt settings: licence number, texts (Q-02 VAT note, Q-11 receipt format), stamp image.

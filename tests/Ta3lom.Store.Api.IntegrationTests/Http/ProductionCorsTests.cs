@@ -19,7 +19,7 @@ public sealed class ConfigurationOriginsTests
     [Fact]
     public void Each_environment_has_exactly_its_own_origins()
     {
-        Origins("Production").ShouldBe(["https://store.ta3lom.sa"]);
+        Origins("Production").ShouldBe(["https://store.ta3lom.sa", "https://ta3lom.sa", "https://www.ta3lom.sa"]);
         Origins("Staging").ShouldBe(["https://store-staging.ta3lom.sa"]);
         Origins("Development").ShouldBe(["https://store.ta3lom.sa", "https://store-staging.ta3lom.sa", "http://localhost:4200", "http://localhost:4201", "http://localhost:4320"]);
     }
@@ -65,5 +65,32 @@ public sealed class ProductionCorsTests(ProductionApiFactory factory) : IClassFi
         var post = await PostAsync(StoreApiFactory.WebOrigin);
 
         post.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);                                 // past the origin check: no refresh cookie
+    }
+}
+
+/// F4 / F9: the main site (ta3lom.sa, www) reads the cart badge with credentials in Production; staging stays its own.
+public sealed class MainSiteCorsTests(ProductionApiFactory factory) : IClassFixture<ProductionApiFactory>
+{
+    [Theory]
+    [InlineData("https://ta3lom.sa")]
+    [InlineData("https://www.ta3lom.sa")]
+    public async Task The_main_site_may_read_the_cart_summary_with_credentials(string origin)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Options, "/v1/cart/summary");
+        request.Headers.Add("Origin", origin);
+        request.Headers.Add("Access-Control-Request-Method", "GET");
+        var response = await factory.CreateClient().SendAsync(request, TestContext.Current.CancellationToken);
+        response.Headers.GetValues("Access-Control-Allow-Origin").Single().ShouldBe(origin);
+        response.Headers.GetValues("Access-Control-Allow-Credentials").Single().ShouldBe("true");
+    }
+
+    [Fact]
+    public async Task Another_site_is_refused()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Options, "/v1/cart/summary");
+        request.Headers.Add("Origin", "https://evil.example");
+        request.Headers.Add("Access-Control-Request-Method", "GET");
+        var response = await factory.CreateClient().SendAsync(request, TestContext.Current.CancellationToken);
+        response.Headers.Contains("Access-Control-Allow-Origin").ShouldBeFalse();
     }
 }
