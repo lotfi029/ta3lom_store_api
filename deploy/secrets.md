@@ -40,8 +40,15 @@ read -rs MOYASAR_KEY && printf '%s' "$MOYASAR_KEY" > "secrets/$ENV/api/Store__Pa
 read -rs SMS && printf '%s' "$SMS" > "secrets/$ENV/api/Store__Sms__AppSid"; unset SMS
 read -rs SMTP && printf '%s' "$SMTP" > "secrets/$ENV/api/Store__Email__Password"; unset SMTP
 read -rs GH && printf '%s' "$GH" > "secrets/$ENV/api/Store__SiteRebuild__Token"; unset GH
+# Review 04 H-2 — owners and modes (umask 077 above made everything root-only):
+sudo chown 999:999 "secrets/$ENV/db_password" && sudo chmod 0400 "secrets/$ENV/db_password"   # postgres + migrate run as uid 999
 sudo chown -R 1654:1654 "secrets/$ENV/api"   # the API image runs as user `app` (uid 1654)
+sudo chmod 0500 "secrets/$ENV/api" && sudo find "secrets/$ENV/api" -type f -exec chmod 0400 {} +
 ```
+
+CI proves these exact steps on every push: job `stack` (`deploy/stack-check.sh`) generates the files this way, starts
+db + migrate + api from `compose.yaml` and waits for `/health/ready`. A `db_password` left root-only fails there with
+`cat: /run/secrets/db_password: Permission denied` in the migrate log.
 
 - The API refuses to start when a key is missing, shorter than 32 bytes, equal to a DEV ONLY value, when the customer
   and staff keys are equal, when the Moyasar secret key is missing or of the wrong mode (live keys only in Production,

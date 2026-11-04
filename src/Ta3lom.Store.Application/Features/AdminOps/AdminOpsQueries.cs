@@ -4,6 +4,7 @@ using Ta3lom.Store.Application.Abstractions.Data;
 using Ta3lom.Store.Application.Abstractions.Pagination;
 using Ta3lom.Store.Application.DTOs.AdminOps;
 using Ta3lom.Store.Domain.Entities.Donations;
+using Ta3lom.Store.Domain.Entities.Payments;
 
 namespace Ta3lom.Store.Application.Features.AdminOps;
 
@@ -67,6 +68,7 @@ internal sealed class GetDashboardQueryHandler(IApplicationDbContext db, IClock 
             PaidThisMonth = Paid(monthStart),
             PendingOrders = await pending.CountAsync(ct),
             InReviewOrders = await db.Orders.CountAsync(o => o.Status == OrderStatus.PaymentReview, ct),
+            OpenOrphanPayments = await db.PaymentEvents.CountAsync(e => e.Outcome == PaymentEvent.OrphanOutcome && e.ResolvedAt == null, ct),
             TopProjectsByPaidAmount = [.. topPaidIds.Join(projects, t => t.Key, p => p.Id, (t, p) => new DashboardPaidProject(p.Id, p.Slug, p.TitleAr, t.Orders, t.Amount.ToWire()))],
         };
     }
@@ -244,7 +246,7 @@ internal sealed class GetAdminOrderQueryHandler(IApplicationDbContext db) : IQue
             Payments = [.. payments.Select(p => new AdminPaymentRow(p.Id, p.AttemptNo, p.Provider, p.Status.ToWire(), p.Method.ToWire(), p.Amount.ToWire(),
                 p.CapturedAmount.ToWire(), p.RefundedAmount.ToWire(), p.ReviewReason?.ToWire(), p.FailureMessage, p.InitiatedAt, p.CapturedAt))],
             Events = events,
-            Refunds = [.. refunds.Select(r => new AdminRefundRow(r.Id, r.Amount.ToWire(), r.Status.ToWire(), r.Reason, r.RequestedBy, r.RequestedAt, r.CompletedAt))],
+            Refunds = [.. refunds.Select(r => new AdminRefundRow(r.Id, r.Amount.ToWire(), r.Status.ToWire(), r.Reason, r.RequestedBy, r.RequestedAt, r.CompletedAt, r.Source.ToWire()))],
             Receipts = [.. receipts.Select(r => new AdminReceiptRow(r.DisplayNumber, r.Series.ToWire(), r.Amount.ToWire(), r.IssuedAt,
                 r.VoidedByReceiptId is { } v ? receipts.FirstOrDefault(x => x.Id == v)?.DisplayNumber : null))],
         };

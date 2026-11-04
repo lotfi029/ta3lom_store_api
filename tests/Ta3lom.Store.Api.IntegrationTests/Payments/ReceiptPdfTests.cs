@@ -81,7 +81,7 @@ public sealed class ReceiptPdfTests
         ContainsArabic(text, "إيصال تبرع").ShouldBeTrue(text);
         ContainsArabic(text, "عبدالله").ShouldBeTrue(text);
         ContainsArabic(text, "جمعية التعلم الإلكتروني").ShouldBeTrue(text);
-        ContainsArabic(text, "ثلاثمائة").ShouldBeTrue(text);
+        ContainsArabic(text, "فقط ثلاثمائة وخمسون ريال سعودي لا غير").ShouldBeTrue(text);   // S-17: the whole words line
         ContainsArabic(text, "القيمة المضافة").ShouldBeTrue(text);
         Encoding.Latin1.GetString(pdf).ShouldContain("NotoNaskhArabic");     // embedded font
     }
@@ -95,19 +95,24 @@ public sealed class ReceiptPdfTests
         ContainsArabic(text, "إيصال إلغاء تبرع").ShouldBeTrue(text);
     }
 
+    /// Review 04 S-17: «فقط … ريال سعودي لا غير»; «ثلاثة عشر ألف ريال», never «ألفًا ريال».
     [Theory]
-    [InlineData("350.00", "فقط ثلاثمائة وخمسون ريالًا لا غير")]
-    [InlineData("1.00", "فقط ريال واحد لا غير")]
-    [InlineData("2.00", "فقط ريالان لا غير")]
-    [InlineData("10.00", "فقط عشرة ريالات لا غير")]
-    [InlineData("11.00", "فقط أحد عشر ريالًا لا غير")]
-    [InlineData("100.00", "فقط مائة ريال لا غير")]
-    [InlineData("125.50", "فقط مائة وخمسة وعشرون ريالًا وخمسون هللة لا غير")]
+    [InlineData("1.00", "فقط ريال سعودي واحد لا غير")]
+    [InlineData("2.00", "فقط ريالان سعوديان لا غير")]
+    [InlineData("3.00", "فقط ثلاثة ريال سعودي لا غير")]
+    [InlineData("11.00", "فقط أحد عشر ريال سعودي لا غير")]
+    [InlineData("100.00", "فقط مائة ريال سعودي لا غير")]
+    [InlineData("1000.00", "فقط ألف ريال سعودي لا غير")]
+    [InlineData("13000.00", "فقط ثلاثة عشر ألف ريال سعودي لا غير")]
+    [InlineData("1000000.00", "فقط مليون ريال سعودي لا غير")]
+    [InlineData("350.00", "فقط ثلاثمائة وخمسون ريال سعودي لا غير")]
+    [InlineData("125.50", "فقط مائة وخمسة وعشرون ريال سعودي وخمسون هللة لا غير")]
+    [InlineData("1.01", "فقط ريال سعودي واحد وهللة واحدة لا غير")]
+    [InlineData("0.02", "فقط هللتان لا غير")]
     [InlineData("0.25", "فقط خمس وعشرون هللة لا غير")]
-    [InlineData("2500.00", "فقط ألفان وخمسمائة ريال لا غير")]
-    [InlineData("13000.00", "فقط ثلاثة عشر ألفًا ريال لا غير")]
-    [InlineData("100000.00", "فقط مائة ألف ريال لا غير")]
-    [InlineData("3000000.00", "فقط ثلاثة ملايين ريال لا غير")]
+    [InlineData("2500.00", "فقط ألفان وخمسمائة ريال سعودي لا غير")]
+    [InlineData("100000.00", "فقط مائة ألف ريال سعودي لا غير")]
+    [InlineData("3000000.00", "فقط ثلاثة ملايين ريال سعودي لا غير")]
     public void Totals_in_Arabic_words(string amount, string expected) =>
         ArabicAmountWords.Of(Money.Parse(amount)).ShouldBe(expected);
 

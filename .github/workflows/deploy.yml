@@ -3,14 +3,20 @@ name: deploy
 # Runbook: deploy/README.md (edge model, plan §5). Images: ghcr.io/lotfi029/ta3lom-store-api and …-api-migrate
 # (private; the VPS pulls with its OWN read:packages token — no registry token is ever sent to the VPS).
 # A deploy starts only after CI succeeded on the same commit:
-#   CI ok on main                      → images :<sha>, :staging-<sha>  → staging (store-api-staging), smoke /health/ready
-#   CI ok on a tag vX.Y.Z (strict)     → images :<sha>, :X.Y.Z          → production after the `production` reviewer
+#   CI ok on main (workflow_run)       → images :<sha>, :staging-<sha>  → staging (store-api-staging), smoke /health/ready
+#   push of a tag vX.Y.Z (strict)      → the run's ref IS the tag (review 04 H-3: the `production` environment's "v* tags
+#                                        only" rule now applies — a workflow_run always ran on main); the gate checks the
+#                                        ref is refs/tags/vX.Y.Z, the tagged commit is on main, and waits until every CI
+#                                        check run on that commit succeeded → images :<sha>, :X.Y.Z → production after the
+#                                        `production` reviewer
 #   workflow_dispatch (environment, tag) → rollback to an existing tag, checked against the environment and the label
 # Missing SSH secrets → the deploy step is SKIPPED with a warning (the commands are printed), never a failure.
 on:
   workflow_run:
     workflows: [ci]
     types: [completed]
+  push:
+    tags: ["v*.*.*"]
   workflow_dispatch:
     inputs:
       environment:
@@ -32,16 +38,20 @@ env:
 
 jobs:
   gate:
-    if: github.event_name == 'workflow_run'
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      checks: read
     outputs:
       target: ${{ steps.decide.outputs.target }}
       sha: ${{ steps.decide.outputs.sha }}
       tag: ${{ steps.decide.outputs.tag }}
     steps:
-      - name: Decide (CI must have succeeded on a push to main or a release tag)
-        id: decide
+      - name: Staging — CI must have succeeded on a push to main
+        if: github.event_name == 'workflow_run'
+        id: staging
         env:
           CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           EVENT: ${{ github.event.workflow_run.event }}
@@ -49,13 +59,58 @@ jobs:
           SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           target=none tag=
-          if [ "$CONCLUSION" = success ] && [ "$EVENT" = push ]; then
-            if [ "$BRANCH" = main ]; then target=staging tag="staging-$SHA"
-            elif printf '%s' "$BRANCH" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then target=production tag="${BRANCH#v}"
-            fi
-          fi
+          # Tags no longer deploy from here (H-3): only main → staging.
+          if [ "$CONCLUSION" = success ] && [ "$EVENT" = push ] && [ "$BRANCH" = main ]; then target=staging tag="staging-$SHA"; fi
           case "$SHA" in *[!0-9a-f]*) echo "::error::invalid sha"; exit 1 ;; esac
           { echo "target=$target"; echo "sha=$SHA"; echo "tag=$tag"; } >> "$GITHUB_OUTPUT"
+          echo "deploy target: $target ${tag:+($tag)}"
+      - name: Production — the ref must be a release tag vX.Y.Z
+        if: github.event_name == 'push'
+        run: |
+          printf '%s' "$GITHUB_REF" | grep -Eq '^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$' \
+            || { echo "::error::production deploys from refs/tags/vX.Y.Z only (got '$GITHUB_REF')"; exit 1; }
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        if: github.event_name == 'push'
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Production — the tagged commit is on main, and every CI check run on it succeeded
+        if: github.event_name == 'push'
+        id: production
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+        run: |
+          case "$SHA" in *[!0-9a-f]*) echo "::error::invalid sha"; exit 1 ;; esac
+          git merge-base --is-ancestor "$SHA" origin/main || { echo "::error::$SHA (tag ${GITHUB_REF_NAME}) is not on main"; exit 1; }
+          # CI runs on the same tag push; wait for its check runs on this commit (the job names of ci.yml).
+          for i in $(seq 1 90); do
+            runs="$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs?per_page=100" \
+              --jq '[.check_runs[] | select(.name == "build-test" or .name == "stack")]')"
+            total="$(jq length <<<"$runs")"
+            pending="$(jq '[.[] | select(.status != "completed")] | length' <<<"$runs")"
+            failed="$(jq '[.[] | select(.status == "completed" and .conclusion != "success")] | length' <<<"$runs")"
+            echo "CI on $SHA: $total check run(s), $pending running, $failed not successful"
+            [ "$failed" -eq 0 ] || { echo "::error::CI did not succeed on $SHA"; exit 1; }
+            if [ "$total" -ge 2 ] && [ "$pending" -eq 0 ]; then
+              { echo "target=production"; echo "sha=$SHA"; echo "tag=${GITHUB_REF_NAME#v}"; } >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "::error::CI on $SHA did not finish within 45 minutes"; exit 1
+      - name: Decide
+        id: decide
+        env:
+          S_TARGET: ${{ steps.staging.outputs.target }}
+          S_SHA: ${{ steps.staging.outputs.sha }}
+          S_TAG: ${{ steps.staging.outputs.tag }}
+          P_TARGET: ${{ steps.production.outputs.target }}
+          P_SHA: ${{ steps.production.outputs.sha }}
+          P_TAG: ${{ steps.production.outputs.tag }}
+        run: |
+          if [ -n "$P_TARGET" ]; then target=$P_TARGET sha=$P_SHA tag=$P_TAG; else target=${S_TARGET:-none} sha=$S_SHA tag=$S_TAG; fi
+          { echo "target=$target"; echo "sha=$sha"; echo "tag=$tag"; } >> "$GITHUB_OUTPUT"
           echo "deploy target: $target ${tag:+($tag)}"
 
   images:
@@ -73,11 +128,11 @@ jobs:
       SHA: ${{ needs.gate.outputs.sha }}
       TAG: ${{ needs.gate.outputs.tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ needs.gate.outputs.sha }}
           persist-credentials: false
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -197,7 +252,7 @@ jobs:
             staging) printf '%s' "$TAG" | grep -Eq '^staging-[0-9a-f]{40}$' || { echo "::error::staging takes staging-<sha> tags only (got '$TAG')"; exit 1; } ;;
             *) echo "::error::unknown environment"; exit 1 ;;
           esac
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}

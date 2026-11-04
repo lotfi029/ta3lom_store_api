@@ -24,6 +24,7 @@ public sealed record ReceiptDocument(
     string? LicenceNo,
     string? VatNoteAr,
     string? VatNoteEn,
-    byte[]? SignatureImage);
+    byte[]? SignatureImage,
+    string? VoidedByNumber = null);
 
 public sealed record ReceiptDocumentLine(string Description, int Quantity, string UnitAmount, string Amount);

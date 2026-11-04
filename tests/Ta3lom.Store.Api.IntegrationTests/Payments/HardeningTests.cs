@@ -143,6 +143,8 @@ public sealed class HardeningTests(ScenarioFactory factory) : IClassFixture<Scen
         (await factory.WebhookAsync(Hook(payment, "payment_refunded"))).Body.Str("outcome").ShouldBe(PaymentSettlement.RefundImported);
         (await OrderAsync(reference, "status, refunded_amount")).ShouldBe("paid:12.00");
         (await RefundsAsync(reference)).ShouldBe("gateway:succeeded:12.00:moyasar");
+        var finance = await factory.StaffAsync(Roles.Finance);
+        (await finance.GetAsync($"/v1/admin/orders/{reference}")).Body.GetProperty("refunds").EnumerateArray().ShouldHaveSingleItem().Str("source").ShouldBe("gateway");
         (await OutboxAsync("StaffAlert", reference)).ShouldBe(1);
         (await OutboxAsync("RefundProcessed", reference)).ShouldBe(1);
 
@@ -271,6 +273,8 @@ public sealed class HardeningTests(ScenarioFactory factory) : IClassFixture<Scen
             .ShouldBeGreaterThanOrEqualTo(1);
 
         var finance = await factory.StaffAsync(Roles.Finance);
+        var openBefore = (await finance.GetAsync("/v1/admin/dashboard")).Body.GetProperty("openOrphanPayments").GetInt32();
+        openBefore.ShouldBeGreaterThanOrEqualTo(1);
         var list = await finance.GetAsync("/v1/admin/payments/orphans");
         list.Response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var row = list.Body.EnumerateArray().Single(r => r.Str("providerPaymentId") == orphan.Id);
@@ -297,6 +301,7 @@ public sealed class HardeningTests(ScenarioFactory factory) : IClassFixture<Scen
         missing.Body.Str("code").ShouldBe(ErrorCodes.PaymentOrphanNotFound);
 
         (await finance.GetAsync("/v1/admin/payments/orphans")).Body.EnumerateArray().Any(r => r.Str("id") == id).ShouldBeFalse();
+        (await finance.GetAsync("/v1/admin/dashboard")).Body.GetProperty("openOrphanPayments").GetInt32().ShouldBe(openBefore - 1);
         (await finance.GetAsync("/v1/admin/payments/orphans?resolved=true")).Body.EnumerateArray().Any(r => r.Str("id") == id).ShouldBeTrue();
     }
 

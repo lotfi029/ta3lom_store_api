@@ -39,7 +39,7 @@ public sealed class StoreOptions
             problems.Add("Store:Cors:Origins needs at least one origin");
         }
 
-        foreach (var origin in Cors.Origins)
+        foreach (var origin in Cors.Origins.Concat(Cors.BadgeOrigins))
         {
             if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) || uri.PathAndQuery != "/" || origin.EndsWith('/'))
             {
@@ -105,6 +105,10 @@ public sealed class CorsSettings
 {
     /// Allowed browser origins: per environment in appsettings.{Environment}.json.
     public IList<string> Origins { get; init; } = [];
+
+    /// Review 04 S-15: origins that may ONLY read the cart badge (`GET /v1/cart/summary`, with credentials) — the main
+    /// site. Nothing else of the API is open to them (no other route, no write, no same-origin pass).
+    public IList<string> BadgeOrigins { get; init; } = [];
 }
 
 public sealed class ForwardedHeadersSettings

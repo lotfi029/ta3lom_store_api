@@ -16,10 +16,21 @@ public sealed class ConfigurationOriginsTests
             .Build()
             .GetSection("Store:Cors:Origins").Get<string[]>() ?? [];
 
+    private static string[] BadgeOrigins(string environment) =>
+        new ConfigurationBuilder()
+            .SetBasePath(AppContext.BaseDirectory)
+            .AddJsonFile("appsettings.json", optional: false)
+            .AddJsonFile($"appsettings.{environment}.json", optional: true)
+            .Build()
+            .GetSection("Store:Cors:BadgeOrigins").Get<string[]>() ?? [];
+
     [Fact]
     public void Each_environment_has_exactly_its_own_origins()
     {
-        Origins("Production").ShouldBe(["https://store.ta3lom.sa", "https://ta3lom.sa", "https://www.ta3lom.sa"]);
+        Origins("Production").ShouldBe(["https://store.ta3lom.sa"]);
+        BadgeOrigins("Production").ShouldBe(["https://ta3lom.sa", "https://www.ta3lom.sa"]);                // S-15: the badge only
+        BadgeOrigins("Staging").ShouldBeEmpty();
+        BadgeOrigins("Development").ShouldBeEmpty();
         Origins("Staging").ShouldBe(["https://store-staging.ta3lom.sa"]);
         Origins("Development").ShouldBe(["https://store.ta3lom.sa", "https://store-staging.ta3lom.sa", "http://localhost:4200", "http://localhost:4201", "http://localhost:4320"]);
     }
@@ -82,6 +93,41 @@ public sealed class MainSiteCorsTests(ProductionApiFactory factory) : IClassFixt
         var response = await factory.CreateClient().SendAsync(request, TestContext.Current.CancellationToken);
         response.Headers.GetValues("Access-Control-Allow-Origin").Single().ShouldBe(origin);
         response.Headers.GetValues("Access-Control-Allow-Credentials").Single().ShouldBe("true");
+    }
+
+    /// Review 04 S-15: the badge stays a simple request — the actual GET carries the CORS answer with credentials.
+    [Theory]
+    [InlineData("https://ta3lom.sa")]
+    [InlineData("https://www.ta3lom.sa")]
+    public async Task S15_the_badge_GET_itself_is_allowed_with_credentials(string origin)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/v1/cart/summary");
+        request.Headers.Add("Origin", origin);
+        var response = await factory.CreateClient().SendAsync(request, TestContext.Current.CancellationToken);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        response.Headers.GetValues("Access-Control-Allow-Origin").Single().ShouldBe(origin);
+        response.Headers.GetValues("Access-Control-Allow-Credentials").Single().ShouldBe("true");
+    }
+
+    /// Review 04 S-15: nothing else of the API is open to the main site — no other route, no write to the cart.
+    [Theory]
+    [InlineData("GET", "/v1/me")]
+    [InlineData("GET", "/v1/catalog/categories")]
+    [InlineData("POST", "/v1/cart/lines")]
+    [InlineData("POST", "/v1/auth/refresh")]
+    [InlineData("POST", "/v1/checkout")]
+    public async Task S15_the_main_site_reaches_no_other_route(string method, string path)
+    {
+        using var preflight = new HttpRequestMessage(HttpMethod.Options, path);
+        preflight.Headers.Add("Origin", "https://ta3lom.sa");
+        preflight.Headers.Add("Access-Control-Request-Method", method);
+        var response = await factory.CreateClient().SendAsync(preflight, TestContext.Current.CancellationToken);
+        response.Headers.Contains("Access-Control-Allow-Origin").ShouldBeFalse($"{method} {path}");
+
+        using var actual = new HttpRequestMessage(new HttpMethod(method), path);
+        actual.Headers.Add("Origin", "https://ta3lom.sa");
+        var direct = await factory.CreateClient().SendAsync(actual, TestContext.Current.CancellationToken);
+        direct.Headers.Contains("Access-Control-Allow-Origin").ShouldBeFalse($"{method} {path}");
     }
 
     [Fact]

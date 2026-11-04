@@ -89,7 +89,8 @@ internal sealed class RefundConfiguration : IEntityTypeConfiguration<Refund>
         e.Property(x => x.FailureMessage).HasColumnType("text");
         e.Property(x => x.RequestedBy).HasColumnType("citext").IsRequired();
         e.Property(x => x.IdempotencyKey).HasColumnType("text").HasMaxLength(64).IsRequired();
-        e.Property(x => x.Source).HasColumnType("text").IsRequired().HasDefaultValueSql("'store'");
+        // The default fills existing rows (migration); the sentinel makes EF always send the value, so no model warning.
+        e.Property(x => x.Source).HasColumnType("text").IsRequired().HasDefaultValueSql("'store'").HasSentinel((Domain.Enums.RefundSource)(-1));
         // S-13: the key is the staff member's own (the Idempotency-Key filter scope is `refund:{sub}` too).
         e.HasIndex(x => new { x.OrderId, x.RequestedBy, x.IdempotencyKey }).IsUnique().HasDatabaseName("ux_refund_idempotency");
         e.HasIndex(x => x.PaymentId).HasDatabaseName("ix_refund_payment");

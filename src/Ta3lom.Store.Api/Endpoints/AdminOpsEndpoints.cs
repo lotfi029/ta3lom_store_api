@@ -108,7 +108,8 @@ internal sealed class AdminOpsEndpoints : IEndpoint
         }
 
         http.Response.Headers.CacheControl = "no-store";
-        return TypedResults.File(result.Value.Content, "text/csv; charset=utf-8", result.Value.FileName);
+        var file = result.Value;
+        return Results.Stream(body => file.WriteAsync(body, ct), "text/csv; charset=utf-8", file.FileName);   // S-12: streamed
     }
 
     private static async Task<IResult> DashboardAsync([FromServices] IQueryHandler<GetDashboardQuery, DashboardResponse> handler, CancellationToken ct) =>

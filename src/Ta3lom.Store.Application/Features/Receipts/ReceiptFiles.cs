@@ -10,7 +10,8 @@ namespace Ta3lom.Store.Application.Features.Receipts;
 
 /// A receipt's PDF: rendered ONCE (outbox `ReceiptIssued`, or the first download if the outbox has not run yet), stored
 /// in PRIVATE file storage (`receipts/{year}/{number}.pdf`, never served publicly), then read back. The texts come from
-/// the `receipt_*` settings; the donor name and lines are the receipt's snapshots.
+/// the `receipt_*` settings; the donor name and lines are the receipt's snapshots. A DR voided by a DRC renders with the
+/// banner «ملغى — DRC-…» (review 04 R-1; issuing the DRC drops the DR's cached PDF).
 public sealed class ReceiptFiles(IApplicationDbContext db, IReceiptRepository receipts, IReceiptRenderer renderer, IFileStorage files,
     IUnitOfWork uow, IClock clock)
 {
@@ -45,6 +46,9 @@ public sealed class ReceiptFiles(IApplicationDbContext db, IReceiptRepository re
         var reference = await db.Orders.AsNoTracking().Where(o => o.Id == r.OrderId).Select(o => o.Reference).FirstAsync(ct);
         var voids = r.VoidsReceiptId is { } dr
             ? await db.DonationReceipts.AsNoTracking().Where(x => x.Id == dr).Select(x => new { x.Series, x.Year, x.Number }).FirstAsync(ct)
+            : null;
+        var voidedBy = r.VoidedByReceiptId is { } drc
+            ? await db.DonationReceipts.AsNoTracking().Where(x => x.Id == drc).Select(x => new { x.Series, x.Year, x.Number }).FirstAsync(ct)
             : null;
         var keys = new[] { SettingKeys.ReceiptOrgNameAr, SettingKeys.ReceiptOrgNameEn, SettingKeys.ReceiptLicenceNo, SettingKeys.ReceiptVatNoteAr, SettingKeys.ReceiptVatNoteEn, SettingKeys.ReceiptSignatureAssetId };
         var settings = await db.Settings.AsNoTracking().Where(s => keys.Contains(s.Key)).ToDictionaryAsync(s => s.Key, s => Text(s.Value), ct);
@@ -81,7 +85,8 @@ public sealed class ReceiptFiles(IApplicationDbContext db, IReceiptRepository re
             settings.GetValueOrDefault(SettingKeys.ReceiptLicenceNo),
             settings.GetValueOrDefault(SettingKeys.ReceiptVatNoteAr),
             settings.GetValueOrDefault(SettingKeys.ReceiptVatNoteEn),
-            signature);
+            signature,
+            voidedBy is null ? null : DonationReceipt.FormatNumber(voidedBy.Series, voidedBy.Year, voidedBy.Number));
     }
 
     private static string Describe(ReceiptLine l) => l.OptionLabelAr is { Length: > 0 } option ? $"{l.TitleAr} — {option}" : l.TitleAr;

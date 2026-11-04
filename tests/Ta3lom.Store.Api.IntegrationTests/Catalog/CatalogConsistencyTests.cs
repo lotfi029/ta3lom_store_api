@@ -76,6 +76,7 @@ public sealed class CatalogConsistencyTests(ScenarioFactory factory) : IClassFix
             (await admin.SendAsync(HttpMethod.Put, $"/v1/admin/settings/{key}", new { value })).Response.StatusCode;
 
         (await PutAsync("min_gift_amount", "100000.00")).ShouldBe(HttpStatusCode.UnprocessableEntity);         // above the presets
+        (await PutAsync("min_gift_amount", "0.99")).ShouldBe(HttpStatusCode.UnprocessableEntity);              // S-1: below the gateway's 1.00
         (await PutAsync("amount_presets", new[] { "5.00", "50.00" })).ShouldBe(HttpStatusCode.UnprocessableEntity);   // a preset below the minimum
         (await PutAsync("max_line_amount", "5.00")).ShouldBe(HttpStatusCode.UnprocessableEntity);              // below the minimum gift
         (await PutAsync("cart_max_total", "50.00")).ShouldBe(HttpStatusCode.UnprocessableEntity);              // below the line maximum

@@ -86,6 +86,12 @@ internal static partial class SettingRules
 
     public static bool IsValid(string key, JsonElement value)
     {
+        if (key == SettingKeys.MinGiftAmount)
+        {
+            // Review 04 S-1: never below what the gateway accepts (1.00 SAR).
+            return IsMoney(value) && MoneyInput.Parse(value.GetString()!) >= Domain.Entities.Donations.Order.GatewayMinimum;
+        }
+
         if (MoneyKeys.Contains(key))
         {
             return IsMoney(value);

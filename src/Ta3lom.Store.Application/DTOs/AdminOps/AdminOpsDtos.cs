@@ -17,6 +17,9 @@ public sealed record DashboardResponse(int PublishedProjects, int ActiveCategori
 
     public int InReviewOrders { get; init; }
 
+    /// Captured payments with no order of ours, not yet resolved by finance (review 04 A-3).
+    public int OpenOrphanPayments { get; init; }
+
     /// Top 5 projects by paid amount (paid lines of paid/partially refunded orders).
     public IReadOnlyList<DashboardPaidProject> TopProjectsByPaidAmount { get; init; } = [];
 }
@@ -79,8 +82,10 @@ public sealed record AdminPaymentRow(Guid Id, int AttemptNo, string Provider, st
 
 public sealed record AdminPaymentEventRow(string Type, DateTimeOffset ReceivedAt, bool SignatureValid, string? Outcome);
 
+/// `status`: requested (waiting for the gateway, review 04 P-3) | succeeded | failed. `source`: `store` (finance) or
+/// `gateway` (made on the gateway's dashboard and imported, A-2; `requestedBy` = "moyasar").
 public sealed record AdminRefundRow(Guid Id, string Amount, string Status, string Reason, string RequestedBy, DateTimeOffset RequestedAt,
-    DateTimeOffset? CompletedAt);
+    DateTimeOffset? CompletedAt, string Source);
 
 public sealed record AdminReceiptRow(string Number, string Series, string Amount, DateTimeOffset IssuedAt, string? VoidedBy);
 
