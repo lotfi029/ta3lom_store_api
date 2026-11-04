@@ -157,6 +157,8 @@ internal sealed class TestTemplateCommandHandler(ITemplateRenderer renderer, IEm
         ["reference"] = "T3-26-000001",
         ["amount"] = "50.00",
         ["name"] = "Test",
+        ["receipt_number"] = "DR-2026-000001",                        // order_paid / refund_processed (R5-Payments)
+        ["link"] = "https://store.ta3lom.sa/ar/orders/T3-26-000001",
     };
 
     public async Task<Result<TemplateTestResponse>> HandleAsync(TestTemplateCommand command, CancellationToken ct = default)

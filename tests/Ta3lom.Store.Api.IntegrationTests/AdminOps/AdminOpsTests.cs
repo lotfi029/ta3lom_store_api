@@ -121,6 +121,10 @@ public sealed class AdminOpsTests(ScenarioFactory factory) : IClassFixture<Scena
         (await manager.PostAsync("/v1/admin/templates/test", new { channel = "sms", body = "رمز {{ code }}", to = mobile })).Body.GetProperty("sent").GetBoolean().ShouldBeTrue();
         factory.SmsTo(mobile).Single().Body.ShouldBe("رمز 123456");
         (await manager.PostAsync("/v1/admin/templates/test", new { channel = "sms", body = "x" })).Response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+
+        // R5-Payments templates (order_paid, refund_processed) preview with a receipt number and an order link.
+        var paid = await manager.PostAsync("/v1/admin/templates/test", new { channel = "email", subject = "s", body = "{{ receipt_number }} {{ link }}" });
+        paid.Body.Str("body").ShouldBe("DR-2026-000001 https://store.ta3lom.sa/ar/orders/T3-26-000001");
     }
 
     [Theory]
