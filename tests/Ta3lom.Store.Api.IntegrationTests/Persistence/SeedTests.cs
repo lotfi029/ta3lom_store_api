@@ -13,11 +13,14 @@ public sealed class SeedRunnerTests
     public async Task Seeds_settings_and_templates_once()
     {
         var cs = await StoreSchema.CreateMigratedAsync("seed");
+        // Settings a migration already inserted (review 04: refund_pending_timeout_minutes — production does not seed).
+        var fromMigrations = await SqlRunner.ScalarAsync<long>(cs, "SELECT count(*) FROM store.setting");
+        fromMigrations.ShouldBe(1);
 
         var first = await StoreSchema.SeedAsync(cs);
         var second = await StoreSchema.SeedAsync(cs);
 
-        first.ShouldBe(SeedData.Settings.Count + SeedData.Templates.Count);
+        first.ShouldBe(SeedData.Settings.Count + SeedData.Templates.Count - (int)fromMigrations);
         second.ShouldBe(0);
     }
 

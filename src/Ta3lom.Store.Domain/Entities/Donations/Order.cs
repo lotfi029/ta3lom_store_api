@@ -161,6 +161,21 @@ public sealed class Order : AggregateRoot
         return true;
     }
 
+    /// The gateway voided a payment of a paid order (review 04 A-1): the money is gone, finance must review — the order
+    /// moves to `payment_review` even though it was paid. True when the status changed.
+    public bool ReopenForReview(PaymentReviewReason reason, DateTimeOffset now)
+    {
+        if (Status == OrderStatus.PaymentReview)
+        {
+            return false;
+        }
+
+        Status = OrderStatus.PaymentReview;
+        ReviewReason = reason;
+        UpdatedAt = now;
+        return true;
+    }
+
     /// Finance accepts a reviewed payment: the order is settled in full (→ `paid`).
     public Result AcceptReview(DateTimeOffset now)
     {

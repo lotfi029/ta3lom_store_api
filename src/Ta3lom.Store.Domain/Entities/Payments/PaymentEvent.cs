@@ -33,6 +33,26 @@ public sealed class PaymentEvent : Entity
 
     public string PayloadJson { get; private set; } = "{}";
 
+    /// An orphan (review 04 A-3): the captured payment the gateway reported, for which we have no attempt.
+    public string? ProviderInvoiceId { get; private set; }
+
+    public Money? GatewayAmount { get; private set; }
+
+    public string? GatewayCurrency { get; private set; }
+
+    /// Inbox claim (S-5): one delivery processes the event; a claim older than <see cref="ClaimTimeout"/> may be retaken.
+    public DateTimeOffset? ClaimedAt { get; private set; }
+
+    public DateTimeOffset? ResolvedAt { get; private set; }
+
+    public string? ResolvedBy { get; private set; }
+
+    public string? ResolutionNote { get; private set; }
+
+    public const string OrphanOutcome = "orphan";
+
+    public static readonly TimeSpan ClaimTimeout = TimeSpan.FromMinutes(2);
+
     public static PaymentEvent Receive(string provider, string providerEventId, string type, string? providerPaymentId,
         bool signatureValid, string payloadJson, DateTimeOffset now) =>
         new(Guid.CreateVersion7())
@@ -45,6 +65,37 @@ public sealed class PaymentEvent : Entity
             PayloadJson = payloadJson,
             ReceivedAt = now,
         };
+
+    /// A captured payment with no attempt of ours (review 04 A-3): kept with its amount for finance.
+    public void MarkOrphan(string? providerPaymentId, string? providerInvoiceId, Money amount, string currency, DateTimeOffset now)
+    {
+        ProviderPaymentId ??= providerPaymentId;
+        ProviderInvoiceId = providerInvoiceId;
+        GatewayAmount = amount;
+        GatewayCurrency = string.IsNullOrWhiteSpace(currency) ? null : currency.Length > 8 ? currency[..8] : currency;
+        Outcome = OrphanOutcome;
+        ProcessedAt = now;
+    }
+
+    /// Finance looked into an orphan payment (refunded it on the dashboard, matched it, …) and records how.
+    public Result Resolve(string resolvedBy, string note, DateTimeOffset now)
+    {
+        if (Outcome != OrphanOutcome)
+        {
+            return PaymentErrors.OrphanNotFound;
+        }
+
+        if (ResolvedAt is not null)
+        {
+            return PaymentErrors.OrphanResolved;
+        }
+
+        var trimmed = Guard.NotEmpty(note).Trim();
+        ResolvedBy = Guard.NotEmpty(resolvedBy);
+        ResolutionNote = trimmed.Length > 500 ? trimmed[..500] : trimmed;
+        ResolvedAt = now;
+        return Result.Success();
+    }
 
     public void Processed(Guid? paymentId, string outcome, DateTimeOffset now)
     {

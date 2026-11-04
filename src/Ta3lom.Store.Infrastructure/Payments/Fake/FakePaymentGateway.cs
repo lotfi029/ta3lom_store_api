@@ -21,6 +21,42 @@ public sealed class FakePaymentStore
 
     public bool FailRefunds { get; set; }
 
+    /// Review 04 test hooks: every read throws (gateway down); a refund answers "no definite answer" (timeout) and is
+    /// or is not applied at the gateway; delays to widen races; the first `DelayNextReads` reads wait `ReadDelay`.
+    public bool FailReads { get; set; }
+
+    public bool PendingRefunds { get; set; }
+
+    public bool PendingRefundApplies { get; set; }
+
+    public TimeSpan RefundDelay { get; set; }
+
+    public TimeSpan CreateDelay { get; set; }
+
+    public TimeSpan ReadDelay { get; set; }
+
+    private int _delayNextReads;
+
+    public int DelayNextReads
+    {
+        get => Volatile.Read(ref _delayNextReads);
+        set => Volatile.Write(ref _delayNextReads, value);
+    }
+
+    internal bool TakeReadDelay() => Interlocked.Decrement(ref _delayNextReads) >= 0;
+
+    /// Every hosted page made for an order (A-4 tests: exactly one may still be payable).
+    public IReadOnlyList<FakeInvoice> InvoicesFor(string orderReference) =>
+        [.. _invoices.Values.Where(i => i.OrderReference == orderReference)];
+
+    /// A captured payment on a hosted page the store never created (A-3: an orphan).
+    public FakePayment OrphanPayment(long amountHalalas)
+    {
+        var invoice = new FakeInvoice($"fake_inv_{Guid.NewGuid():N}", "unknown", amountHalalas, "about:blank", DateTimeOffset.MaxValue);
+        _invoices[invoice.Id] = invoice;
+        return Act(invoice.Id, success: true);
+    }
+
     public FakeInvoice? Invoice(string id) => _invoices.GetValueOrDefault(id);
 
     public FakePayment? Payment(string id) => _payments.GetValueOrDefault(id);
@@ -70,14 +106,14 @@ public sealed class FakePaymentStore
                 ["amount"] = payment.AmountHalalas,
                 ["captured"] = payment.Captured,
                 ["refunded"] = payment.Refunded,
-                ["currency"] = "SAR",
+                ["currency"] = payment.Currency,
                 ["invoice_id"] = payment.InvoiceId,
                 ["source"] = new JsonObject { ["type"] = "creditcard", ["company"] = "mada", ["message"] = payment.Message, ["number"] = "4201-32XX-XXXX-1010" },
             },
         }.ToJsonString();
 
     internal static GatewayPayment Map(FakePayment p) =>
-        MoyasarGateway.Map(new MoyasarGateway.MoyasarPayment(p.Id, p.Status, p.AmountHalalas, p.Captured, p.Refunded, "SAR", p.InvoiceId,
+        MoyasarGateway.Map(new MoyasarGateway.MoyasarPayment(p.Id, p.Status, p.AmountHalalas, p.Captured, p.Refunded, p.Currency, p.InvoiceId,
             new MoyasarGateway.MoyasarSource("creditcard", "mada", p.Message), false));
 }
 
@@ -112,6 +148,8 @@ public sealed class FakePayment(string id, string invoiceId, long amountHalalas)
 
     public long Refunded { get; set; }
 
+    public string? Currency { get; set; } = "SAR";
+
     public string? Message { get; set; }
 }
 
@@ -121,33 +159,67 @@ public sealed class FakePaymentGateway(FakePaymentStore store, IOptions<PaymentO
 
     public string Name => ProviderName;
 
-    public Task<HostedPaymentResult> CreateHostedPaymentAsync(HostedPaymentRequest request, CancellationToken ct = default)
+    public async Task<HostedPaymentResult> CreateHostedPaymentAsync(HostedPaymentRequest request, CancellationToken ct = default)
     {
         if (store.FailNextCreate)
         {
             store.FailNextCreate = false;
-            return Task.FromResult(HostedPaymentResult.Failed("fake gateway down"));
+            return HostedPaymentResult.Failed("fake gateway down");
+        }
+
+        if (store.CreateDelay > TimeSpan.Zero)
+        {
+            await Task.Delay(store.CreateDelay, ct);
         }
 
         var invoice = store.AddInvoice(request);
         var api = options.Value.Fake.ApiBaseUrl.TrimEnd('/');
-        return Task.FromResult(HostedPaymentResult.Created(invoice.Id, $"{api}/dev/payments/{invoice.Id}", request.ExpiresAt));
+        return HostedPaymentResult.Created(invoice.Id, $"{api}/dev/payments/{invoice.Id}", request.ExpiresAt);
     }
 
-    public Task<GatewayPayment?> GetPaymentAsync(string providerPaymentId, CancellationToken ct = default) =>
-        Task.FromResult(store.Payment(providerPaymentId) is { } p ? FakePaymentStore.Map(p) : null);
-
-    public Task<IReadOnlyList<GatewayPayment>> FindPaymentsForHostedPageAsync(string providerInvoiceId, CancellationToken ct = default) =>
-        Task.FromResult<IReadOnlyList<GatewayPayment>>(store.Invoice(providerInvoiceId) is { } invoice
-            ? [.. invoice.PaymentIds.Select(store.Payment).OfType<FakePayment>().Select(FakePaymentStore.Map)]
-            : []);
-
-    public Task<GatewayRefundResult> RefundAsync(string providerPaymentId, long amountHalalas, string idempotencyKey, CancellationToken ct = default)
+    public async Task<GatewayPayment?> GetPaymentAsync(string providerPaymentId, CancellationToken ct = default)
     {
+        await ReadAsync(ct);
+        return store.Payment(providerPaymentId) is { } p ? FakePaymentStore.Map(p) : null;
+    }
+
+    public async Task<IReadOnlyList<GatewayPayment>> FindPaymentsForHostedPageAsync(string providerInvoiceId, CancellationToken ct = default)
+    {
+        await ReadAsync(ct);
+        return store.Invoice(providerInvoiceId) is { } invoice
+            ? [.. invoice.PaymentIds.Select(store.Payment).OfType<FakePayment>().Select(FakePaymentStore.Map)]
+            : [];
+    }
+
+    private async Task ReadAsync(CancellationToken ct)
+    {
+        if (store.FailReads)
+        {
+            throw new PaymentGatewayException("fake gateway down");
+        }
+
+        if (store.ReadDelay > TimeSpan.Zero && store.TakeReadDelay())
+        {
+            await Task.Delay(store.ReadDelay, ct);
+        }
+    }
+
+    public async Task<GatewayRefundResult> RefundAsync(string providerPaymentId, long amountHalalas, string idempotencyKey, CancellationToken ct = default)
+    {
+        if (store.RefundDelay > TimeSpan.Zero)
+        {
+            await Task.Delay(store.RefundDelay, ct);
+        }
+
         var p = store.Payment(providerPaymentId);
         if (store.FailRefunds || p is null || p.Captured - p.Refunded < amountHalalas)
         {
-            return Task.FromResult(GatewayRefundResult.Failed("fake refund refused"));
+            return GatewayRefundResult.Failed("fake refund refused");
+        }
+
+        if (store.PendingRefunds && !store.PendingRefundApplies)
+        {
+            return GatewayRefundResult.Unknown("fake gateway timeout");
         }
 
         p.Refunded += amountHalalas;
@@ -156,7 +228,7 @@ public sealed class FakePaymentGateway(FakePaymentStore store, IOptions<PaymentO
             p.Status = "refunded";
         }
 
-        return Task.FromResult(GatewayRefundResult.Succeeded($"fake_rf_{Guid.NewGuid():N}"));
+        return store.PendingRefunds ? GatewayRefundResult.Unknown("fake gateway timeout") : GatewayRefundResult.Succeeded($"fake_rf_{Guid.NewGuid():N}");
     }
 
     public Task CancelHostedPaymentAsync(string providerInvoiceId, CancellationToken ct = default)

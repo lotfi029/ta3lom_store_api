@@ -457,4 +457,34 @@
   <data name="receipt.not_available.detail" xml:space="preserve">
     <value>لا يوجد إيصال متاح لهذا الطلب بعد.</value>
   </data>
+  <data name="payment.refund_pending" xml:space="preserve">
+    <value>استرداد قيد المعالجة</value>
+  </data>
+  <data name="payment.refund_pending.detail" xml:space="preserve">
+    <value>لا يزال استرداد سابق لهذا الطلب بانتظار رد بوابة الدفع. حاول بعد قليل.</value>
+  </data>
+  <data name="payment.review_partial" xml:space="preserve">
+    <value>المبلغ المدفوع أقل من الإجمالي</value>
+  </data>
+  <data name="payment.review_partial.detail" xml:space="preserve">
+    <value>لا يمكن قبول الدفعة: ما احتفظت به بوابة الدفع أقل من إجمالي الطلب. استرد الدفعة بدلًا من ذلك.</value>
+  </data>
+  <data name="payment.orphan_not_found" xml:space="preserve">
+    <value>الدفعة غير موجودة</value>
+  </data>
+  <data name="payment.orphan_not_found.detail" xml:space="preserve">
+    <value>لا توجد دفعة غير مطابقة بهذا المعرّف.</value>
+  </data>
+  <data name="payment.orphan_resolved" xml:space="preserve">
+    <value>عولجت الدفعة مسبقًا</value>
+  </data>
+  <data name="payment.orphan_resolved.detail" xml:space="preserve">
+    <value>سُجّلت معالجة هذه الدفعة غير المطابقة من قبل.</value>
+  </data>
+  <data name="checkout.below_minimum" xml:space="preserve">
+    <value>المبلغ أقل من الحد الأدنى</value>
+  </data>
+  <data name="checkout.below_minimum.detail" xml:space="preserve">
+    <value>إجمالي التبرع أقل من الحد الأدنى الذي تقبله بوابة الدفع.</value>
+  </data>
 </root>

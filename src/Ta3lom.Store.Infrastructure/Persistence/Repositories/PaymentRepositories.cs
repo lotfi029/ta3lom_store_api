@@ -19,12 +19,14 @@ internal sealed class PaymentRepository(StoreDbContext db) : GenericRepository<P
     public Task<Payment?> FindByProviderInvoiceIdAsync(string provider, string providerInvoiceId, CancellationToken ct = default) =>
         Set.FirstOrDefaultAsync(p => p.Provider == provider && p.ProviderInvoiceId == providerInvoiceId, ct);
 
-    public async Task<IReadOnlyList<Payment>> OpenForReconciliationAsync(DateTimeOffset startedBefore, DateTimeOffset dueAfter, int max, CancellationToken ct = default) =>
+    public async Task<IReadOnlyList<Payment>> ForReconciliationAsync(DateTimeOffset startedBefore, DateTimeOffset lateAfter, int max, CancellationToken ct = default) =>
         await Set.AsNoTracking()
-            .Where(p => p.Status == PaymentStatus.Initiated && p.ProviderInvoiceId != null && p.InitiatedAt <= startedBefore)
-            .Join(Db.Set<Order>(), p => p.OrderId, o => o.Id, (p, o) => new { p, o.PaymentDueAt })
-            .Where(x => x.PaymentDueAt > dueAfter)
-            .OrderBy(x => x.p.InitiatedAt).Select(x => x.p).Take(max).ToListAsync(ct);
+            .Where(p => p.ProviderInvoiceId != null && p.InitiatedAt <= startedBefore
+                        && (p.Status == PaymentStatus.Initiated || p.Status == PaymentStatus.Cancelled || p.Status == PaymentStatus.Failed))
+            .Join(Db.Set<Order>(), p => p.OrderId, o => o.Id, (p, o) => new { p, o.Status, o.PaymentDueAt })
+            .Where(x => x.Status == OrderStatus.PendingPayment || x.Status == OrderStatus.PaymentReview
+                        || ((x.Status == OrderStatus.Expired || x.Status == OrderStatus.Cancelled) && (x.p.RedirectExpiresAt ?? x.PaymentDueAt) > lateAfter))
+            .OrderByDescending(x => x.p.InitiatedAt).Select(x => x.p).Take(max).ToListAsync(ct);
 }
 
 /// The webhook inbox: `INSERT … ON CONFLICT (provider, provider_event_id) DO NOTHING`, then the stored row.
@@ -44,6 +46,18 @@ internal sealed class PaymentEventRepository(StoreDbContext db) : IPaymentEventR
         var stored = await db.PaymentEvents.FirstAsync(x => x.Provider == e.Provider && x.ProviderEventId == e.ProviderEventId, ct);
         return (stored, inserted);
     }
+
+    public async Task<bool> TryClaimAsync(Guid eventId, DateTimeOffset now, DateTimeOffset staleBefore, CancellationToken ct = default) =>
+        await db.Database.ExecuteSqlAsync($"""
+            UPDATE store.payment_event SET claimed_at = {now}
+            WHERE id = {eventId} AND processed_at IS NULL AND (claimed_at IS NULL OR claimed_at < {staleBefore})
+            """, ct) == 1;
+
+    public Task ReleaseClaimAsync(Guid eventId, CancellationToken ct = default) =>
+        db.Database.ExecuteSqlAsync($"UPDATE store.payment_event SET claimed_at = NULL WHERE id = {eventId} AND processed_at IS NULL", ct);
+
+    public Task<PaymentEvent?> GetAsync(Guid eventId, CancellationToken ct = default) =>
+        db.PaymentEvents.FirstOrDefaultAsync(x => x.Id == eventId, ct);
 }
 
 internal sealed class ReceiptRepository(StoreDbContext db) : GenericRepository<DonationReceipt>(db), IReceiptRepository
@@ -57,6 +71,18 @@ internal sealed class ReceiptRepository(StoreDbContext db) : GenericRepository<D
 
 internal sealed class RefundRepository(StoreDbContext db) : GenericRepository<Refund>(db), IRefundRepository
 {
-    public Task<Refund?> FindByIdempotencyKeyAsync(Guid orderId, string idempotencyKey, CancellationToken ct = default) =>
-        Set.FirstOrDefaultAsync(r => r.OrderId == orderId && r.IdempotencyKey == idempotencyKey, ct);
+    public async Task<IReadOnlyList<Refund>> ForIdempotencyKeyAsync(Guid orderId, string requestedBy, string idempotencyKey, CancellationToken ct = default)
+    {
+        var prefix = idempotencyKey + ":";
+        return await Set.Where(r => r.OrderId == orderId && r.RequestedBy == requestedBy
+                                    && (r.IdempotencyKey == idempotencyKey || r.IdempotencyKey.StartsWith(prefix)))
+            .OrderBy(r => r.RequestedAt).ToListAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<Refund>> ForOrderAsync(Guid orderId, CancellationToken ct = default) =>
+        await Set.Where(r => r.OrderId == orderId).OrderBy(r => r.RequestedAt).ThenBy(r => r.Id).ToListAsync(ct);
+
+    public async Task<IReadOnlyList<Guid>> PaymentsWithRequestedRefundsAsync(DateTimeOffset requestedBefore, int max, CancellationToken ct = default) =>
+        await Set.AsNoTracking().Where(r => r.Status == RefundStatus.Requested && r.RequestedAt <= requestedBefore)
+            .Select(r => r.PaymentId).Distinct().Take(max).ToListAsync(ct);
 }

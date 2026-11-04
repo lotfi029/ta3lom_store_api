@@ -457,4 +457,34 @@
   <data name="receipt.not_available.detail" xml:space="preserve">
     <value>No receipt is available for this order yet.</value>
   </data>
+  <data name="payment.refund_pending" xml:space="preserve">
+    <value>A refund is pending</value>
+  </data>
+  <data name="payment.refund_pending.detail" xml:space="preserve">
+    <value>An earlier refund of this order is still waiting for the gateway. Try again shortly.</value>
+  </data>
+  <data name="payment.review_partial" xml:space="preserve">
+    <value>Less than the total was captured</value>
+  </data>
+  <data name="payment.review_partial.detail" xml:space="preserve">
+    <value>The payment cannot be accepted: the gateway kept less than the order total. Refund it instead.</value>
+  </data>
+  <data name="payment.orphan_not_found" xml:space="preserve">
+    <value>Orphan payment not found</value>
+  </data>
+  <data name="payment.orphan_not_found.detail" xml:space="preserve">
+    <value>There is no unmatched payment with this id.</value>
+  </data>
+  <data name="payment.orphan_resolved" xml:space="preserve">
+    <value>Already resolved</value>
+  </data>
+  <data name="payment.orphan_resolved.detail" xml:space="preserve">
+    <value>This unmatched payment was already resolved.</value>
+  </data>
+  <data name="checkout.below_minimum" xml:space="preserve">
+    <value>Below the minimum</value>
+  </data>
+  <data name="checkout.below_minimum.detail" xml:space="preserve">
+    <value>The donation total is below the minimum the payment gateway accepts.</value>
+  </data>
 </root>

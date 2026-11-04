@@ -34,6 +34,8 @@ public static class DependencyInjection
         services.AddScoped<Features.Notifications.NotificationDispatch>();
         services.AddScoped<Features.Payments.PaymentStarter>();
         services.AddScoped<Features.Payments.PaymentSettlement>();
+        services.AddScoped<Features.Payments.RefundBook>();
+        services.AddScoped<Features.Payments.RefundReconciliation>();
         services.AddScoped<Features.Receipts.ReceiptFiles>();
         services.AddScoped<Features.Payments.FinanceOperations>();
         services.AddScoped<Features.StaffAuth.StaffSessions>();

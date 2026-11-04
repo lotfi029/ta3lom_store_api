@@ -28,6 +28,8 @@ public static class AuditActions
     public const string OrderCancelled = "order.cancelled";
     public const string OrderRefunded = "order.refunded";
     public const string OrderRefundFailed = "order.refund_failed";
+    public const string OrderRefundPending = "order.refund_pending";
+    public const string OrphanPaymentResolved = "payment.orphan_resolved";
     public const string PaymentReviewAccepted = "payment.review_accepted";
     public const string PaymentReviewRefunded = "payment.review_refunded";
     public const string ReceiptResent = "receipt.resent";

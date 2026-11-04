@@ -23,3 +23,13 @@ internal sealed class ExpireUnpaidOrdersJob(ICommandHandler<ExpireUnpaidOrdersCo
     public async ValueTask Execute(IJobExecutionContext context, CancellationToken cancellationToken) =>
         await runs.RunAsync(context.JobDetail.Key.Name, context.ScheduledFireTimeUtc, ct => handler.HandleAsync(new ExpireUnpaidOrdersCommand(), ct), cancellationToken);
 }
+
+/// Every 5 minutes, offset by 4 (`0 4/5 * * * ?`): confirms or fails refunds still waiting for the gateway (review 04 P-3).
+[DisallowConcurrentExecution]
+internal sealed class ReconcileRefundsJob(ICommandHandler<ReconcileRefundsCommand, int> handler, JobRuns runs) : IJob
+{
+    public const string Cron = "0 4/5 * * * ?";
+
+    public async ValueTask Execute(IJobExecutionContext context, CancellationToken cancellationToken) =>
+        await runs.RunAsync(context.JobDetail.Key.Name, context.ScheduledFireTimeUtc, ct => handler.HandleAsync(new ReconcileRefundsCommand(), ct), cancellationToken);
+}

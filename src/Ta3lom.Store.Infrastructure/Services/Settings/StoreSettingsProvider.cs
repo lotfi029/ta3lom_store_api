@@ -83,7 +83,8 @@ internal sealed class StoreSettingsProvider(IServiceScopeFactory scopes, IClock 
                 : d.AmountPresets,
             Text(raw, SettingKeys.SiteNameAr),
             Text(raw, SettingKeys.SiteNameEn),
-            Text(raw, SettingKeys.SupportMobile));
+            Text(raw, SettingKeys.SupportMobile),
+            IntOr(raw, SettingKeys.RefundPendingTimeoutMinutes, d.RefundPendingTimeoutMinutes));
     }
 
     private static Money? ToMoney(JsonElement e) => e.ValueKind switch

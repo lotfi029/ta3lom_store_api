@@ -63,10 +63,22 @@ internal sealed class RefundPaymentReviewCommandHandler(FinanceOperations financ
 
 /// The finance actions share the locking and the receipts.
 public sealed class FinanceOperations(IOrderRepository orders, IPaymentRepository payments, IRefundRepository refunds, IReceiptRepository receipts,
-    IDocumentNumbers numbers, IPaymentGatewayRegistry gateways, PaymentSettlement settlement, IOutbox outbox, IAuditTrail audit,
-    ICurrentActor actor, IUnitOfWork uow, IClock clock)
+    IPaymentGatewayRegistry gateways, PaymentSettlement settlement, RefundBook book, RefundReconciliation reconciliation, IOutbox outbox,
+    IAuditTrail audit, ICurrentActor actor, IUnitOfWork uow, IClock clock)
 {
+    /// P-3: the refund call has its own budget, not the request's — a client that goes away must not leave the refund
+    /// unknown halfway; past it the refund stays `requested` and the reconciliation settles it.
+    public static readonly TimeSpan RefundCallTimeout = TimeSpan.FromSeconds(20);
+
+    public const string RefundPendingState = "pending";
+    public const string RefundSucceededState = "succeeded";
+
     /// `amount` null = everything refundable on the payments in review (`reviewOnly`).
+    /// (1) under the order lock: the staff member's own key (S-13) — a refund still `requested` with that key is reconciled
+    /// against the gateway instead of being sent again; status; amount ≤ captured − succeeded − requested (P-4); no other
+    /// refund pending (A-6); version; `requested` rows. (2) The gateway call outside the transaction with its own timeout.
+    /// (3) under the lock again, per row: succeeded → <see cref="RefundBook"/>; refused → `failed` (502 when nothing
+    /// succeeded); no definite answer → stays `requested` and the answer is 202 `refund: "pending"` (P-3).
     public async Task<Result<AdminPaymentActionResponse>> RefundAsync(string reference, uint version, Money? amount, string reason,
         string idempotencyKey, bool reviewOnly, CancellationToken ct)
     {
@@ -80,17 +92,14 @@ public sealed class FinanceOperations(IOrderRepository orders, IPaymentRepositor
             }
 
             var attempts = await payments.ForOrderAsync(order.Id, t);
-            if (await refunds.FindByIdempotencyKeyAsync(order.Id, idempotencyKey, t) is { } earlier)
+            if (await refunds.ForIdempotencyKeyAsync(order.Id, staff, idempotencyKey, t) is { Count: > 0 } earlier)
             {
-                return earlier.Status == RefundStatus.Requested
-                    ? Result.Failure<Prepared>(Error.Conflict(ErrorCodes.IdempotencyInProgress, "This refund is in progress."))
-                    : Result.Success(new Prepared(order.Id, [], earlier.Status == RefundStatus.Succeeded));
+                return Result.Success(new Prepared(order.Id, [], earlier.Any(r => r.Status == RefundStatus.Succeeded),
+                    [.. earlier.Where(r => r.Status == RefundStatus.Requested).Select(r => r.PaymentId).Distinct()]));
             }
 
-            if (order.Version != version)
-            {
-                return Result.Failure<Prepared>(GeneralErrors.ConcurrencyConflict);
-            }
+            var requested = (await refunds.ForOrderAsync(order.Id, t)).Where(r => r.Status == RefundStatus.Requested).ToList();
+            Money Available(Payment p) => p.Refundable - requested.Where(r => r.PaymentId == p.Id).Select(r => r.Amount).Sum();
 
             List<(Payment Payment, Money Amount)> plan;
             if (reviewOnly)
@@ -99,6 +108,11 @@ public sealed class FinanceOperations(IOrderRepository orders, IPaymentRepositor
                 if (inReview.Count == 0)
                 {
                     return Result.Failure<Prepared>(PaymentErrors.NotInReview(order.Status));
+                }
+
+                if (requested.Count > 0)
+                {
+                    return Result.Failure<Prepared>(PaymentErrors.RefundPending);
                 }
 
                 plan = [.. inReview.Select(p => (p, p.Refundable))];
@@ -115,14 +129,25 @@ public sealed class FinanceOperations(IOrderRepository orders, IPaymentRepositor
                     return Result.Failure<Prepared>(PaymentErrors.RefundNotAllowed(order.Status));
                 }
 
-                var source = attempts.Where(p => p.Status is PaymentStatus.Captured && p.Refundable.IsPositive).OrderByDescending(p => p.Refundable.Amount).FirstOrDefault();
-                var refundable = attempts.Where(p => p.Status == PaymentStatus.Captured).Select(p => p.Refundable).Sum();
-                if (source is null || amount!.Value > source.Refundable)
+                var captured = attempts.Where(p => p.Status == PaymentStatus.Captured).ToList();
+                var source = captured.Where(p => Available(p).IsPositive).OrderByDescending(p => Available(p).Amount).FirstOrDefault();
+                var refundable = captured.Select(Available).Where(m => m.IsPositive).Sum();
+                if (source is null || amount!.Value > Available(source))
                 {
-                    return Result.Failure<Prepared>(PaymentErrors.RefundExceeds(source?.Refundable ?? refundable));
+                    return Result.Failure<Prepared>(PaymentErrors.RefundExceeds(source is null ? refundable : Available(source)));
+                }
+
+                if (requested.Count > 0)
+                {
+                    return Result.Failure<Prepared>(PaymentErrors.RefundPending);
                 }
 
                 plan = [(source, amount.Value)];
+            }
+
+            if (order.Version != version)
+            {
+                return Result.Failure<Prepared>(GeneralErrors.ConcurrencyConflict);
             }
 
             var now = clock.UtcNow;
@@ -132,40 +157,50 @@ public sealed class FinanceOperations(IOrderRepository orders, IPaymentRepositor
                 refunds.Add(row);
             }
 
-            return Result.Success(new Prepared(order.Id, [.. rows.Zip(plan, (r, p) => new Planned(r.Id, p.Payment.Provider, p.Payment.ProviderPaymentId!, p.Amount))], false));
+            return Result.Success(new Prepared(order.Id, [.. rows.Zip(plan, (r, p) => new Planned(r.Id, p.Payment.Provider, p.Payment.ProviderPaymentId!, p.Amount))], false, []));
         }, ct);
         if (prepared.IsFailure)
         {
             return prepared.Error;
         }
 
-        if (prepared.Value.Planned.Count == 0)
+        var ready = prepared.Value;
+        if (ready.Planned.Count == 0)
         {
-            return prepared.Value.AlreadySucceeded
-                ? await SnapshotAsync(prepared.Value.OrderId, ct)
-                : PaymentErrors.RefundFailed;
+            return await RetryAsync(ready, ct);
         }
 
         var outcomes = new List<(Planned Planned, GatewayRefundResult Result)>();
-        foreach (var planned in prepared.Value.Planned)
+        foreach (var planned in ready.Planned)
         {
-            var gateway = gateways.Find(planned.Provider);
-            outcomes.Add((planned, gateway is null
-                ? GatewayRefundResult.Failed("unknown provider")
-                : await gateway.RefundAsync(planned.ProviderPaymentId, planned.Amount.ToHalalas(), idempotencyKey, ct)));
+            outcomes.Add((planned, await CallGatewayAsync(planned, idempotencyKey)));
         }
 
         var applied = await uow.ExecuteInTransactionAsync(async t =>
         {
-            var order = (await orders.GetForUpdateAsync(prepared.Value.OrderId, t))!;
+            var order = (await orders.GetForUpdateAsync(ready.OrderId, t))!;
             var now = clock.UtcNow;
             var attempts = await payments.ForOrderAsync(order.Id, t);
             var anyFailed = false;
+            var anyPending = false;
             var refundedOnOrder = Money.Zero;
             Guid? lastRefund = null;
             foreach (var (planned, result) in outcomes)
             {
                 var refund = (await refunds.GetByIdAsync(planned.RefundId, t))!;
+                if (refund.Status != RefundStatus.Requested)
+                {
+                    lastRefund ??= refund.Status == RefundStatus.Succeeded ? refund.Id : null;   // a webhook confirmed it meanwhile
+                    continue;
+                }
+
+                if (result.Pending)
+                {
+                    anyPending = true;
+                    audit.Record(AuditActions.OrderRefundPending, "orders", order.Id.ToString(), staff, new { order.Reference, amount = planned.Amount.ToWire(), result.Error });
+                    continue;
+                }
+
                 if (!result.Ok)
                 {
                     refund.Fail(result.Error, now);
@@ -177,40 +212,63 @@ public sealed class FinanceOperations(IOrderRepository orders, IPaymentRepositor
                 refund.Succeed(result.ProviderRefundId, now);
                 var payment = attempts.First(p => p.Id == refund.PaymentId);
                 await payments.ReloadAsync(payment, t);
-                var doublePayment = payment.Status == PaymentStatus.Review && order.Status is OrderStatus.Paid or OrderStatus.Refunded;
-                payment.ApplyRefund(planned.Amount, now);
-                if (!doublePayment)
-                {
-                    var captured = attempts.Where(p => p.IsCaptured && (order.Status == OrderStatus.PaymentReview || p.Status != PaymentStatus.Review || p.Id == payment.Id))
-                        .Select(p => p.CapturedAmount).Sum();
-                    order.ApplyRefund(planned.Amount, captured, now).IsSuccess.ShouldHold();
-                    refundedOnOrder += planned.Amount;
-                }
-
+                refundedOnOrder += RefundBook.Apply(order, attempts, payment, planned.Amount, now);
                 lastRefund = refund.Id;
-                audit.Record(reviewOnlyAction(), "orders", order.Id.ToString(), staff, new { order.Reference, amount = planned.Amount.ToWire(), refund = refund.Id });
+                audit.Record(reviewOnly ? AuditActions.PaymentReviewRefunded : AuditActions.OrderRefunded, "orders", order.Id.ToString(), staff,
+                    new { order.Reference, amount = planned.Amount.ToWire(), refund = refund.Id });
             }
 
-            Guid? drcId = null;
-            if (order.Status == OrderStatus.Refunded && await receipts.DonationReceiptForOrderAsync(order.Id, t) is { VoidedByReceiptId: null } dr)
-            {
-                var year = clock.ToRiyadh(now).Year;
-                var drc = DonationReceipt.IssueCancellation(dr, year, await numbers.NextAsync(ReceiptSeries.Drc, year, t), dr.Amount, now);
-                receipts.Add(drc);
-                outbox.Enqueue(new ReceiptIssued(drc.Id, order.Id, drc.DisplayNumber));
-                drcId = drc.Id;
-            }
-
-            if (lastRefund is { } refundId && (refundedOnOrder.IsPositive || drcId is not null))
-            {
-                outbox.Enqueue(new RefundProcessed(order.Id, order.Reference, refundId, refundedOnOrder.ToWire(), order.Status == OrderStatus.Refunded, drcId));
-            }
-
-            return anyFailed && lastRefund is null ? Result.Failure<bool>(PaymentErrors.RefundFailed) : Result.Success(true);
+            await book.FinishAsync(order, lastRefund, refundedOnOrder, now, t);
+            return anyFailed && lastRefund is null && !anyPending ? Result.Failure<bool>(PaymentErrors.RefundFailed) : Result.Success(anyPending);
         }, commitOnFailure: true, ct);
-        return applied.IsFailure ? applied.Error : await SnapshotAsync(prepared.Value.OrderId, ct);
+        return applied.IsFailure ? applied.Error : await SnapshotAsync(ready.OrderId, applied.Value ? RefundPendingState : RefundSucceededState, ct);
+    }
 
-        string reviewOnlyAction() => reviewOnly ? AuditActions.PaymentReviewRefunded : AuditActions.OrderRefunded;
+    private async Task<GatewayRefundResult> CallGatewayAsync(Planned planned, string idempotencyKey)
+    {
+        if (gateways.Find(planned.Provider) is not { } gateway)
+        {
+            return GatewayRefundResult.Failed("unknown provider");
+        }
+
+        using var budget = new CancellationTokenSource(RefundCallTimeout);
+        try
+        {
+            return await gateway.RefundAsync(planned.ProviderPaymentId, planned.Amount.ToHalalas(), idempotencyKey, budget.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return GatewayRefundResult.Unknown("timeout");
+        }
+    }
+
+    /// The same key again: nothing is sent twice. Rows still `requested` are reconciled against the gateway first.
+    private async Task<Result<AdminPaymentActionResponse>> RetryAsync(Prepared ready, CancellationToken ct)
+    {
+        foreach (var paymentId in ready.Pending)
+        {
+            await reconciliation.ReconcileAsync(paymentId, ct);
+        }
+
+        if (ready.Pending.Count > 0)
+        {
+            var rows = (await refunds.ForOrderAsync(ready.OrderId, ct)).Where(r => ready.Pending.Contains(r.PaymentId)).ToList();
+            if (rows.Any(r => r.Status == RefundStatus.Requested))
+            {
+                return await SnapshotAsync(ready.OrderId, RefundPendingState, ct);
+            }
+
+            if (!rows.Any(r => r.Status == RefundStatus.Succeeded))
+            {
+                return PaymentErrors.RefundFailed;
+            }
+        }
+        else if (!ready.AlreadySucceeded)
+        {
+            return PaymentErrors.RefundFailed;
+        }
+
+        return await SnapshotAsync(ready.OrderId, RefundSucceededState, ct);
     }
 
     public async Task<Result<AdminPaymentActionResponse>> AcceptReviewAsync(string reference, uint version, CancellationToken ct)
@@ -229,6 +287,14 @@ public sealed class FinanceOperations(IOrderRepository orders, IPaymentRepositor
                 return Result.Failure<Guid>(GeneralErrors.ConcurrencyConflict);
             }
 
+            var attempts = await payments.ForOrderAsync(order.Id, t);
+            var kept = attempts.Where(p => p.IsCaptured).Select(p => p.CapturedAmount - p.RefundedAmount).Sum();
+            if (order.Status == OrderStatus.PaymentReview && kept < order.TotalAmount)
+            {
+                // P-9 (REVIEW): a DR may not state more than the gateway kept; finance refunds the review instead.
+                return Result.Failure<Guid>(PaymentErrors.ReviewPartial(kept, order.TotalAmount));
+            }
+
             var now = clock.UtcNow;
             var result = order.AcceptReview(now);
             if (result.IsFailure)
@@ -236,7 +302,7 @@ public sealed class FinanceOperations(IOrderRepository orders, IPaymentRepositor
                 return Result.Failure<Guid>(result.Error);
             }
 
-            foreach (var payment in (await payments.ForOrderAsync(order.Id, t)).Where(p => p.Status == PaymentStatus.Review))
+            foreach (var payment in attempts.Where(p => p.Status == PaymentStatus.Review))
             {
                 payment.AcceptReview(now);
             }
@@ -250,15 +316,18 @@ public sealed class FinanceOperations(IOrderRepository orders, IPaymentRepositor
         return accepted.IsFailure ? accepted.Error : await SnapshotAsync(accepted.Value, ct);
     }
 
-    private async Task<Result<AdminPaymentActionResponse>> SnapshotAsync(Guid orderId, CancellationToken ct)
+    private async Task<Result<AdminPaymentActionResponse>> SnapshotAsync(Guid orderId, CancellationToken ct) => await SnapshotAsync(orderId, null, ct);
+
+    private async Task<Result<AdminPaymentActionResponse>> SnapshotAsync(Guid orderId, string? refund, CancellationToken ct)
     {
         var order = (await orders.GetByIdAsync(orderId, ct))!;
         var receipt = await receipts.DonationReceiptForOrderAsync(orderId, ct);
         return new AdminPaymentActionResponse(order.Reference, order.Status.ToWire(), order.TotalAmount.ToWire(), order.RefundedAmount.ToWire(),
-            order.Version, receipt?.DisplayNumber);
+            order.Version, receipt?.DisplayNumber, refund);
     }
 
     private sealed record Planned(Guid RefundId, string Provider, string ProviderPaymentId, Money Amount);
 
-    private sealed record Prepared(Guid OrderId, IReadOnlyList<Planned> Planned, bool AlreadySucceeded);
+    /// `Pending` = payments whose refund with this key is still `requested` (a retry reconciles them).
+    private sealed record Prepared(Guid OrderId, IReadOnlyList<Planned> Planned, bool AlreadySucceeded, IReadOnlyList<Guid> Pending);
 }

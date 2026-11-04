@@ -122,6 +122,16 @@ public sealed class Payment : AggregateRoot
         UpdatedAt = now;
     }
 
+    /// The gateway voided a payment we had taken as captured (review 04 A-1): nothing is left to refund; finance reviews.
+    public void MarkVoidedAfterCapture(DateTimeOffset now)
+    {
+        Guard.Against(!IsCaptured, "payment.not_captured");
+        RefundedAmount = CapturedAmount;
+        Status = PaymentStatus.Review;
+        ReviewReason = PaymentReviewReason.VoidedAfterCapture;
+        UpdatedAt = now;
+    }
+
     /// Finance accepted the reviewed payment.
     public void AcceptReview(DateTimeOffset now)
     {

@@ -65,6 +65,7 @@ public static class DependencyInjection
             q.AddStoreJob<IntegrityChecksJob>(IntegrityChecksJob.Cron);
             q.AddStoreJob<ReconcilePaymentsJob>(ReconcilePaymentsJob.Cron);
             q.AddStoreJob<ExpireUnpaidOrdersJob>(ExpireUnpaidOrdersJob.Cron);
+            q.AddStoreJob<ReconcileRefundsJob>(ReconcileRefundsJob.Cron);
         });
         services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
         services.AddScoped<JobRuns>();

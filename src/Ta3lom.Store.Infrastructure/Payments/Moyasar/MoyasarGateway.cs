@@ -34,8 +34,11 @@ internal sealed partial class MoyasarGateway(HttpClient http, IOptions<PaymentOp
 
     public async Task<HostedPaymentResult> CreateHostedPaymentAsync(HostedPaymentRequest request, CancellationToken ct = default)
     {
+        // Review 04 A-4/P-5: the page expires with the order (`expired_at` = paymentDueAt) and carries our ids, so a payment
+        // found on the dashboard can always be traced back to its order and attempt.
         var body = new CreateInvoice(request.AmountHalalas, "SAR", request.Description, request.ReturnUrl, request.ReturnUrl,
-            request.ExpiresAt.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture));
+            request.ExpiresAt.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture),
+            new InvoiceMetadata(request.OrderReference, request.PaymentId.ToString()));
         try
         {
             using var message = Request(HttpMethod.Post, "invoices");
@@ -74,7 +77,8 @@ internal sealed partial class MoyasarGateway(HttpClient http, IOptions<PaymentOp
     public async Task<GatewayRefundResult> RefundAsync(string providerPaymentId, long amountHalalas, string idempotencyKey, CancellationToken ct = default)
     {
         // Moyasar documents no refund idempotency: the `refund` row (requested before this call, unique per Idempotency-Key)
-        // and the order row lock keep a refund from being sent twice.
+        // and the order row lock keep a refund from being sent twice. Review 04 P-3: only a 4xx is a definite refusal; a
+        // 5xx, a timeout or a dropped connection may have refunded — `Unknown`, settled later from the payment's `refunded`.
         try
         {
             using var message = Request(HttpMethod.Post, $"payments/{Uri.EscapeDataString(providerPaymentId)}/refund");
@@ -84,16 +88,23 @@ internal sealed partial class MoyasarGateway(HttpClient http, IOptions<PaymentOp
             {
                 var error = await ReadErrorAsync(response, ct);
                 LogRefused(logger, "refund", (int)response.StatusCode, providerPaymentId);
-                return GatewayRefundResult.Failed(error);
+                return (int)response.StatusCode >= 500 ? GatewayRefundResult.Unknown(error) : GatewayRefundResult.Failed(error);
             }
 
-            var payment = await response.Content.ReadFromJsonAsync<MoyasarPayment>(Json, ct);
-            return GatewayRefundResult.Succeeded(payment?.Id);
+            try
+            {
+                var payment = await response.Content.ReadFromJsonAsync<MoyasarPayment>(Json, ct);
+                return GatewayRefundResult.Succeeded(payment?.Id);
+            }
+            catch (JsonException)
+            {
+                return GatewayRefundResult.Succeeded(null);                  // 2xx: refunded, whatever the body
+            }
         }
-        catch (Exception ex) when (IsTransport(ex, ct))
+        catch (Exception ex) when (IsTransport(ex, ct) || ex is OperationCanceledException)
         {
             LogUnreachable(logger, "refund", ex.GetType().Name);
-            return GatewayRefundResult.Failed(ex.GetType().Name);
+            return GatewayRefundResult.Unknown(ex.GetType().Name);
         }
     }
 
@@ -164,7 +175,8 @@ internal sealed partial class MoyasarGateway(HttpClient http, IOptions<PaymentOp
             _ => PaymentMethod.Unknown,
         };
         var failed = status is GatewayPaymentStatus.Failed or GatewayPaymentStatus.Voided;
-        return new GatewayPayment(p.Id, p.InvoiceId, status, p.Amount, captured, p.Refunded, p.Currency ?? "SAR", method,
+        // S-2: a missing currency stays missing (settlement treats it as a mismatch, never as SAR).
+        return new GatewayPayment(p.Id, p.InvoiceId, status, p.Amount, captured, p.Refunded, string.IsNullOrWhiteSpace(p.Currency) ? null : p.Currency, method,
             failed ? p.Status : null, failed ? p.Source?.Message : null, p.Live ?? false);
     }
 
@@ -240,7 +252,10 @@ internal sealed partial class MoyasarGateway(HttpClient http, IOptions<PaymentOp
     [LoggerMessage(Level = LogLevel.Warning, Message = "Moyasar unreachable during {Operation}: {Error}")]
     private static partial void LogUnreachable(ILogger logger, string operation, string error);
 
-    private sealed record CreateInvoice(long Amount, string Currency, string Description, string SuccessUrl, string BackUrl, string ExpiredAt);
+    private sealed record CreateInvoice(long Amount, string Currency, string Description, string SuccessUrl, string BackUrl, string ExpiredAt,
+        InvoiceMetadata Metadata);
+
+    private sealed record InvoiceMetadata(string OrderRef, string PaymentId);
 
     private sealed record RefundBody(long Amount);
 

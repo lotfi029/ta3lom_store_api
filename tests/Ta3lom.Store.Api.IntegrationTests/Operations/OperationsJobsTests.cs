@@ -13,7 +13,7 @@ public sealed class OperationsJobsTests(StoreApiFactory factory) : IClassFixture
     [Fact]
     public void Every_maintenance_job_is_scheduled() =>
         factory.Services.GetRequiredService<IJobRunner>().Jobs.Keys.ShouldBe(
-            ["PruneOtpJob", "PruneIdempotencyKeysJob", "ExpireGuestCartsJob", "RetentionJob", "IntegrityChecksJob", "ReconcilePaymentsJob", "ExpireUnpaidOrdersJob"], ignoreOrder: true);
+            ["PruneOtpJob", "PruneIdempotencyKeysJob", "ExpireGuestCartsJob", "RetentionJob", "IntegrityChecksJob", "ReconcilePaymentsJob", "ExpireUnpaidOrdersJob", "ReconcileRefundsJob"], ignoreOrder: true);
 
     [Fact]
     public void Every_job_command_has_a_handler()
@@ -26,6 +26,7 @@ public sealed class OperationsJobsTests(StoreApiFactory factory) : IClassFixture
         sp.GetRequiredService<ICommandHandler<ExpireGuestCartsCommand, int>>().ShouldNotBeNull();
         sp.GetRequiredService<ICommandHandler<RetentionCommand, int>>().ShouldNotBeNull();
         sp.GetRequiredService<ICommandHandler<IntegrityChecksCommand, int>>().ShouldNotBeNull();
+        sp.GetRequiredService<ICommandHandler<Application.Features.Payments.ReconcileRefundsCommand, int>>().ShouldNotBeNull();
     }
 
     [Fact]

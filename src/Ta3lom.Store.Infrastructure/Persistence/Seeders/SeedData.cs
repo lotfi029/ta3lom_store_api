@@ -22,6 +22,7 @@ internal static class SeedData
         ("receipt_vat_note_ar", "\"لا تخضع لضريبة القيمة المضافة\""),
         ("receipt_vat_note_en", "\"Not subject to VAT\""),
         ("receipt_signature_asset_id", "null"),
+        ("refund_pending_timeout_minutes", "30"),
     ];
 
     /// Message templates (Scriban). The final wording is approved by the owner before launch.

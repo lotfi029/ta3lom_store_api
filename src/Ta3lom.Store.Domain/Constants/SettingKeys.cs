@@ -21,7 +21,10 @@ public static class SettingKeys
     public const string ReceiptVatNoteEn = "receipt_vat_note_en";
     public const string ReceiptSignatureAssetId = "receipt_signature_asset_id";
 
+    /// Minutes a refund may wait for the gateway's answer before the reconciliation fails it (review 04 A-6).
+    public const string RefundPendingTimeoutMinutes = "refund_pending_timeout_minutes";
+
     public static IReadOnlyList<string> All { get; } =
         [MinGiftAmount, MaxLineAmount, CartMaxLines, CartMaxTotal, PaymentWindowMinutes, AmountPresets, SiteNameAr, SiteNameEn, SupportMobile,
-         ReceiptOrgNameAr, ReceiptOrgNameEn, ReceiptLicenceNo, ReceiptVatNoteAr, ReceiptVatNoteEn, ReceiptSignatureAssetId];
+         ReceiptOrgNameAr, ReceiptOrgNameEn, ReceiptLicenceNo, ReceiptVatNoteAr, ReceiptVatNoteEn, ReceiptSignatureAssetId, RefundPendingTimeoutMinutes];
 }

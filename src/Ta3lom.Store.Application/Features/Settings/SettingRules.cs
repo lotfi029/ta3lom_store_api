@@ -19,6 +19,7 @@ internal static partial class SettingRules
     {
         [SettingKeys.CartMaxLines] = (1, 50),
         [SettingKeys.PaymentWindowMinutes] = (5, 1440),
+        [SettingKeys.RefundPendingTimeoutMinutes] = (5, 1440),
     };
 
     /// numeric(12,2) and within the D-03 / D-04 ceiling of 100,000.

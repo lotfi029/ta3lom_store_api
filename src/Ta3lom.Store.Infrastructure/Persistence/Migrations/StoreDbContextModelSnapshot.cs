@@ -628,7 +628,7 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("ck_orders_refunded", "refunded_amount >= 0");
 
-                            t.HasCheckConstraint("ck_orders_review_reason", "review_reason IS NULL OR review_reason IN ('amount_mismatch', 'late_capture', 'double_payment')");
+                            t.HasCheckConstraint("ck_orders_review_reason", "review_reason IS NULL OR review_reason IN ('amount_mismatch', 'late_capture', 'double_payment', 'external_refund', 'voided_after_capture')");
 
                             t.HasCheckConstraint("ck_orders_status", "status IN ('pending_payment', 'paid', 'payment_review', 'cancelled', 'expired', 'refunded')");
 
@@ -1454,7 +1454,7 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("ck_payment_method", "method IN ('unknown', 'mada', 'creditcard', 'applepay', 'stcpay')");
 
-                            t.HasCheckConstraint("ck_payment_review_reason", "review_reason IS NULL OR review_reason IN ('amount_mismatch', 'late_capture', 'double_payment')");
+                            t.HasCheckConstraint("ck_payment_review_reason", "review_reason IS NULL OR review_reason IN ('amount_mismatch', 'late_capture', 'double_payment', 'external_refund', 'voided_after_capture')");
 
                             t.HasCheckConstraint("ck_payment_status", "status IN ('initiated', 'captured', 'failed', 'cancelled', 'review', 'refunded')");
                         });
@@ -1465,6 +1465,19 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("ClaimedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("claimed_at");
+
+                    b.Property<decimal?>("GatewayAmount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("gateway_amount");
+
+                    b.Property<string>("GatewayCurrency")
+                        .HasColumnType("text")
+                        .HasColumnName("gateway_currency");
 
                     b.Property<string>("Outcome")
                         .HasColumnType("text")
@@ -1493,6 +1506,10 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("provider_event_id");
 
+                    b.Property<string>("ProviderInvoiceId")
+                        .HasColumnType("text")
+                        .HasColumnName("provider_invoice_id");
+
                     b.Property<string>("ProviderPaymentId")
                         .HasColumnType("text")
                         .HasColumnName("provider_payment_id");
@@ -1500,6 +1517,18 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("ReceivedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("received_at");
+
+                    b.Property<string>("ResolutionNote")
+                        .HasColumnType("text")
+                        .HasColumnName("resolution_note");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolved_at");
+
+                    b.Property<string>("ResolvedBy")
+                        .HasColumnType("citext")
+                        .HasColumnName("resolved_by");
 
                     b.Property<bool>("SignatureValid")
                         .HasColumnType("boolean")
@@ -1512,6 +1541,10 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_payment_event");
+
+                    b.HasIndex("Outcome")
+                        .HasDatabaseName("ix_payment_event_orphan")
+                        .HasFilter("outcome = 'orphan'");
 
                     b.HasIndex("PaymentId")
                         .HasDatabaseName("ix_payment_event_payment");
@@ -1574,6 +1607,13 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                         .HasColumnType("citext")
                         .HasColumnName("requested_by");
 
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasColumnName("source")
+                        .HasDefaultValueSql("'store'");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text")
@@ -1585,13 +1625,15 @@ namespace Ta3lom.Store.Infrastructure.Persistence.Migrations
                     b.HasIndex("PaymentId")
                         .HasDatabaseName("ix_refund_payment");
 
-                    b.HasIndex("OrderId", "IdempotencyKey")
+                    b.HasIndex("OrderId", "RequestedBy", "IdempotencyKey")
                         .IsUnique()
                         .HasDatabaseName("ux_refund_idempotency");
 
                     b.ToTable("refund", "store", t =>
                         {
                             t.HasCheckConstraint("ck_refund_amount", "amount > 0");
+
+                            t.HasCheckConstraint("ck_refund_source", "source IN ('store', 'gateway')");
 
                             t.HasCheckConstraint("ck_refund_status", "status IN ('requested', 'succeeded', 'failed')");
                         });

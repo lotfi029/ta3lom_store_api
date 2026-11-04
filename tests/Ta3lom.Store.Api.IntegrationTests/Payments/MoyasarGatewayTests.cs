@@ -49,7 +49,9 @@ public sealed class MoyasarGatewayTests
         body.RootElement.GetProperty("success_url").GetString()!.ShouldContain("/ar/orders/T3-26-000001");
         body.RootElement.GetProperty("back_url").GetString()!.ShouldContain("/ar/orders/T3-26-000001");
         body.RootElement.GetProperty("expired_at").GetString().ShouldBe("2026-11-04T10:00:00.000Z");
-        body.RootElement.TryGetProperty("metadata", out _).ShouldBeFalse();
+        // Review 04 P-5: every page carries our ids.
+        body.RootElement.GetProperty("metadata").GetProperty("order_ref").GetString().ShouldBe("T3-26-000001");
+        Guid.TryParse(body.RootElement.GetProperty("metadata").GetProperty("payment_id").GetString(), out _).ShouldBeTrue();
     }
 
     [Theory]
@@ -104,13 +106,51 @@ public sealed class MoyasarGatewayTests
         }
     }
 
-    [Fact]
-    public async Task A_partially_refunded_paid_payment_stays_captured()
+    /// Review 04 A-2 (replaces "a partially refunded paid payment stays captured", which let settlement ignore the
+    /// refunded part): the payment is still captured and carries what the gateway refunded, so settlement imports it.
+    [Theory]
+    [InlineData("paid", 10000, GatewayPaymentStatus.Captured)]
+    [InlineData("paid", 35000, GatewayPaymentStatus.Refunded)]
+    [InlineData("refunded", 35000, GatewayPaymentStatus.Refunded)]
+    public async Task A_refunded_amount_is_always_carried_for_settlement_to_import(string status, long refunded, GatewayPaymentStatus expected)
     {
-        var (gateway, _) = Make(Json(HttpStatusCode.OK, MoyasarFixtures.Payment("paid", refunded: 10000)));
+        var (gateway, _) = Make(Json(HttpStatusCode.OK, MoyasarFixtures.Payment(status, refunded: refunded)));
         var payment = (await gateway.GetPaymentAsync(MoyasarFixtures.PaymentId, TestContext.Current.CancellationToken))!;
-        payment.Status.ShouldBe(GatewayPaymentStatus.Captured);
-        payment.RefundedHalalas.ShouldBe(10000);
+        payment.Status.ShouldBe(expected);
+        payment.CapturedHalalas.ShouldBe(35000);
+        payment.RefundedHalalas.ShouldBe(refunded);
+    }
+
+    [Fact]
+    public async Task S2_a_payment_without_a_currency_has_none_never_SAR()
+    {
+        var (gateway, _) = Make(Json(HttpStatusCode.OK, MoyasarFixtures.Payment("paid").Replace("\"currency\":\"SAR\",", "", StringComparison.Ordinal)));
+        (await gateway.GetPaymentAsync(MoyasarFixtures.PaymentId, TestContext.Current.CancellationToken))!.Currency.ShouldBeNull();
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.InternalServerError)]
+    [InlineData(HttpStatusCode.BadGateway)]
+    [InlineData(HttpStatusCode.GatewayTimeout)]
+    public async Task P3_a_refund_answered_5xx_is_unknown_not_failed(HttpStatusCode code)
+    {
+        var (gateway, handler) = Make(Json(code, "{}"));
+        var result = await gateway.RefundAsync(MoyasarFixtures.PaymentId, 100, "key-1", TestContext.Current.CancellationToken);
+        result.Ok.ShouldBeFalse();
+        result.Pending.ShouldBeTrue();
+        handler.Requests.Count.ShouldBe(1);                     // writes are never retried
+    }
+
+    [Fact]
+    public async Task P3_a_refund_whose_connection_drops_or_times_out_is_unknown_not_failed()
+    {
+        var (dropped, _) = Make(_ => throw new HttpRequestException("reset"));
+        (await dropped.RefundAsync(MoyasarFixtures.PaymentId, 100, "key-1", TestContext.Current.CancellationToken)).Pending.ShouldBeTrue();
+
+        var (slow, _) = Make(_ => throw new TaskCanceledException("timeout"));
+        using var budget = new CancellationTokenSource();
+        await budget.CancelAsync();
+        (await slow.RefundAsync(MoyasarFixtures.PaymentId, 100, "key-2", budget.Token)).Pending.ShouldBeTrue();
     }
 
     [Fact]
@@ -154,6 +194,7 @@ public sealed class MoyasarGatewayTests
         var (refused, refusedHandler) = Make(Json(HttpStatusCode.BadRequest, """{"type":"invalid_request","message":"Amount exceeds"}"""));
         var failed = await refused.RefundAsync(MoyasarFixtures.PaymentId, 1, "key-2", TestContext.Current.CancellationToken);
         failed.Ok.ShouldBeFalse();
+        failed.Pending.ShouldBeFalse();                         // a 4xx is a definite refusal
         failed.Error.ShouldBe("Amount exceeds");
         refusedHandler.Requests.Count.ShouldBe(1);
     }

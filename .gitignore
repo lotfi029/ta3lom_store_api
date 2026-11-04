@@ -17,3 +17,4 @@ deploy/secrets/
 deploy/.env
 deploy/.env.production
 deploy/.env.staging
+coverage/
