@@ -4,10 +4,14 @@ using Ta3lom.Store.Domain.Entities.Payments;
 
 namespace Ta3lom.Store.Application.Features.Payments;
 
-/// Opens a payment attempt on the gateway's hosted page (ADR-S05, plan §3.3). Three steps, the gateway call OUTSIDE any
-/// transaction: (1) under the order lock, decide the attempt (reuse the open one, or create attempt n+1 and cancel the
-/// previous open one); (2) call the gateway; (3) store the hosted page on the attempt. A gateway failure leaves the order
-/// `pending_payment` with an open attempt without a page — the next call (checkout replay A-1, `/pay`) tries again.
+/// Opens a payment attempt on the gateway's hosted page (ADR-S05, plan §3.3, review 04 A-4). Three steps, the gateway call
+/// OUTSIDE any transaction: (1) under the order lock, decide the attempt (reuse the open one, or create attempt n+1 and
+/// cancel the previous open one); (2) call the gateway — every page expires at the order's `paymentDueAt`; (3) under the
+/// order lock again, store the page on the attempt ONLY when it has none: a concurrent request that attached first wins,
+/// and this request's new page is cancelled and the stored one returned — one live page per attempt. Pages of replaced
+/// or failed attempts are cancelled at the gateway (best effort; they also expire at `paymentDueAt`). A gateway failure
+/// leaves the order `pending_payment` with an open attempt without a page — the next call (checkout replay A-1, `/pay`)
+/// tries again.
 public sealed class PaymentStarter(IOrderRepository orders, IPaymentRepository payments, IPaymentGatewayRegistry gateways,
     IOrderStatusTokens statusTokens, IWebLinks links, IUnitOfWork uow, IClock clock)
 {
@@ -27,9 +31,12 @@ public sealed class PaymentStarter(IOrderRepository orders, IPaymentRepository p
             return ready;
         }
 
-        if (d.CancelInvoice is { } old)
+        foreach (var (provider, old) in d.Cancel)
         {
-            await gateways.Find(d.CancelProvider!)!.CancelHostedPaymentAsync(old, ct);   // best effort
+            if (gateways.Find(provider) is { } previous)
+            {
+                await previous.CancelHostedPaymentAsync(old, ct);                     // best effort
+            }
         }
 
         var token = statusTokens.Create(d.Reference).Token;
@@ -40,17 +47,37 @@ public sealed class PaymentStarter(IOrderRepository orders, IPaymentRepository p
             return PaymentErrors.GatewayUnavailable;
         }
 
+        var stale = false;
         var attached = await uow.ExecuteInTransactionAsync(async t =>
         {
+            stale = false;
+            await orders.GetForUpdateAsync(orderId, t);                              // serialised with every other /pay
             var payment = await payments.GetByIdAsync(d.PaymentId, t);
+            if (payment is not null)
+            {
+                await payments.ReloadAsync(payment, t);
+            }
+
             if (payment is not { IsOpen: true })
             {
+                stale = true;
                 return Result.Failure<CheckoutPayment>(PaymentErrors.NotPayable(OrderStatus.PendingPayment));
+            }
+
+            if (payment.ProviderInvoiceId is not null)
+            {
+                stale = true;                                                        // another request attached its page first
+                return Result.Success(new CheckoutPayment(payment.RedirectUrl!, payment.RedirectExpiresAt));
             }
 
             payment.AttachHostedPage(created.ProviderInvoiceId!, created.RedirectUrl!, created.ExpiresAt, clock.UtcNow);
             return Result.Success(new CheckoutPayment(created.RedirectUrl!, created.ExpiresAt));
         }, ct);
+        if (stale)
+        {
+            await gateway.CancelHostedPaymentAsync(created.ProviderInvoiceId!, ct);
+        }
+
         return attached;
     }
 
@@ -73,18 +100,21 @@ public sealed class PaymentStarter(IOrderRepository orders, IPaymentRepository p
         if (open is not null && open.Provider == provider && (open.RedirectUrl is null || !newAttempt))
         {
             return open.RedirectUrl is { } url
-                ? new Decision(open.Id, order.Reference, order.Locale, Halalas(order), order.PaymentDueAt, new CheckoutPayment(url, open.RedirectExpiresAt), null, null)
-                : new Decision(open.Id, order.Reference, order.Locale, Halalas(order), order.PaymentDueAt, null, null, null);
+                ? new Decision(open.Id, order.Reference, order.Locale, Halalas(order), order.PaymentDueAt, new CheckoutPayment(url, open.RedirectExpiresAt), [])
+                : new Decision(open.Id, order.Reference, order.Locale, Halalas(order), order.PaymentDueAt, null, []);
         }
 
         open?.Cancel(now);
+        // P-6: the page of the replaced attempt, and of failed ones — a failed payment leaves its page payable.
+        var cancel = attempts.Where(p => (p == open || p.Status == PaymentStatus.Failed) && p.ProviderInvoiceId is not null)
+            .Select(p => (p.Provider, p.ProviderInvoiceId!)).Distinct().ToList();
         var attempt = Payment.Start(order.Id, attempts.Count == 0 ? 1 : attempts.Max(p => p.AttemptNo) + 1, provider, order.TotalAmount, now);
         payments.Add(attempt);
-        return new Decision(attempt.Id, order.Reference, order.Locale, Halalas(order), order.PaymentDueAt, null, open?.ProviderInvoiceId, open?.Provider);
+        return new Decision(attempt.Id, order.Reference, order.Locale, Halalas(order), order.PaymentDueAt, null, cancel);
     }
 
     private static long Halalas(Order order) => order.TotalAmount.ToHalalas();
 
     private sealed record Decision(Guid PaymentId, string Reference, string Locale, long AmountHalalas, DateTimeOffset DueAt,
-        CheckoutPayment? Existing, string? CancelInvoice, string? CancelProvider);
+        CheckoutPayment? Existing, IReadOnlyList<(string Provider, string Invoice)> Cancel);
 }

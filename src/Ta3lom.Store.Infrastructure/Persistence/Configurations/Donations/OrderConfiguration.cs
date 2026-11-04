@@ -16,7 +16,7 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         {
             t.HasCheckConstraint("ck_orders_status", "status IN ('pending_payment', 'paid', 'payment_review', 'cancelled', 'expired', 'refunded')");
             t.HasCheckConstraint("ck_orders_refunded", "refunded_amount >= 0");
-            t.HasCheckConstraint("ck_orders_review_reason", "review_reason IS NULL OR review_reason IN ('amount_mismatch', 'late_capture', 'double_payment')");
+            t.HasCheckConstraint("ck_orders_review_reason", "review_reason IS NULL OR review_reason IN ('amount_mismatch', 'late_capture', 'double_payment', 'external_refund', 'voided_after_capture')");
             t.HasCheckConstraint("ck_orders_locale", "locale IN ('ar', 'en')");
             t.HasCheckConstraint("ck_orders_reference", "reference ~ '^T3-[0-9]{2}-[0-9]{6,}$'");
             t.HasCheckConstraint("ck_orders_total", "total_amount > 0 AND line_count > 0");

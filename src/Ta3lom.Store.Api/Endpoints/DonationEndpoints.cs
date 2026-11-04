@@ -21,7 +21,7 @@ internal sealed class DonationEndpoints : IEndpoint
         var cart = app.MapGroup("/cart").WithTags("Cart").RequireAuthorization(Policies.CustomerOptional)
             .RequireRateLimiting(RatePolicies.Cart).RequireSameOrigin().ProducesProblem(StatusCodes.Status401Unauthorized);
         cart.MapGet("/", GetCartAsync).Produces<CartResponse>();
-        cart.MapGet("/summary", GetSummaryAsync).Produces<CartSummaryResponse>();
+        cart.MapGet("/summary", GetSummaryAsync).Produces<CartSummaryResponse>().RequireCors(CorsSetup.BadgePolicy);   // S-15: the main site's badge
         cart.MapPost("/lines", AddLineAsync).Produces<CartResponse>()
             .ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status403Forbidden).ProducesProblem(StatusCodes.Status422UnprocessableEntity);
         cart.MapPatch("/lines/{id:guid}", UpdateLineAsync).Produces<CartResponse>()

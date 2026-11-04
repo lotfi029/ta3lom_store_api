@@ -18,7 +18,7 @@ internal sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
             t.HasCheckConstraint("ck_payment_amounts", "amount > 0 AND captured_amount >= 0 AND refunded_amount >= 0 AND refunded_amount <= captured_amount");
             t.HasCheckConstraint("ck_payment_attempt", "attempt_no >= 1");
             t.HasCheckConstraint("ck_payment_currency", "currency = 'SAR'");
-            t.HasCheckConstraint("ck_payment_review_reason", "review_reason IS NULL OR review_reason IN ('amount_mismatch', 'late_capture', 'double_payment')");
+            t.HasCheckConstraint("ck_payment_review_reason", "review_reason IS NULL OR review_reason IN ('amount_mismatch', 'late_capture', 'double_payment', 'external_refund', 'voided_after_capture')");
         });
         e.HasKey(x => x.Id).HasName("pk_payment");
         e.Property(x => x.Id).ValueGeneratedNever();
@@ -58,7 +58,12 @@ internal sealed class PaymentEventConfiguration : IEntityTypeConfiguration<Payme
         e.Property(x => x.ProviderPaymentId).HasColumnType("text");
         e.Property(x => x.Outcome).HasColumnType("text");
         e.Property(x => x.PayloadJson).HasColumnType("jsonb").IsRequired();
+        e.Property(x => x.ProviderInvoiceId).HasColumnType("text");
+        e.Property(x => x.GatewayCurrency).HasColumnType("text");
+        e.Property(x => x.ResolvedBy).HasColumnType("citext");
+        e.Property(x => x.ResolutionNote).HasColumnType("text");
         e.HasIndex(x => new { x.Provider, x.ProviderEventId }).IsUnique().HasDatabaseName("ux_payment_event_provider");
+        e.HasIndex(x => x.Outcome).HasFilter("outcome = 'orphan'").HasDatabaseName("ix_payment_event_orphan");
         e.HasIndex(x => x.PaymentId).HasDatabaseName("ix_payment_event_payment");
         e.HasOne<Payment>().WithMany().HasForeignKey(x => x.PaymentId).HasConstraintName("fk_payment_event_payment").OnDelete(DeleteBehavior.Restrict);
     }
@@ -73,6 +78,7 @@ internal sealed class RefundConfiguration : IEntityTypeConfiguration<Refund>
         {
             t.HasCheckConstraint("ck_refund_status", "status IN ('requested', 'succeeded', 'failed')");
             t.HasCheckConstraint("ck_refund_amount", "amount > 0");
+            t.HasCheckConstraint("ck_refund_source", "source IN ('store', 'gateway')");
         });
         e.HasKey(x => x.Id).HasName("pk_refund");
         e.Property(x => x.Id).ValueGeneratedNever();
@@ -83,7 +89,10 @@ internal sealed class RefundConfiguration : IEntityTypeConfiguration<Refund>
         e.Property(x => x.FailureMessage).HasColumnType("text");
         e.Property(x => x.RequestedBy).HasColumnType("citext").IsRequired();
         e.Property(x => x.IdempotencyKey).HasColumnType("text").HasMaxLength(64).IsRequired();
-        e.HasIndex(x => new { x.OrderId, x.IdempotencyKey }).IsUnique().HasDatabaseName("ux_refund_idempotency");
+        // The default fills existing rows (migration); the sentinel makes EF always send the value, so no model warning.
+        e.Property(x => x.Source).HasColumnType("text").IsRequired().HasDefaultValueSql("'store'").HasSentinel((Domain.Enums.RefundSource)(-1));
+        // S-13: the key is the staff member's own (the Idempotency-Key filter scope is `refund:{sub}` too).
+        e.HasIndex(x => new { x.OrderId, x.RequestedBy, x.IdempotencyKey }).IsUnique().HasDatabaseName("ux_refund_idempotency");
         e.HasIndex(x => x.PaymentId).HasDatabaseName("ix_refund_payment");
         e.HasOne<Order>().WithMany().HasForeignKey(x => x.OrderId).HasConstraintName("fk_refund_order").OnDelete(DeleteBehavior.Restrict);
         e.HasOne<Payment>().WithMany().HasForeignKey(x => x.PaymentId).HasConstraintName("fk_refund_payment").OnDelete(DeleteBehavior.Restrict);

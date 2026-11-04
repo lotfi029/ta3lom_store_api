@@ -35,6 +35,11 @@ public sealed class Refund : Entity
 
     public string IdempotencyKey { get; private set; } = null!;
 
+    public RefundSource Source { get; private set; }
+
+    /// The staff member (or "moyasar" for an imported gateway refund) recorded on an imported refund.
+    public const string GatewayActor = "moyasar";
+
     public static Refund Request(Guid orderId, Guid paymentId, Money amount, string reason, string requestedBy,
         string idempotencyKey, DateTimeOffset now)
     {
@@ -50,6 +55,27 @@ public sealed class Refund : Entity
             RequestedBy = Guard.NotEmpty(requestedBy),
             IdempotencyKey = Guard.NotEmpty(idempotencyKey),
             RequestedAt = now,
+            Source = RefundSource.Store,
+        };
+    }
+
+    /// A refund made outside the store (the gateway's dashboard), seen on a re-fetched payment (review 04 A-2): recorded
+    /// as already succeeded, so the order's amounts, DRC and donor messages follow the same path as our own refunds.
+    public static Refund Import(Guid orderId, Guid paymentId, Money amount, DateTimeOffset now)
+    {
+        Guard.Against(!amount.IsPositive, "refund.amount_positive");
+        return new(Guid.CreateVersion7())
+        {
+            OrderId = Guard.NotEmpty(orderId),
+            PaymentId = Guard.NotEmpty(paymentId),
+            Amount = amount,
+            Reason = "refund made outside the store",
+            Status = RefundStatus.Succeeded,
+            RequestedBy = GatewayActor,
+            IdempotencyKey = $"gateway:{Guid.CreateVersion7():N}",
+            RequestedAt = now,
+            CompletedAt = now,
+            Source = RefundSource.Gateway,
         };
     }
 

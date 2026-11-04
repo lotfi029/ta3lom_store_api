@@ -40,8 +40,10 @@ internal sealed class AdminOpsEndpoints : IEndpoint
             .Produces<AdminOrderRow>().ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict);
 
         // R5-Payments (plan §4): refunds and payment review — finance only, idempotent, audited.
-        orders.MapPost("/{reference}/refunds", RefundAsync).RequireAuthorization(Policies.StaffFinance).RequireIdempotencyKey("refund")
-            .Produces<AdminPaymentActionResponse>().ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status404NotFound)
+        // Review 04 P-3: 202 `refund: "pending"` when the gateway gave no definite answer — not kept for replay, so the same
+        // key retries (and reconciles) instead of replaying "pending" forever.
+        orders.MapPost("/{reference}/refunds", RefundAsync).RequireAuthorization(Policies.StaffFinance).RequireIdempotencyKey("refund", PendingRefundShaper.Instance)
+            .Produces<AdminPaymentActionResponse>().Produces<AdminPaymentActionResponse>(StatusCodes.Status202Accepted).ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status422UnprocessableEntity).ProducesProblem(StatusCodes.Status502BadGateway);
         orders.MapPost("/{reference}/review/accept", AcceptReviewAsync).RequireAuthorization(Policies.StaffFinance)
             .Produces<AdminPaymentActionResponse>().ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict);
@@ -50,9 +52,15 @@ internal sealed class AdminOpsEndpoints : IEndpoint
 
         admin.MapGet("/reports/donations.csv", DonationsCsvAsync).WithTags("Admin · Reports").RequireAuthorization(Policies.StaffFinance)
             .Produces(StatusCodes.Status200OK, contentType: "text/csv").ProducesProblem(StatusCodes.Status400BadRequest);
-        orders.MapPost("/{reference}/review/refund", RefundReviewAsync).RequireAuthorization(Policies.StaffFinance).RequireIdempotencyKey("refund")
-            .Produces<AdminPaymentActionResponse>().ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
+        orders.MapPost("/{reference}/review/refund", RefundReviewAsync).RequireAuthorization(Policies.StaffFinance).RequireIdempotencyKey("refund", PendingRefundShaper.Instance)
+            .Produces<AdminPaymentActionResponse>().Produces<AdminPaymentActionResponse>(StatusCodes.Status202Accepted).ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status502BadGateway);
+
+        // Review 04 A-3: captured payments with no order of ours.
+        var payments = admin.MapGroup("/payments").WithTags("Admin · Payments").RequireAuthorization(Policies.StaffFinance);
+        payments.MapGet("/orphans", ListOrphansAsync).Produces<IReadOnlyList<OrphanPaymentRow>>();
+        payments.MapPost("/orphans/{id:guid}/resolve", ResolveOrphanAsync).Produces<OrphanPaymentRow>()
+            .ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict);
 
         var templates = admin.MapGroup("/templates").WithTags("Admin · Templates").RequireAuthorization(Policies.StaffTemplates);
         templates.MapGet("/", ListTemplatesAsync).Produces<IReadOnlyList<TemplateResponse>>();
@@ -68,7 +76,7 @@ internal sealed class AdminOpsEndpoints : IEndpoint
 
     private static async Task<IResult> RefundAsync(string reference, [FromBody] AdminRefundRequest request, HttpContext http,
         [FromServices] ICommandHandler<RefundOrderCommand, AdminPaymentActionResponse> handler, CancellationToken ct) =>
-        (await handler.HandleAsync(new RefundOrderCommand(reference, request, http.Request.Headers["Idempotency-Key"].ToString()), ct)).ToHttp();
+        (await handler.HandleAsync(new RefundOrderCommand(reference, request, http.Request.Headers["Idempotency-Key"].ToString()), ct)).ToHttp(PendingRefundShaper.Answer);
 
     private static async Task<IResult> AcceptReviewAsync(string reference, [FromBody] AdminReviewRequest request,
         [FromServices] ICommandHandler<AcceptPaymentReviewCommand, AdminPaymentActionResponse> handler, CancellationToken ct) =>
@@ -76,7 +84,15 @@ internal sealed class AdminOpsEndpoints : IEndpoint
 
     private static async Task<IResult> RefundReviewAsync(string reference, [FromBody] AdminReviewRequest request, HttpContext http,
         [FromServices] ICommandHandler<RefundPaymentReviewCommand, AdminPaymentActionResponse> handler, CancellationToken ct) =>
-        (await handler.HandleAsync(new RefundPaymentReviewCommand(reference, request, http.Request.Headers["Idempotency-Key"].ToString()), ct)).ToHttp();
+        (await handler.HandleAsync(new RefundPaymentReviewCommand(reference, request, http.Request.Headers["Idempotency-Key"].ToString()), ct)).ToHttp(PendingRefundShaper.Answer);
+
+    private static async Task<IResult> ListOrphansAsync([FromServices] IQueryHandler<ListOrphanPaymentsQuery, IReadOnlyList<OrphanPaymentRow>> handler,
+        CancellationToken ct, bool resolved = false) =>
+        (await handler.HandleAsync(new ListOrphanPaymentsQuery(resolved), ct)).ToHttp();
+
+    private static async Task<IResult> ResolveOrphanAsync(Guid id, [FromBody] ResolveOrphanRequest request,
+        [FromServices] ICommandHandler<ResolveOrphanPaymentCommand, OrphanPaymentRow> handler, CancellationToken ct) =>
+        (await handler.HandleAsync(new ResolveOrphanPaymentCommand(id, request), ct)).ToHttp();
 
     private static async Task<IResult> ResendReceiptAsync(string reference,
         [FromServices] ICommandHandler<ResendReceiptCommand, AdminPaymentActionResponse> handler, CancellationToken ct) =>
@@ -92,7 +108,8 @@ internal sealed class AdminOpsEndpoints : IEndpoint
         }
 
         http.Response.Headers.CacheControl = "no-store";
-        return TypedResults.File(result.Value.Content, "text/csv; charset=utf-8", result.Value.FileName);
+        var file = result.Value;
+        return Results.Stream(body => file.WriteAsync(body, ct), "text/csv; charset=utf-8", file.FileName);   // S-12: streamed
     }
 
     private static async Task<IResult> DashboardAsync([FromServices] IQueryHandler<GetDashboardQuery, DashboardResponse> handler, CancellationToken ct) =>
@@ -137,4 +154,19 @@ internal sealed class AdminOpsEndpoints : IEndpoint
     private static async Task<IResult> AuditAsync([FromServices] IQueryHandler<ListAuditQuery, PagedResult<AuditRow>> handler, CancellationToken ct,
         string? actor = null, string? action = null, string? entity = null, string? entityId = null, int page = 1, int pageSize = 50) =>
         (await handler.HandleAsync(new ListAuditQuery(actor, action, entity, entityId, page, pageSize), ct)).ToHttp();
+}
+
+/// A refund the gateway did not confirm yet: 202, and not stored for idempotent replay (review 04 P-3).
+internal sealed class PendingRefundShaper : IIdempotentResponseShaper
+{
+    public static readonly PendingRefundShaper Instance = new();
+
+    public static IResult Answer(AdminPaymentActionResponse value) =>
+        value.Refund == FinanceOperations.RefundPendingState ? TypedResults.Accepted((string?)null, value) : TypedResults.Ok(value);
+
+    public object ForStorage(object value) => value;
+
+    public bool ShouldStore(object value) => value is not AdminPaymentActionResponse { Refund: FinanceOperations.RefundPendingState };
+
+    public string ForReplay(string storedJson, System.Text.Json.JsonSerializerOptions json, HttpContext http) => storedJson;
 }

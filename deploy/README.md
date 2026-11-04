@@ -16,7 +16,7 @@ internet ─▶ edge Caddy (ta3lom-deploy, TLS, HSTS) ─▶ edge network ─▶
 | Compose project | `ta3lom-store` | `ta3lom-store-staging` |
 | Env file | `.env.production` | `.env.staging` |
 | API host / edge alias | `store-api.ta3lom.sa` → `store-api` | `store-api-staging.ta3lom.sa` → `store-api-staging` |
-| Web origin (CORS) | `https://store.ta3lom.sa` (+ `https://ta3lom.sa`, `https://www.ta3lom.sa` for the cart badge) | `https://store-staging.ta3lom.sa` |
+| Web origin (CORS) | `https://store.ta3lom.sa`; `https://ta3lom.sa`, `https://www.ta3lom.sa` only for `GET /v1/cart/summary` (badge, `Store:Cors:BadgeOrigins`) | `https://store-staging.ta3lom.sa` |
 | Image tag | `X.Y.Z` (git tag `vX.Y.Z`) | `staging-<sha>` |
 | Moyasar | live keys (`sk_live_…`) | **test** keys (`sk_test_…`) |
 | Secrets | `secrets/production/` | `secrets/staging/` |
@@ -53,12 +53,16 @@ run read-only (tmpfs `/tmp`) as non-root.
 
 ## 2. Deploy (automatic)
 
-`.github/workflows/deploy.yml` starts only after **CI succeeded on the same commit**:
+`.github/workflows/deploy.yml` deploys only a commit **CI succeeded on**:
 
 - **main** → images `:staging-<sha>` (+ `:<sha>`), built, `self-check` (renders a receipt PDF in the image), pushed;
   then on the VPS `docker compose … pull migrate api && docker compose … up -d --wait api` for staging, then a smoke of
   `/health/ready`.
-- **tag `vX.Y.Z`** → images `:X.Y.Z`, same steps for production after the `production` environment reviewer approves.
+- **tag `vX.Y.Z`** (review 04 H-3) → the workflow runs on the **tag push itself**, so its ref is the tag and the
+  `production` environment's "`v*` tags only" rule really applies. Its gate fails unless the ref is
+  `refs/tags/vX.Y.Z`, the tagged commit is on `main`, and every CI check run on that commit (`build-test`, `stack`)
+  succeeded — it waits up to 45 minutes for them. Then images `:X.Y.Z`, same steps for production after the
+  `production` environment reviewer approves. Release: merge to `main`, then `git tag vX.Y.Z <main sha> && git push origin vX.Y.Z`.
 - Missing `*_SSH_*` secrets → the deploy step is skipped with a warning and prints the commands (never a red run).
 
 GitHub settings: environments `staging` and `production` (required reviewer; tags `v*` only); secrets per environment
@@ -88,6 +92,10 @@ A rollback across a migration keeps the newer schema (expand-only migrations sta
 
 `backup.sh`: `pg_dump -Fc` + tar of the `api-keys` (Data Protection key ring) and `api-files` (uploads and private
 receipt PDFs) volumes; 14 daily / 8 weekly kept; `OFFSITE_HOOK` copies them off the VPS (ta3lom-deploy's `offsite.sh`).
+Review 04: folders `0700`, files `0600` from the start (S-10); `counts-<stamp>.txt` holds each table's row count taken
+in the dump's own snapshot, and `restore-test.sh` fails on any difference, a missing counts file (`--no-counts` for
+dumps made before this change), a restore error or a receipt-number gap (S-11). CI runs backup → restore test on a live
+stack on every push (`deploy/stack-check.sh`). Container logs rotate at 10 MB × 5 (S-16).
 The `secrets/` folders are backed up by the owner offline.
 
 ## 5. Operations

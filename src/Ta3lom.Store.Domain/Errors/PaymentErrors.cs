@@ -31,4 +31,19 @@ public static class PaymentErrors
         Error.Conflict(ErrorCodes.PaymentNotInReview, "The order is not in payment review.").With("orderStatus", status.ToWire());
 
     public static Error ReceiptNotAvailable => Error.NotFound(ErrorCodes.ReceiptNotAvailable, "No receipt is available for this order.");
+
+    /// A refund is still waiting for the gateway's answer (review 04 A-6): one at a time per order.
+    public static Error RefundPending => Error.Conflict(ErrorCodes.PaymentRefundPending, "A refund of this order is still pending.");
+
+    /// Accepting the review would issue a receipt for more than the gateway kept (review 04 P-9).
+    public static Error ReviewPartial(Money captured, Money total) =>
+        Error.Conflict(ErrorCodes.PaymentReviewPartial, "Less than the order total was captured.").With("captured", captured.ToWire()).With("total", total.ToWire());
+
+    public static Error OrphanNotFound => Error.NotFound(ErrorCodes.PaymentOrphanNotFound, "No such orphan payment.");
+
+    public static Error OrphanResolved => Error.Conflict(ErrorCodes.PaymentOrphanResolved, "This orphan payment is already resolved.");
+
+    /// Below the gateway's floor of 1.00 SAR (review 04 S-1).
+    public static Error BelowMinimum(Money minimum) =>
+        Error.Unprocessable(ErrorCodes.CheckoutBelowMinimum, "The total is below the minimum the gateway accepts.").With("minimum", minimum.ToWire());
 }

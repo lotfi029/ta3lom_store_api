@@ -92,6 +92,13 @@ public static class ErrorCodes
     public const string PaymentNotInReview = "payment.not_in_review";
     public const string ReceiptNotAvailable = "receipt.not_available";
 
+    // Payments hardening (review 04)
+    public const string PaymentRefundPending = "payment.refund_pending";
+    public const string PaymentReviewPartial = "payment.review_partial";
+    public const string PaymentOrphanNotFound = "payment.orphan_not_found";
+    public const string PaymentOrphanResolved = "payment.orphan_resolved";
+    public const string CheckoutBelowMinimum = "checkout.below_minimum";
+
     // Idempotency and templates
     public const string IdempotencyKeyRequired = "idempotency.key_required";
     public const string IdempotencyKeyReused = "idempotency.key_reused";

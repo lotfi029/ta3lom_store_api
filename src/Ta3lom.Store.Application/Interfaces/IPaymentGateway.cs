@@ -61,14 +61,19 @@ public enum GatewayPaymentStatus
 
 /// A payment re-fetched from the gateway. `CapturedHalalas` is what was really taken; `RefundedHalalas` what went back.
 public sealed record GatewayPayment(string ProviderPaymentId, string? ProviderInvoiceId, GatewayPaymentStatus Status,
-    long AmountHalalas, long CapturedHalalas, long RefundedHalalas, string Currency, PaymentMethod Method,
+    long AmountHalalas, long CapturedHalalas, long RefundedHalalas, string? Currency, PaymentMethod Method,
     string? FailureCode, string? FailureMessage, bool Live);
 
-public sealed record GatewayRefundResult(bool Ok, string? ProviderRefundId, string? Error)
+/// `Pending` (review 04 P-3): no definite answer — a timeout, a 5xx, a dropped connection. The refund may or may not have
+/// happened at the gateway: it stays `requested` until the refund reconciliation reads the payment's refunded amount.
+public sealed record GatewayRefundResult(bool Ok, string? ProviderRefundId, string? Error, bool Pending = false)
 {
     public static GatewayRefundResult Succeeded(string? id) => new(true, id, null);
 
+    /// A definite refusal (4xx): nothing was refunded.
     public static GatewayRefundResult Failed(string error) => new(false, null, error);
+
+    public static GatewayRefundResult Unknown(string error) => new(false, null, error, true);
 }
 
 /// `Valid = false` → 401 and the event recorded with `signature_valid = false`. `RedactedPayload` never holds the secret.

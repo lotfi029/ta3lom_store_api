@@ -74,6 +74,11 @@ internal sealed class CheckoutCommandHandler(ICustomerRepository customers, ICar
             return OrderErrors.LinesInvalid([.. priced.Problems.Cast<object>()]);
         }
 
+        if (priced.Total < Order.GatewayMinimum)
+        {
+            return PaymentErrors.BelowMinimum(Order.GatewayMinimum);          // review 04 S-1: Moyasar takes ≥ 1.00 SAR
+        }
+
         var now = clock.UtcNow;
         var locale = command.Request.Locale ?? customer.Locale;
         customer.UpdateProfile(name, email, locale, null, now);

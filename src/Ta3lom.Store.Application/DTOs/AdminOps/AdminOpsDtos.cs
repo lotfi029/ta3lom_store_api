@@ -17,6 +17,9 @@ public sealed record DashboardResponse(int PublishedProjects, int ActiveCategori
 
     public int InReviewOrders { get; init; }
 
+    /// Captured payments with no order of ours, not yet resolved by finance (review 04 A-3).
+    public int OpenOrphanPayments { get; init; }
+
     /// Top 5 projects by paid amount (paid lines of paid/partially refunded orders).
     public IReadOnlyList<DashboardPaidProject> TopProjectsByPaidAmount { get; init; } = [];
 }
@@ -79,8 +82,10 @@ public sealed record AdminPaymentRow(Guid Id, int AttemptNo, string Provider, st
 
 public sealed record AdminPaymentEventRow(string Type, DateTimeOffset ReceivedAt, bool SignatureValid, string? Outcome);
 
+/// `status`: requested (waiting for the gateway, review 04 P-3) | succeeded | failed. `source`: `store` (finance) or
+/// `gateway` (made on the gateway's dashboard and imported, A-2; `requestedBy` = "moyasar").
 public sealed record AdminRefundRow(Guid Id, string Amount, string Status, string Reason, string RequestedBy, DateTimeOffset RequestedAt,
-    DateTimeOffset? CompletedAt);
+    DateTimeOffset? CompletedAt, string Source);
 
 public sealed record AdminReceiptRow(string Number, string Series, string Amount, DateTimeOffset IssuedAt, string? VoidedBy);
 
@@ -108,6 +113,15 @@ public sealed record AdminRefundRequest(string Amount, string Reason, uint Versi
 /// `POST /v1/admin/orders/{reference}/review/accept|refund`: the order's `version`; a reason for the refund.
 public sealed record AdminReviewRequest(uint Version, string? Reason);
 
-/// The order after a finance action.
+/// The order after a finance action. `Refund` (refund actions only): `succeeded`, or `pending` — the gateway gave no
+/// definite answer, the refund stays requested (202) and is confirmed by the reconciliation or a retry with the same key.
 public sealed record AdminPaymentActionResponse(string Reference, string Status, string TotalAmount, string RefundedAmount, uint Version,
-    string? ReceiptNumber);
+    string? ReceiptNumber, string? Refund = null);
+
+/// `GET /v1/admin/payments/orphans` (review 04 A-3): a captured payment with no order of ours. Amount as the gateway
+/// reported it; `currency` null when the gateway sent none.
+public sealed record OrphanPaymentRow(Guid Id, string Provider, string? ProviderPaymentId, string? ProviderInvoiceId, string Amount, string? Currency,
+    DateTimeOffset ReceivedAt, DateTimeOffset? ResolvedAt, string? ResolvedBy, string? ResolutionNote);
+
+/// `POST /v1/admin/payments/orphans/{id}/resolve`: what finance did about it (1–500 characters).
+public sealed record ResolveOrphanRequest(string Note);

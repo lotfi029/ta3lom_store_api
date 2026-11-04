@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using Microsoft.Extensions.DependencyInjection;
 using Ta3lom.Store.Api.IntegrationTests.Donations;
 using Ta3lom.Store.Api.IntegrationTests.Infrastructure;
 using Ta3lom.Store.Api.IntegrationTests.Infrastructure.Scenario;
@@ -41,7 +42,9 @@ public sealed class FinanceViewTests(ScenarioFactory factory) : IClassFixture<Sc
         d.GetProperty("payments")[1].Str("method").ShouldBe("mada");
         d.GetProperty("events").EnumerateArray().Select(e => e.Str("outcome")).ShouldBe(["failed", "settled"]);
         d.GetProperty("events")[0].TryGetProperty("payloadJson", out _).ShouldBeFalse();
-        d.GetProperty("refunds").EnumerateArray().ShouldHaveSingleItem().Str("status").ShouldBe("succeeded");
+        var refundRow = d.GetProperty("refunds").EnumerateArray().ShouldHaveSingleItem();
+        refundRow.Str("status").ShouldBe("succeeded");
+        refundRow.Str("source").ShouldBe("store");                                    // review 04 W-2
         d.GetProperty("receipts").EnumerateArray().ShouldHaveSingleItem().Str("number").ShouldMatch(@"^DR-\d{4}-\d{6}$");
     }
 
@@ -88,6 +91,7 @@ public sealed class FinanceViewTests(ScenarioFactory factory) : IClassFixture<Sc
         csv.StatusCode.ShouldBe(HttpStatusCode.OK);
         csv.Content.Headers.ContentType!.MediaType.ShouldBe("text/csv");
         csv.Headers.CacheControl!.NoStore.ShouldBeTrue();
+        csv.Content.Headers.ContentDisposition!.FileName!.Trim('"').ShouldBe($"donations-{today}-{today}.csv");
         var bytes = await csv.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken);
         bytes.Take(3).ShouldBe(Encoding.UTF8.GetPreamble());
         var text = Encoding.UTF8.GetString(bytes, 3, bytes.Length - 3);
@@ -115,4 +119,29 @@ public sealed class FinanceViewTests(ScenarioFactory factory) : IClassFixture<Sc
     [InlineData("عبدالله", "عبدالله")]
     public void CSV_cells_are_escaped_and_injection_safe(string value, string expected) =>
         DonationsCsvQueryHandler.Cell(value).ShouldBe(expected);
+
+    /// Review 04 S-12: written page by page — a page of one order gives exactly the same file as one page of all.
+    [Fact]
+    public async Task S12_the_CSV_is_the_same_whatever_the_page_size()
+    {
+        for (var i = 0; i < 3; i++)
+        {
+            await PaidAsync();
+        }
+
+        var today = DateOnly.FromDateTime(factory.Clock.UtcNow.ToOffset(TimeSpan.FromHours(3)).DateTime);
+        async Task<string> RenderAsync(int pageSize)
+        {
+            await using var scope = factory.Services.CreateAsyncScope();
+            var handler = scope.ServiceProvider.GetRequiredService<Ta3lom.Store.Application.Abstractions.Messaging.IQueryHandler<DonationsCsvQuery, CsvFile>>();
+            var file = (await handler.HandleAsync(new DonationsCsvQuery(today, today, pageSize), TestContext.Current.CancellationToken)).Value;
+            using var buffer = new MemoryStream();
+            await file.WriteAsync(buffer, TestContext.Current.CancellationToken);
+            return Encoding.UTF8.GetString(buffer.ToArray());
+        }
+
+        var paged = await RenderAsync(1);
+        paged.ShouldBe(await RenderAsync(500));
+        paged.Split("\r\n", StringSplitOptions.RemoveEmptyEntries).Length.ShouldBeGreaterThanOrEqualTo(4);   // header + 3 orders
+    }
 }

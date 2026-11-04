@@ -342,4 +342,24 @@ public sealed partial class CheckoutTests(ScenarioFactory factory) : IClassFixtu
         (await (await factory.CustomerAsync()).GetAsync($"/v1/me/donations/{loose}")).Response.StatusCode.ShouldBe(HttpStatusCode.NotFound);   // never another donor's
         (await anonymous.SendJsonAsync(HttpMethod.Get, $"/v1/orders/{loose}/status?t=wrong")).Response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
+
+    /// Review 04 S-1: Moyasar refuses an amount below 1.00 SAR — the checkout refuses it first, before any order exists.
+    [Fact]
+    public async Task S1_a_total_below_one_riyal_is_refused_before_an_order_is_placed()
+    {
+        var admin = await factory.StaffAsync(Ta3lom.Store.Domain.Constants.Roles.Admin);
+        var build = new Catalog.CatalogBuilder(admin);
+        var category = Guid.Parse((await build.CategoryAsync()).Str("id"));
+        var project = await build.PublishAsync(await build.OptionsAsync(await build.DraftAsync(category, allowOpenAmount: false), ("قلم", "0.50", true)));
+        var donor = await factory.CustomerAsync();
+        (await donor.PostAsync("/v1/cart/lines", new { projectId = Guid.Parse(project.Str("id")), optionId = Guid.Parse(project.GetProperty("options")[0].Str("id")), quantity = 1 }))
+            .Response.IsSuccessStatusCode.ShouldBeTrue();
+
+        var placed = await donor.PostAsync("/v1/checkout", new { fullName = "عبدالله", email = "donor@example.com" }, HttpJson.Key());
+
+        placed.Response.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        placed.Body.Str("code").ShouldBe(ErrorCodes.CheckoutBelowMinimum);
+        placed.Body.Str("minimum").ShouldBe("1.00");
+        (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.orders WHERE customer_id = '{donor.Id}'")).ShouldBe(0);
+    }
 }

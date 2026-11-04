@@ -19,6 +19,7 @@ internal static partial class SettingRules
     {
         [SettingKeys.CartMaxLines] = (1, 50),
         [SettingKeys.PaymentWindowMinutes] = (5, 1440),
+        [SettingKeys.RefundPendingTimeoutMinutes] = (5, 1440),
     };
 
     /// numeric(12,2) and within the D-03 / D-04 ceiling of 100,000.
@@ -85,6 +86,12 @@ internal static partial class SettingRules
 
     public static bool IsValid(string key, JsonElement value)
     {
+        if (key == SettingKeys.MinGiftAmount)
+        {
+            // Review 04 S-1: never below what the gateway accepts (1.00 SAR).
+            return IsMoney(value) && MoneyInput.Parse(value.GetString()!) >= Domain.Entities.Donations.Order.GatewayMinimum;
+        }
+
         if (MoneyKeys.Contains(key))
         {
             return IsMoney(value);

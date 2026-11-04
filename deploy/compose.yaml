@@ -9,10 +9,16 @@
 # Runbook: deploy/README.md.
 name: ${COMPOSE_PROJECT_NAME:-ta3lom-store}
 
+# Review 04 S-16: every container's log is rotated by Docker (json-file, 10 MB × 5) — the disk never fills with logs.
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "5" }
+
 services:
   db:
     image: postgres:18
     restart: unless-stopped
+    logging: *logging
     environment:
       POSTGRES_USER: store
       POSTGRES_DB: ta3lom_store
@@ -31,6 +37,7 @@ services:
   # One-shot: applies the idempotent migration script, then exits. The API starts only after it succeeded.
   migrate:
     image: ${MIGRATE_IMAGE:-ghcr.io/lotfi029/ta3lom-store-api-migrate}:${STORE_VERSION:?set STORE_VERSION (image tag)}
+    logging: *logging
     environment:
       PGHOST: db
       PGDATABASE: ta3lom_store
@@ -46,6 +53,7 @@ services:
 
   api:
     image: ${API_IMAGE:-ghcr.io/lotfi029/ta3lom-store-api}:${STORE_VERSION:?set STORE_VERSION (image tag)}
+    logging: *logging
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: ${STORE_ENVIRONMENT:?set STORE_ENVIRONMENT (Production or Staging)}

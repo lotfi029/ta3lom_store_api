@@ -10,7 +10,8 @@ public sealed record StoreSettings(
     IReadOnlyList<Money> AmountPresets,
     string? SiteNameAr,
     string? SiteNameEn,
-    string? SupportMobile)
+    string? SupportMobile,
+    int RefundPendingTimeoutMinutes = 30)
 {
     /// The seeded values (D-03, D-04 and the session defaults: minimum gift 10.00).
     public static StoreSettings Defaults { get; } = new(

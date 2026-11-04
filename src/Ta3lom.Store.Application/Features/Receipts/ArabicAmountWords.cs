@@ -2,9 +2,11 @@ using System.Text;
 
 namespace Ta3lom.Store.Application.Features.Receipts;
 
-/// The receipt total in Arabic words (plan §4: "total in figures and words"), Saudi receipt style:
-/// `فقط ثلاثمائة وخمسون ريالًا وخمس وعشرون هللة لا غير`. Covers 0 … 999,999,999.99. The counted noun follows the last
-/// two digits (1 → واحد after the noun, 2 → dual, 3–10 → plural, 11–99 → singular accusative, 00 → singular).
+/// The receipt total in Arabic words (plan §4: "total in figures and words"), Saudi receipt style (review 04 S-17):
+/// `فقط ثلاثمائة وخمسون ريال سعودي وخمس وعشرون هللة لا غير`. Covers 0 … 999,999,999.99. After a number the currency is the
+/// fixed «ريال سعودي» / «هللة» of receipts and cheques; one and two put the noun first («ريال سعودي واحد», «ريالان
+/// سعوديان», «هللة واحدة», «هللتان»). Thousands and millions agree with their own count (ألف, ألفان, 3–10 آلاف/ملايين,
+/// otherwise ألف/مليون without tanween: «ثلاثة عشر ألف ريال سعودي»).
 public static class ArabicAmountWords
 {
     private static readonly string[] Units =
@@ -28,37 +30,23 @@ public static class ArabicAmountWords
         var riyals = halalas / 100;
         var rest = (int)(halalas % 100);
         var sb = new StringBuilder("فقط ");
-        sb.Append(riyals == 0 && rest > 0 ? string.Empty : Counted(riyals, "ريال", "ريالان", "ريالات", "ريالًا"));
+        sb.Append(riyals == 0 && rest > 0 ? string.Empty : Counted(riyals, "ريال سعودي", "ريال سعودي واحد", "ريالان سعوديان"));
         if (rest > 0)
         {
-            sb.Append(riyals == 0 ? string.Empty : " و").Append(Counted(rest, "هللة", "هللتان", "هللات", "هللة", feminine: true));
+            sb.Append(riyals == 0 ? string.Empty : " و").Append(Counted(rest, "هللة", "هللة واحدة", "هللتان", feminine: true));
         }
 
         return sb.Append(" لا غير").ToString();
     }
 
-    /// The number in words followed by its counted noun (the noun first for 1 and 2: "ريال واحد", "ريالان").
-    private static string Counted(long n, string one, string two, string few, string many, bool feminine = false)
+    /// The number in words followed by the currency (the noun alone for 1 and 2: "ريال سعودي واحد", "ريالان سعوديان").
+    private static string Counted(long n, string noun, string one, string two, bool feminine = false) => n switch
     {
-        switch (n)
-        {
-            case 0:
-                return $"صفر {one}";
-            case 1:
-                return $"{one} {(feminine ? "واحدة" : "واحد")}";
-            case 2:
-                return two;
-        }
-
-        var lastTwo = n % 100;
-        var noun = lastTwo switch
-        {
-            >= 3 and <= 10 => few,
-            >= 11 and <= 99 => many,
-            _ => one,
-        };
-        return $"{Words(n, feminine)} {noun}";
-    }
+        0 => $"صفر {noun}",
+        1 => one,
+        2 => two,
+        _ => $"{Words(n, feminine)} {noun}",
+    };
 
     public static string Words(long n, bool feminine = false)
     {
@@ -73,12 +61,12 @@ public static class ArabicAmountWords
         var rest = (int)(n % 1000);
         if (millions > 0)
         {
-            parts.Add(Scale(millions, "مليون", "مليونان", "ملايين", "مليونًا"));
+            parts.Add(Scale(millions, "مليون", "مليونان", "ملايين"));
         }
 
         if (thousands > 0)
         {
-            parts.Add(Scale(thousands, "ألف", "ألفان", "آلاف", "ألفًا"));
+            parts.Add(Scale(thousands, "ألف", "ألفان", "آلاف"));
         }
 
         if (rest > 0)
@@ -89,12 +77,12 @@ public static class ArabicAmountWords
         return string.Join(" و", parts);
     }
 
-    private static string Scale(long n, string one, string two, string few, string many) => n switch
+    private static string Scale(long n, string one, string two, string few) => n switch
     {
         1 => one,
         2 => two,
         >= 3 and <= 10 => $"{Below1000((int)n, false)} {few}",
-        _ => $"{Below1000((int)n, false)} {(n % 100 is >= 11 and <= 99 ? many : one)}",
+        _ => $"{Below1000((int)n, false)} {one}",
     };
 
     private static string Below1000(int n, bool feminine)

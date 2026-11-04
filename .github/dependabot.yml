@@ -1,0 +1,7 @@
+# Review 04 S-14: workflow actions are pinned by commit SHA; Dependabot proposes the updates (SHA + version comment).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

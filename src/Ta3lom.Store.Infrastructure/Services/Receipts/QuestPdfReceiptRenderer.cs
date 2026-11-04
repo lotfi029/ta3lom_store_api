@@ -48,6 +48,20 @@ internal sealed class QuestPdfReceiptRenderer : IReceiptRenderer
             page.Content().PaddingVertical(12).Column(col =>
             {
                 col.Spacing(6);
+                if (d.VoidedByNumber is { } voidedBy)
+                {
+                    // Review 04 R-1: a refunded donation's DR is void; it names the cancellation receipt.
+                    col.Item().Border(1.5f).BorderColor(Colors.Red.Darken2).Background(Colors.Red.Lighten5).Padding(8).Column(banner =>
+                    {
+                        banner.Item().Text(t =>
+                        {
+                            t.Span("ملغى — ").Bold().FontSize(16).FontColor(Colors.Red.Darken3);
+                            t.Span(voidedBy).Bold().FontSize(16).FontColor(Colors.Red.Darken3);
+                        });
+                        banner.Item().Text($"Void — cancelled by {voidedBy}").FontSize(9).FontColor(Colors.Red.Darken3);
+                    });
+                }
+
                 col.Item().Text(d.IsCancellation ? "إيصال إلغاء تبرع" : "إيصال تبرع").Bold().FontSize(18);
                 col.Item().Text(d.IsCancellation ? "Donation cancellation receipt" : "Donation receipt").FontSize(10).FontColor(Colors.Grey.Darken1);
                 col.Item().Text(t =>

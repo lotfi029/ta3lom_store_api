@@ -182,4 +182,51 @@ public sealed class RefundTests(ScenarioFactory factory) : IClassFixture<Scenari
         (await factory.ScalarAsync<string>($"SELECT string_agg(p.attempt_no || ':' || p.status || ':' || p.refunded_amount, ',' ORDER BY p.attempt_no) FROM store.payment p JOIN store.orders o ON o.id = p.order_id WHERE o.reference = '{reference}'"))
             .ShouldBe("1:captured:0.00,2:refunded:32.00");
     }
+
+    /// Review 04 S-13: an Idempotency-Key is the staff member's own — another staff member's request with the same key is
+    /// a different refund, never a replay of the first.
+    [Fact]
+    public async Task S13_the_same_key_from_two_staff_members_is_two_refunds()
+    {
+        var (_, reference) = await PaidAsync();
+        var first = await factory.StaffAsync(Roles.Finance);
+        var second = await factory.StaffAsync(Roles.Finance);
+        var key = $"key-{Guid.NewGuid():N}";
+
+        (await RefundAsync(first, reference, "1.00", key)).Body.Str("refundedAmount").ShouldBe("1.00");
+        (await RefundAsync(second, reference, "2.00", key)).Body.Str("refundedAmount").ShouldBe("3.00");
+
+        (await factory.ScalarAsync<long>($"SELECT count(DISTINCT r.requested_by) FROM store.refund r JOIN store.orders o ON o.id = r.order_id WHERE o.reference = '{reference}' AND r.status = 'succeeded'"))
+            .ShouldBe(2);
+    }
+
+    /// Review 04 R-1: once refunded, the DR (re-rendered: its cached PDF is dropped by the DRC) carries «ملغى — DRC-…»,
+    /// and a resend sends the refund message with the DRC, not the paid message with a void DR.
+    [Fact]
+    public async Task R1_a_refunded_orders_DR_is_marked_void_and_a_resend_sends_the_DRC()
+    {
+        var (donor, reference) = await PaidAsync();
+        var finance = await factory.StaffAsync(Roles.Finance);
+        await factory.DrainOutboxAsync();                                             // the DR PDF is rendered and cached
+        (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.donation_receipt r JOIN store.orders o ON o.id = r.order_id WHERE o.reference = '{reference}' AND r.series = 'DR' AND r.pdf_storage_key IS NOT NULL")).ShouldBe(1);
+
+        (await RefundAsync(finance, reference, "32.00")).Body.Str("status").ShouldBe("refunded");
+        var drc = await factory.ScalarAsync<string>($"SELECT 'DRC-' || r.year || '-' || lpad(r.number::text, 6, '0') FROM store.donation_receipt r JOIN store.orders o ON o.id = r.order_id WHERE o.reference = '{reference}' AND r.series = 'DRC'");
+
+        var dr = await donor.Http.GetAsync($"/v1/me/donations/{reference}/receipt", TestContext.Current.CancellationToken);
+        dr.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var text = ReceiptPdfTests.Extract(await dr.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
+        text.ShouldContain("DR-");
+        text.ShouldContain(drc);
+        ReceiptPdfTests.ContainsArabic(text, "ملغى").ShouldBeTrue(text);
+
+        await factory.DrainOutboxAsync();
+        var before = await factory.ScalarAsync<long>($"SELECT count(*) FROM store.outbox_message WHERE type = 'RefundProcessed' AND payload->>'reference' = '{reference}'");
+        var resend = await finance.PostAsync($"/v1/admin/orders/{reference}/receipt/resend", null, HttpJson.Key());
+        resend.Response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        resend.Body.Str("receiptNumber").ShouldBe(drc);
+        (await factory.ScalarAsync<long>($"SELECT count(*) FROM store.outbox_message WHERE type = 'RefundProcessed' AND payload->>'reference' = '{reference}'")).ShouldBe(before + 1);
+        await factory.DrainOutboxAsync();
+        (await factory.MailAsync()).Count(m => m.Body.Contains(reference, StringComparison.Ordinal) && m.Attachments.Any(a => a == $"{drc}.pdf")).ShouldBe(2);
+    }
 }

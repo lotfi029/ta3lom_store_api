@@ -79,6 +79,8 @@ public sealed class DonationReceipt : Entity
             IssuedAt = now,
         };
         donation.VoidedByReceiptId = drc.Id;
+        // Review 04 R-1: the DR's cached PDF predates the void; it is re-rendered (with the «ملغى» banner) on the next read.
+        donation.PdfStorageKey = null;
         return drc;
     }
 

@@ -9,6 +9,9 @@ namespace Ta3lom.Store.Domain.Entities.Donations;
 /// refunds are recorded per amount (full → `refunded`, partial → stays `paid` with `refunded_amount > 0`).
 public sealed class Order : AggregateRoot
 {
+    /// The smallest total the payment gateway accepts (Moyasar: 100 halalas). Review 04 S-1.
+    public static readonly Money GatewayMinimum = new(1.00m);
+
     private readonly List<OrderLine> _lines = [];
 
     private Order(Guid id, DateTimeOffset now) : base(id)
@@ -151,6 +154,21 @@ public sealed class Order : AggregateRoot
     public bool FlagForReview(PaymentReviewReason reason, DateTimeOffset now)
     {
         if (Status is OrderStatus.Paid or OrderStatus.Refunded or OrderStatus.PaymentReview)
+        {
+            return false;
+        }
+
+        Status = OrderStatus.PaymentReview;
+        ReviewReason = reason;
+        UpdatedAt = now;
+        return true;
+    }
+
+    /// The gateway voided a payment of a paid order (review 04 A-1): the money is gone, finance must review — the order
+    /// moves to `payment_review` even though it was paid. True when the status changed.
+    public bool ReopenForReview(PaymentReviewReason reason, DateTimeOffset now)
+    {
+        if (Status == OrderStatus.PaymentReview)
         {
             return false;
         }
