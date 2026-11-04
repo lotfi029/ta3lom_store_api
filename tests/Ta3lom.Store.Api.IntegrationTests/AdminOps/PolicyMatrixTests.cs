@@ -19,6 +19,7 @@ public sealed class PolicyMatrixTests(ScenarioFactory factory) : IClassFixture<S
     private static readonly string[] Orders = [Roles.Admin, Roles.Finance];
     private static readonly string[] Templates = [Roles.Admin, Roles.StoreManager];
     private static readonly string[] AdminOnly = [Roles.Admin];
+    private static readonly string[] Finance = [Roles.Admin, Roles.Finance];
 
     /// The plan's access table, one row per route.
     private static readonly Dictionary<string, string[]> Expected = new(StringComparer.Ordinal)
@@ -47,6 +48,9 @@ public sealed class PolicyMatrixTests(ScenarioFactory factory) : IClassFixture<S
         ["GET /v1/admin/orders"] = All,
         ["GET /v1/admin/orders/{reference}"] = All,
         ["POST /v1/admin/orders/{reference}/cancel"] = Orders,
+        ["POST /v1/admin/orders/{reference}/refunds"] = Finance,
+        ["POST /v1/admin/orders/{reference}/review/accept"] = Finance,
+        ["POST /v1/admin/orders/{reference}/review/refund"] = Finance,
         ["GET /v1/admin/templates"] = Templates,
         ["POST /v1/admin/templates/test"] = Templates,
         ["PUT /v1/admin/templates/{key}/{channel}/{locale}"] = Templates,

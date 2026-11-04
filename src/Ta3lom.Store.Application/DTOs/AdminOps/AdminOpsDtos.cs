@@ -41,3 +41,16 @@ public sealed record TemplateTestResponse(string? Subject, string Body, bool Sen
 
 /// `GET /v1/admin/audit`.
 public sealed record AuditRow(long Id, DateTimeOffset At, string Actor, string Action, string Entity, string? EntityId, string? Diff);
+
+// ── Payments: refunds and review (R5-Payments, plan §4) ─────────────────────────────────────────────────────────────
+
+/// `POST /v1/admin/orders/{reference}/refunds`: an amount (`"50.00"`) of the captured payment, a reason, and the order's
+/// `version` as read (409 `concurrency.conflict` otherwise). `Idempotency-Key` required.
+public sealed record AdminRefundRequest(string Amount, string Reason, uint Version);
+
+/// `POST /v1/admin/orders/{reference}/review/accept|refund`: the order's `version`; a reason for the refund.
+public sealed record AdminReviewRequest(uint Version, string? Reason);
+
+/// The order after a finance action.
+public sealed record AdminPaymentActionResponse(string Reference, string Status, string TotalAmount, string RefundedAmount, uint Version,
+    string? ReceiptNumber);

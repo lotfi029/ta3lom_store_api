@@ -4,6 +4,7 @@ using Ta3lom.Store.Application.Abstractions.Messaging;
 using Ta3lom.Store.Application.Abstractions.Pagination;
 using Ta3lom.Store.Application.DTOs.AdminOps;
 using Ta3lom.Store.Application.Features.AdminOps;
+using Ta3lom.Store.Application.Features.Payments;
 using Ta3lom.Store.Domain.Constants;
 
 namespace Ta3lom.Store.Api.Endpoints;
@@ -38,6 +39,16 @@ internal sealed class AdminOpsEndpoints : IEndpoint
         orders.MapPost("/{reference}/cancel", CancelAsync).RequireAuthorization(Policies.StaffOrders)
             .Produces<AdminOrderRow>().ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict);
 
+        // R5-Payments (plan §4): refunds and payment review — finance only, idempotent, audited.
+        orders.MapPost("/{reference}/refunds", RefundAsync).RequireAuthorization(Policies.StaffFinance).RequireIdempotencyKey("refund")
+            .Produces<AdminPaymentActionResponse>().ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status422UnprocessableEntity).ProducesProblem(StatusCodes.Status502BadGateway);
+        orders.MapPost("/{reference}/review/accept", AcceptReviewAsync).RequireAuthorization(Policies.StaffFinance)
+            .Produces<AdminPaymentActionResponse>().ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict);
+        orders.MapPost("/{reference}/review/refund", RefundReviewAsync).RequireAuthorization(Policies.StaffFinance).RequireIdempotencyKey("refund")
+            .Produces<AdminPaymentActionResponse>().ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status502BadGateway);
+
         var templates = admin.MapGroup("/templates").WithTags("Admin · Templates").RequireAuthorization(Policies.StaffTemplates);
         templates.MapGet("/", ListTemplatesAsync).Produces<IReadOnlyList<TemplateResponse>>();
         templates.MapPost("/test", TestTemplateAsync).RequireRateLimiting(RatePolicies.TemplateTest)   // D-b: 5 per hour per staff member
@@ -49,6 +60,18 @@ internal sealed class AdminOpsEndpoints : IEndpoint
         admin.MapGet("/audit", AuditAsync).WithTags("Admin · Audit").RequireAuthorization(Policies.StaffAdmin)
             .Produces<PagedResult<AuditRow>>().ProducesProblem(StatusCodes.Status400BadRequest);
     }
+
+    private static async Task<IResult> RefundAsync(string reference, [FromBody] AdminRefundRequest request, HttpContext http,
+        [FromServices] ICommandHandler<RefundOrderCommand, AdminPaymentActionResponse> handler, CancellationToken ct) =>
+        (await handler.HandleAsync(new RefundOrderCommand(reference, request, http.Request.Headers["Idempotency-Key"].ToString()), ct)).ToHttp();
+
+    private static async Task<IResult> AcceptReviewAsync(string reference, [FromBody] AdminReviewRequest request,
+        [FromServices] ICommandHandler<AcceptPaymentReviewCommand, AdminPaymentActionResponse> handler, CancellationToken ct) =>
+        (await handler.HandleAsync(new AcceptPaymentReviewCommand(reference, request), ct)).ToHttp();
+
+    private static async Task<IResult> RefundReviewAsync(string reference, [FromBody] AdminReviewRequest request, HttpContext http,
+        [FromServices] ICommandHandler<RefundPaymentReviewCommand, AdminPaymentActionResponse> handler, CancellationToken ct) =>
+        (await handler.HandleAsync(new RefundPaymentReviewCommand(reference, request, http.Request.Headers["Idempotency-Key"].ToString()), ct)).ToHttp();
 
     private static async Task<IResult> DashboardAsync([FromServices] IQueryHandler<GetDashboardQuery, DashboardResponse> handler, CancellationToken ct) =>
         (await handler.HandleAsync(new GetDashboardQuery(), ct)).ToHttp();

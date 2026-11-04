@@ -27,6 +27,9 @@ public static class Policies
     /// Staff users, settings and the audit log.
     public const string StaffAdmin = "staff:admin";
 
+    /// Refunds, payment review, receipts resend and the finance export (R5-Payments).
+    public const string StaffFinance = "staff:finance";
+
     public static IReadOnlyDictionary<string, string[]> StaffRoles { get; } = new Dictionary<string, string[]>(StringComparer.Ordinal)
     {
         [StaffRead] = [.. Roles.All],
@@ -35,6 +38,7 @@ public static class Policies
         [StaffOrders] = [Roles.Admin, Roles.Finance],
         [StaffTemplates] = [Roles.Admin, Roles.StoreManager],
         [StaffAdmin] = [Roles.Admin],
+        [StaffFinance] = [Roles.Admin, Roles.Finance],
     };
 }
 

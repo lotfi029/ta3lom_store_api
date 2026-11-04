@@ -74,3 +74,31 @@ internal sealed class ReceiptIssuedHandler(ReceiptFiles receipts) : OutboxHandle
     protected override Task HandleAsync(ReceiptIssued message, OutboxEnvelope envelope, CancellationToken ct) =>
         receipts.GetOrRenderAsync(message.ReceiptId, ct);
 }
+
+/// A succeeded refund (plan §4): SMS `refund_processed` and, with an e-mail, the same e-mail — with the DRC PDF attached
+/// when the order was fully refunded. Once per channel and recipient.
+internal sealed class RefundProcessedHandler(IApplicationDbContext db, NotificationDispatch dispatch, ReceiptFiles receipts,
+    IOrderStatusTokens tokens, IWebLinks links) : OutboxHandler<RefundProcessed>
+{
+    protected override async Task HandleAsync(RefundProcessed message, OutboxEnvelope envelope, CancellationToken ct)
+    {
+        var order = await db.Orders.AsNoTracking().Where(o => o.Id == message.OrderId)
+            .Select(o => new { o.Reference, o.DonorMobile, o.DonorEmail, o.Locale }).FirstAsync(ct);
+        var file = message.ReceiptId is { } drc ? await receipts.GetOrRenderAsync(drc, ct) : null;
+        var model = new
+        {
+            reference = order.Reference,
+            amount = message.Amount,
+            receiptNumber = file is null ? null : Path.GetFileNameWithoutExtension(file.FileName),
+            link = links.OrderStatus(order.Locale, order.Reference, tokens.Create(order.Reference).Token),
+        };
+        await dispatch.SendOnceAsync(envelope, MessageChannel.Sms, order.DonorMobile, "refund_processed", order.Locale, model, ct,
+            subject: $"refund_processed {order.Reference}");
+        if (order.DonorEmail != Domain.Entities.Donations.Order.AnonymisedEmail)
+        {
+            await dispatch.SendOnceAsync(envelope, MessageChannel.Email, order.DonorEmail, "refund_processed", order.Locale, model, ct,
+                subject: $"refund_processed {order.Reference}",
+                attachments: file is null ? null : [new EmailAttachment(file.FileName, "application/pdf", file.Pdf)]);
+        }
+    }
+}
