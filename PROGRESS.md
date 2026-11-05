@@ -21,3 +21,11 @@
 - Docker Hub answers 429 in the cloud session: `docker pull mirror.gcr.io/library/postgres:18 && docker tag … postgres:18`.
 - Tests: `env -u STORE_TEST_DB -u STORE_TEST_DB_CONNECTION dotnet test --solution Ta3lom.Store.slnx` (the session sets an
   external-DB variable; the gate is Testcontainers postgres:18).
+
+## Showcase mode (branch `claude/showcase-mode`)
+
+| Item | Commit | Tests | Status |
+|---|---|---|---|
+| Baseline (`main` 43c5972) | — | 781 (1 skipped sandbox; `SecretFilesTests` fails on Windows only, also on `main`) | green on CI |
+| SM-1 … SM-6, SM-8 | Showcase mode: provider none, store-feature 409s, sign-in switch | red first: 20/28 showcase tests failing; then 825 total, all green but the Windows-only one | done |
+| SM-7 | Showcase deploy: compose switches, stack-check showcase run, runbooks | red first: 5/5 deploy-file tests; stack-check showcase (Production) | done |

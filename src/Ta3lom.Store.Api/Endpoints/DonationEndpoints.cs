@@ -22,7 +22,7 @@ internal sealed class DonationEndpoints : IEndpoint
             .RequireRateLimiting(RatePolicies.Cart).RequireSameOrigin().ProducesProblem(StatusCodes.Status401Unauthorized);
         cart.MapGet("/", GetCartAsync).Produces<CartResponse>();
         cart.MapGet("/summary", GetSummaryAsync).Produces<CartSummaryResponse>().RequireCors(CorsSetup.BadgePolicy);   // S-15: the main site's badge
-        cart.MapPost("/lines", AddLineAsync).Produces<CartResponse>()
+        cart.MapPost("/lines", AddLineAsync).RequireStoreFeature(StoreFeature.Payments).Produces<CartResponse>()
             .ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status403Forbidden).ProducesProblem(StatusCodes.Status422UnprocessableEntity);
         cart.MapPatch("/lines/{id:guid}", UpdateLineAsync).Produces<CartResponse>()
             .ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity);
@@ -32,7 +32,7 @@ internal sealed class DonationEndpoints : IEndpoint
         var checkout = app.MapGroup("/checkout").WithTags("Checkout").RequireSameOrigin().ProducesProblem(StatusCodes.Status401Unauthorized);
         checkout.MapPost("/quote", QuoteAsync).RequireAuthorization(Policies.CustomerOptional).RequireRateLimiting(RatePolicies.Cart)
             .Produces<CartResponse>().ProducesProblem(StatusCodes.Status409Conflict);
-        checkout.MapPost("/", CheckoutAsync).RequireAuthorization(Policies.Customer).RequireRateLimiting(RatePolicies.Checkout)
+        checkout.MapPost("/", CheckoutAsync).RequireAuthorization(Policies.Customer).RequireRateLimiting(RatePolicies.Checkout).RequireStoreFeature(StoreFeature.Payments)
             .RequireIdempotencyKey("checkout", CheckoutReplay.Instance)
             .Produces<CheckoutResponse>(StatusCodes.Status201Created).ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden).ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status422UnprocessableEntity);
@@ -47,7 +47,7 @@ internal sealed class DonationEndpoints : IEndpoint
 
         // Plan §3.3: a new payment attempt (the donor, or the status token holder). Idempotent per key.
         app.MapPost("/orders/{reference}/pay", PayAsync).WithTags("Orders").RequireAuthorization(Policies.CustomerOptional)
-            .RequireRateLimiting(RatePolicies.Pay).RequireSameOrigin().RequireIdempotencyKey("pay")
+            .RequireRateLimiting(RatePolicies.Pay).RequireSameOrigin().RequireStoreFeature(StoreFeature.Payments).RequireIdempotencyKey("pay")
             .Produces<PayOrderResponse>().ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status503ServiceUnavailable);
     }

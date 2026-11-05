@@ -487,4 +487,16 @@
   <data name="checkout.below_minimum.detail" xml:space="preserve">
     <value>إجمالي التبرع أقل من الحد الأدنى الذي تقبله بوابة الدفع.</value>
   </data>
+  <data name="store.payments_disabled" xml:space="preserve">
+    <value>التبرع الإلكتروني غير متاح بعد</value>
+  </data>
+  <data name="store.payments_disabled.detail" xml:space="preserve">
+    <value>يعرض المتجر المشاريع حاليًا، وسيُفتح التبرع الإلكتروني قريبًا.</value>
+  </data>
+  <data name="store.signin_disabled" xml:space="preserve">
+    <value>تسجيل دخول المتبرعين غير متاح بعد</value>
+  </data>
+  <data name="store.signin_disabled.detail" xml:space="preserve">
+    <value>سيُتاح تسجيل الدخول عند فتح التبرع الإلكتروني.</value>
+  </data>
 </root>
