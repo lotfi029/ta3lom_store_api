@@ -18,7 +18,7 @@ internet ─▶ edge Caddy (ta3lom-deploy, TLS, HSTS) ─▶ edge network ─▶
 | API host / edge alias | `store-api.ta3lom.sa` → `store-api` | `store-api-staging.ta3lom.sa` → `store-api-staging` |
 | Web origin (CORS) | `https://store.ta3lom.sa`; `https://ta3lom.sa`, `https://www.ta3lom.sa` only for `GET /v1/cart/summary` (badge, `Store:Cors:BadgeOrigins`) | `https://store-staging.ta3lom.sa` |
 | Image tag | `X.Y.Z` (git tag `vX.Y.Z`) | `staging-<sha>` |
-| Moyasar | live keys (`sk_live_…`) | **test** keys (`sk_test_…`) |
+| Moyasar | live keys (`sk_live_…`) — none in showcase mode | **test** keys (`sk_test_…`) — none in showcase mode |
 | Secrets | `secrets/production/` | `secrets/staging/` |
 
 Memory limits: db 512 MB, api 384 MB, migrate 256 MB per environment (≈ 0.9 GB each). The API and migrate containers
@@ -98,12 +98,60 @@ dumps made before this change), a restore error or a receipt-number gap (S-11). 
 stack on every push (`deploy/stack-check.sh`). Container logs rotate at 10 MB × 5 (S-16).
 The `secrets/` folders are backed up by the owner offline.
 
+## Showcase mode (deploy without payments)
+
+Until the association subscribes to Moyasar, both environments can run as a **showcase**: donors see the categories
+and projects (prices, options, «التبرع الإلكتروني قريبًا»), there is no cart, checkout, order or donor sign-in; staff
+admin works fully (catalogue, media, settings, templates, staff, audit; the finance screens stay reachable and empty).
+Nothing in the database changes between the two modes, so switching payments on later is configuration only.
+
+**Switch showcase on** (in `.env.production` / `.env.staging`):
+
+```bash
+PAYMENTS_PROVIDER=none
+CUSTOMER_SIGNIN=false
+```
+
+then `docker compose --env-file .env.$ENV -p <project> -f compose.yaml up -d api`. The API then:
+
+- answers **409 `store.payments_disabled`** on `POST /v1/cart/lines`, `POST /v1/checkout`, `POST /v1/orders/{ref}/pay`
+  and the finance actions (refunds, review accept/refund, receipt resend) — before anything is written;
+- answers **409 `store.signin_disabled`** on `POST /v1/auth/otp/request`, `/otp/verify`, `/refresh` (staff sign-in
+  is untouched);
+- keeps `GET /v1/cart/summary` (main-site badge, `lineCount: 0`), every catalogue route and every admin read view;
+- does not schedule the payment jobs (ReconcilePayments, ExpireUnpaidOrders, ReconcileRefunds); the Moyasar webhook
+  is an unknown provider (404);
+- reports `"mode":"showcase"` in `/health/ready` (check `mode`) and `paymentsEnabled: false`, `customerSignIn: false`
+  in `GET /v1/catalog/config` (the web admin dashboard shows a "payments off" badge from it);
+- logs one warning at start-up: `payments disabled (showcase)`.
+
+Secret files **not needed** in showcase: `Store__Payments__Moyasar__SecretKey`, `Store__Payments__Moyasar__WebhookSecret`,
+`Store__Sms__AppSid` (and `SMS_SENDER_ID` may stay empty) — see `secrets.md` "Showcase". Every other secret is still
+required. CI proves it: job `stack` runs `deploy/stack-check.sh` once live (Staging) and once with
+`STACK_MODE=showcase` (Production, no Moyasar or SMS file).
+
+`CUSTOMER_SIGNIN=false` is refused unless `PAYMENTS_PROVIDER=none` (checkout needs a signed-in donor).
+`PAYMENTS_PROVIDER=none` with `CUSTOMER_SIGNIN=true` is allowed (donors could sign in and see an empty account; it
+then needs the SMS settings in Production).
+
+**Switch payments on** (after the Moyasar subscription):
+
+1. Moyasar dashboard: keys, webhook `https://<API_DOMAIN>/v1/payments/webhooks/moyasar` with a new secret
+   (`secrets.md`), payment methods; Unifonic: AppSid and the approved sender id.
+2. Write `Store__Payments__Moyasar__SecretKey`, `Store__Payments__Moyasar__WebhookSecret`, `Store__Sms__AppSid` into
+   `secrets/<env>/api/` (owners and modes as in `secrets.md`) and set `SMS_SENDER_ID`.
+3. In the env file: `PAYMENTS_PROVIDER=moyasar`, `CUSTOMER_SIGNIN=true` (or delete both lines: those are the
+   defaults). `up -d api`; `/health/ready` must say `"mode":"live"`.
+4. Web: rebuild with `showcase: false` and Moyasar's Apple Pay domain file (web `deploy/README.md` "Showcase mode").
+5. Staging first: a sandbox donation and its refund; then production and the live 1-SAR donation (go-live checklist).
+
 ## 5. Operations
 
 - Logs: `docker compose --env-file .env.production -p ta3lom-store -f compose.yaml logs --tail 200 api` (no PII: the
   RedactingEnricher masks mobiles, e-mails and tokens).
 - Health: `/health/live` (process), `/health/ready` (database + outbox: dead letters or overdue messages → Degraded).
-- Jobs (Quartz, Riyadh time): reconcile payments and expire unpaid orders every 5 minutes; OTP/idempotency pruning
+- Jobs (Quartz, Riyadh time): reconcile payments and expire unpaid orders every 5 minutes (not scheduled in showcase
+  mode); OTP/idempotency pruning
   hourly; guest carts, integrity checks, retention nightly/weekly.
 - Payment webhook: `POST /v1/payments/webhooks/moyasar` (anonymous, verified by the shared secret, re-fetches the
   payment before settling). A failed verification is recorded and answered 401 — check the secret in the dashboard.
@@ -112,7 +160,8 @@ The `secrets/` folders are backed up by the owner offline.
 ## Go-live checklist (owner)
 
 - [ ] Edge network recreated with the fixed subnet; `EDGE_SUBNET` set in both env files.
-- [ ] Secrets for both environments (Moyasar **live** keys in production, **test** keys in staging).
+- [ ] Secrets for both environments (Moyasar **live** keys in production, **test** keys in staging — not before the
+      Moyasar subscription: showcase mode needs none, see "Showcase mode").
 - [ ] Moyasar: association account, live keys, webhook URL + secret, payment methods enabled.
 - [ ] GHCR read token on the VPS; GitHub environments and secrets.
 - [ ] DNS for the four store names; edge store block deployed.

@@ -63,13 +63,17 @@ services:
       Store__Files__PublicBaseUrl: https://${API_DOMAIN}/files/public
       # Only the edge network may set X-Forwarded-For/Proto (its fixed subnet, created by ta3lom-deploy/edge/up.sh).
       Store__ForwardedHeaders__KnownNetworks__0: ${EDGE_SUBNET:?set EDGE_SUBNET (the edge network IPv4 subnet)}
-      Store__Payments__Provider: moyasar
+      # Showcase mode (deploy without payments): PAYMENTS_PROVIDER=none and CUSTOMER_SIGNIN=false in the env file; the
+      # defaults are the live store. See README.md "Showcase mode".
+      Store__Payments__Provider: ${PAYMENTS_PROVIDER:-moyasar}
+      Store__Features__CustomerSignIn: ${CUSTOMER_SIGNIN:-true}
       Store__SiteRebuild__Repository: ${SITE_REBUILD_REPOSITORY:-lotfi029/ta3lom_store_web}
       Store__Sms__SenderId: ${SMS_SENDER_ID:-}
       Store__Email__User: ${SMTP_USER:-store@ta3lom.sa}
       Store__Telemetry__OtlpEndpoint: ${OTLP_ENDPOINT:-}
     volumes:
       # Key-per-file secrets (Store__Jwt__…, Store__Payments__Moyasar__SecretKey, …): read-only, loaded by SecretFilesSetup.
+      # Showcase mode needs no Moyasar and no Sms__AppSid file (secrets.md "Showcase").
       - ${SECRETS_DIR:?set SECRETS_DIR (e.g. ./secrets/production)}/api:/run/secrets:ro
       - api-keys:/srv/store/keys
       - api-files:/srv/store/files

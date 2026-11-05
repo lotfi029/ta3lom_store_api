@@ -7,6 +7,9 @@
 # Run by CI (job `stack`) and locally:  bash deploy/stack-check.sh <api image> <migrate image>
 # Staging mode: Production refuses Moyasar test keys, and no live key exists outside the VPS. Nothing here is a real
 # secret: every value is random per run, lives in a temp dir and is removed on exit.
+# STACK_MODE=showcase (deploy without payments): PRODUCTION with PAYMENTS_PROVIDER=none and CUSTOMER_SIGNIN=false and NO
+# Moyasar or Sms__AppSid secret file — the API must start, report "mode":"showcase" on /health/ready and refuse a cart
+# line with 409 store.payments_disabled. The backup/restore part runs in the default (live) mode only.
 set -euo pipefail
 
 API_IMAGE_REF=${1:?usage: stack-check.sh <api image:tag> <migrate image:tag>}
@@ -20,6 +23,12 @@ PROJECT=t3s-stack-check
 SUDO=""
 [ "$(id -u)" -eq 0 ] || SUDO="sudo"
 CREATED_EDGE=""
+STACK_MODE=${STACK_MODE:-live}
+case "$STACK_MODE" in
+  live) ENV_NAME=staging ;;
+  showcase) ENV_NAME=production ;;
+  *) echo "stack-check: STACK_MODE must be live or showcase" >&2; exit 2 ;;
+esac
 
 cleanup() {
   local rc=$?
@@ -49,12 +58,18 @@ migrate_repo="${MIGRATE_IMAGE_REF%:*}" migrate_tag="${MIGRATE_IMAGE_REF##*:}"
 sed -e "s|^COMPOSE_PROJECT_NAME=.*|COMPOSE_PROJECT_NAME=$PROJECT|" \
     -e "s|^STORE_VERSION=.*|STORE_VERSION=$api_tag|" \
     -e "s|^EDGE_SUBNET=.*|EDGE_SUBNET=$EDGE_SUBNET_NOW|" \
-    -e "s|^SECRETS_DIR=.*|SECRETS_DIR=./secrets/staging|" \
-    "$HERE/.env.staging.example" > "$WORK/.env"
+    -e "s|^SECRETS_DIR=.*|SECRETS_DIR=./secrets/$ENV_NAME|" \
+    "$HERE/.env.$ENV_NAME.example" > "$WORK/.env"
 printf 'API_IMAGE=%s\nMIGRATE_IMAGE=%s\n' "$api_repo" "$migrate_repo" >> "$WORK/.env"
+if [ "$STACK_MODE" = showcase ]; then
+  # What the owner sets on the VPS before Moyasar (README.md "Showcase mode").
+  sed -i -e "s|^PAYMENTS_PROVIDER=.*|PAYMENTS_PROVIDER=none|" -e "s|^CUSTOMER_SIGNIN=.*|CUSTOMER_SIGNIN=false|" "$WORK/.env"
+  grep -q "^PAYMENTS_PROVIDER=none" "$WORK/.env" && grep -q "^CUSTOMER_SIGNIN=false" "$WORK/.env" \
+    || { echo "stack-check: the env example has no PAYMENTS_PROVIDER / CUSTOMER_SIGNIN line" >&2; exit 1; }
+fi
 
-# Secrets exactly as secrets.md generates them (random; test-mode Moyasar key).
-S="$WORK/secrets/staging"
+# Secrets exactly as secrets.md generates them (random; test-mode Moyasar key). Showcase: no Moyasar and no SMS file.
+S="$WORK/secrets/$ENV_NAME"
 mkdir -p "$S/api"
 ( umask 077
   openssl rand -base64 32 | tr -d '/+=\n' > "$S/db_password"
@@ -62,9 +77,11 @@ mkdir -p "$S/api"
   for k in Jwt__CustomerSigningKeyBase64 Jwt__StaffSigningKeyBase64 Otp__PepperBase64 Tokens__StatusKeyBase64 Hashing__KeyBase64; do
     openssl rand -base64 48 | tr -d '\n' > "$S/api/Store__$k"
   done
-  openssl rand -hex 32 > "$S/api/Store__Payments__Moyasar__WebhookSecret"
-  printf 'sk_test_%s' "$(openssl rand -hex 16)" > "$S/api/Store__Payments__Moyasar__SecretKey"
-  printf 'ci-%s' "$(openssl rand -hex 8)" > "$S/api/Store__Sms__AppSid"
+  if [ "$STACK_MODE" = live ]; then
+    openssl rand -hex 32 > "$S/api/Store__Payments__Moyasar__WebhookSecret"
+    printf 'sk_test_%s' "$(openssl rand -hex 16)" > "$S/api/Store__Payments__Moyasar__SecretKey"
+    printf 'ci-%s' "$(openssl rand -hex 8)" > "$S/api/Store__Sms__AppSid"
+  fi
   printf 'ci-%s' "$(openssl rand -hex 8)" > "$S/api/Store__Email__Password"
   printf 'ci-%s' "$(openssl rand -hex 8)" > "$S/api/Store__SiteRebuild__Token"
 )
@@ -79,13 +96,29 @@ alias="$(sed -n 's/^EDGE_ALIAS=\([^ ]*\).*/\1/p' "$WORK/.env")"
 for _ in $(seq 1 60); do
   if docker run --rm --network edge "$CURL_IMAGE" -fsS --max-time 3 "http://$alias:8080/health/ready" >/dev/null 2>&1; then
     echo "stack-check: http://$alias:8080/health/ready answered 200 — OK"
-    docker run --rm --network edge "$CURL_IMAGE" -sS "http://$alias:8080/health/ready"; echo
-    ready=1
+    ready="$(docker run --rm --network edge "$CURL_IMAGE" -sS "http://$alias:8080/health/ready")"
+    echo "$ready"
     break
   fi
   sleep 2
 done
 [ -n "${ready:-}" ] || { echo "stack-check: /health/ready never answered 200" >&2; exit 1; }
+case "$ready" in
+  *"\"mode\":\"$STACK_MODE\""*) echo "stack-check: readiness reports mode $STACK_MODE — OK" ;;
+  *) echo "stack-check: readiness does not report \"mode\":\"$STACK_MODE\"" >&2; exit 1 ;;
+esac
+
+if [ "$STACK_MODE" = showcase ]; then
+  # Showcase: a donor action is refused before anything is written ("mode":"showcase" checked above).
+  refused="$(docker run --rm --network edge "$CURL_IMAGE" -sS -o - -w ' %{http_code}' -X POST -H 'Content-Type: application/json' \
+    -d '{"categoryId":"00000000-0000-0000-0000-000000000000","amount":"10.00"}' "http://$alias:8080/v1/cart/lines")"
+  case "$refused" in
+    *'"code":"store.payments_disabled"'*' 409') echo "stack-check: POST /v1/cart/lines → 409 store.payments_disabled — OK" ;;
+    *) echo "stack-check: POST /v1/cart/lines should be 409 store.payments_disabled, got: $refused" >&2; exit 1 ;;
+  esac
+  echo "stack-check: OK — showcase stack healthy in Production without Moyasar or SMS secrets"
+  exit 0
+fi
 
 echo "stack-check: backup.sh → restore-test.sh"
 BACKUPS="$WORK/backups"

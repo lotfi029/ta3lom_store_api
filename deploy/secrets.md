@@ -46,7 +46,24 @@ sudo chown -R 1654:1654 "secrets/$ENV/api"   # the API image runs as user `app` 
 sudo chmod 0500 "secrets/$ENV/api" && sudo find "secrets/$ENV/api" -type f -exec chmod 0400 {} +
 ```
 
-CI proves these exact steps on every push: job `stack` (`deploy/stack-check.sh`) generates the files this way, starts
+## Showcase (deploy without payments)
+
+While the env file says `PAYMENTS_PROVIDER=none` and `CUSTOMER_SIGNIN=false` (README.md "Showcase mode"), these
+files are **not needed** — skip them (the `read -rs MOYASAR_KEY` and `read -rs SMS` lines above) and do not create
+empty ones:
+
+```
+  api/
+    Store__Payments__Moyasar__SecretKey        # not needed in showcase
+    Store__Payments__Moyasar__WebhookSecret    # not needed in showcase
+    Store__Sms__AppSid                         # not needed in showcase (and SMS_SENDER_ID may stay empty)
+```
+
+Every other file above is still required (database, the five keys, SMTP password, site-rebuild token). When payments
+are switched on, write the three files first, then change the env file and `up -d api`.
+
+CI proves these exact steps on every push: job `stack` (`deploy/stack-check.sh`, once live and once with
+`STACK_MODE=showcase` without the three files above) generates the files this way, starts
 db + migrate + api from `compose.yaml` and waits for `/health/ready`. A `db_password` left root-only fails there with
 `cat: /run/secrets/db_password: Permission denied` in the migrate log.
 

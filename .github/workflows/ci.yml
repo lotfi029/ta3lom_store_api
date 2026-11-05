@@ -133,4 +133,8 @@ jobs:
         run: shellcheck -S warning deploy/*.sh
       - name: db + migrate + api with generated secrets → /health/ready, then backup → strict restore test
         run: bash deploy/stack-check.sh ta3lom-store-api:stack ta3lom-store-api-migrate:stack
+      # Showcase mode (deploy without payments): Production, PAYMENTS_PROVIDER=none, CUSTOMER_SIGNIN=false, no Moyasar or
+      # SMS secret file → /health/ready "mode":"showcase" and a cart line refused with 409 store.payments_disabled.
+      - name: Showcase stack (Production, no Moyasar or SMS secrets) → /health/ready mode showcase
+        run: STACK_MODE=showcase bash deploy/stack-check.sh ta3lom-store-api:stack ta3lom-store-api-migrate:stack
 
