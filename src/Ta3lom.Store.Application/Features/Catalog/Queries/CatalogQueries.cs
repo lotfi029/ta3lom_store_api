@@ -130,12 +130,12 @@ internal sealed class GetHomeQueryHandler(CatalogReader reader, IStoreSettings s
 /// `GET /v1/catalog/config`: minimum gift, presets and limits (D-03, D-04).
 public sealed record GetCatalogConfigQuery : IQuery<CatalogConfigResponse>;
 
-internal sealed class GetCatalogConfigQueryHandler(IStoreSettings settings) : IQueryHandler<GetCatalogConfigQuery, CatalogConfigResponse>
+internal sealed class GetCatalogConfigQueryHandler(IStoreSettings settings, IStoreMode mode) : IQueryHandler<GetCatalogConfigQuery, CatalogConfigResponse>
 {
     public async Task<Result<CatalogConfigResponse>> HandleAsync(GetCatalogConfigQuery query, CancellationToken ct = default)
     {
         var s = await settings.GetAsync(ct);
         return new CatalogConfigResponse(s.MinGiftAmount.ToWire(), s.MaxLineAmount.ToWire(), s.CartMaxLines, s.CartMaxTotal.ToWire(),
-            CartLimits.MaxQuantity, [.. s.AmountPresets.Select(p => p.ToWire())]);
+            CartLimits.MaxQuantity, [.. s.AmountPresets.Select(p => p.ToWire())], mode.PaymentsEnabled, mode.CustomerSignIn);
     }
 }

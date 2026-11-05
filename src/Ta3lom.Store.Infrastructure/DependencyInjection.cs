@@ -29,6 +29,7 @@ using Ta3lom.Store.Infrastructure.Services.Security;
 using Ta3lom.Store.Infrastructure.Services.Settings;
 using Ta3lom.Store.Infrastructure.Services.SiteRebuild;
 using Ta3lom.Store.Infrastructure.Services.Sms;
+using Ta3lom.Store.Infrastructure.Services.StoreMode;
 using Ta3lom.Store.Infrastructure.Services.Templates;
 using Ta3lom.Store.Infrastructure.Services.Time;
 
@@ -53,19 +54,28 @@ public static class DependencyInjection
         AddSecurity(services);
         AddMessaging(services);
         AddPayments(services, configuration);
+        AddStoreMode(services);
         AddFiles(services);
 
-        // Jobs: RAM store, in-process, Riyadh cron. Each is a thin shell around one Application command.
+        // Jobs: RAM store, in-process, Riyadh cron. Each is a thin shell around one Application command. Showcase mode
+        // (`Store:Payments:Provider = none`): no gateway to reconcile with and no order to expire, so the payment jobs are
+        // not scheduled at all.
+        var paymentsEnabled = !PaymentOptions.IsNone(configuration[$"{PaymentOptions.Section}:{nameof(PaymentOptions.Provider)}"]);
+        var jobs = new ScheduledJobs();
+        services.AddSingleton(jobs);
         services.AddQuartz(q =>
         {
-            q.AddStoreJob<PruneOtpJob>(PruneOtpJob.Cron);
-            q.AddStoreJob<PruneIdempotencyKeysJob>(PruneIdempotencyKeysJob.Cron);
-            q.AddStoreJob<ExpireGuestCartsJob>(ExpireGuestCartsJob.Cron);
-            q.AddStoreJob<RetentionJob>(RetentionJob.Cron);
-            q.AddStoreJob<IntegrityChecksJob>(IntegrityChecksJob.Cron);
-            q.AddStoreJob<ReconcilePaymentsJob>(ReconcilePaymentsJob.Cron);
-            q.AddStoreJob<ExpireUnpaidOrdersJob>(ExpireUnpaidOrdersJob.Cron);
-            q.AddStoreJob<ReconcileRefundsJob>(ReconcileRefundsJob.Cron);
+            q.AddStoreJob<PruneOtpJob>(jobs, PruneOtpJob.Cron);
+            q.AddStoreJob<PruneIdempotencyKeysJob>(jobs, PruneIdempotencyKeysJob.Cron);
+            q.AddStoreJob<ExpireGuestCartsJob>(jobs, ExpireGuestCartsJob.Cron);
+            q.AddStoreJob<RetentionJob>(jobs, RetentionJob.Cron);
+            q.AddStoreJob<IntegrityChecksJob>(jobs, IntegrityChecksJob.Cron);
+            if (paymentsEnabled)
+            {
+                q.AddStoreJob<ReconcilePaymentsJob>(jobs, ReconcilePaymentsJob.Cron);
+                q.AddStoreJob<ExpireUnpaidOrdersJob>(jobs, ExpireUnpaidOrdersJob.Cron);
+                q.AddStoreJob<ReconcileRefundsJob>(jobs, ReconcileRefundsJob.Cron);
+            }
         });
         services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
         services.AddScoped<JobRuns>();
@@ -177,7 +187,18 @@ public static class DependencyInjection
         services.AddScoped<IPaymentGatewayRegistry, PaymentGatewayRegistry>();
     }
 
-    /// SMS (sink unless `Store:Sms:Provider = unifonic`), e-mail (sink unless `Store:Email:Mode = smtp`), templates, outbox, settings.
+    /// Showcase mode: `Store:Features` (donor sign-in), the `IStoreMode` port, the `mode` readiness check and the
+    /// start-up warning when payments are off.
+    private static void AddStoreMode(IServiceCollection services)
+    {
+        services.AddOptions<StoreFeatureOptions>().BindConfiguration(StoreFeatureOptions.Section).ValidateOnStart();
+        services.AddSingleton<IValidateOptions<StoreFeatureOptions>, StoreFeatureOptionsValidator>();
+        services.AddSingleton<IStoreMode, ConfiguredStoreMode>();
+        services.AddHostedService<ShowcaseModeNotice>();
+        services.AddHealthChecks().AddCheck<StoreModeHealthCheck>(StoreModeHealthCheck.Name, tags: [HealthTags.Ready]);
+    }
+
+    /// SMS (sink unless `Store:Sms:Provider = unifonic` with an AppSid — showcase Production has none), e-mail (sink unless `Store:Email:Mode = smtp`), templates, outbox, settings.
     private static void AddMessaging(IServiceCollection services)
     {
         services.AddOptions<SmsOptions>().BindConfiguration(SmsOptions.Section).ValidateOnStart();
@@ -186,7 +207,8 @@ public static class DependencyInjection
         services.AddSingleton<IDevSmsInbox>(sp => sp.GetRequiredService<SinkSmsSender>());
         services.AddHttpClient<UnifonicSmsSender>(c => c.Timeout = TimeSpan.FromSeconds(10));
         services.AddScoped<ISmsSender>(sp =>
-            string.Equals(sp.GetRequiredService<IOptions<SmsOptions>>().Value.Provider, "unifonic", StringComparison.OrdinalIgnoreCase)
+            sp.GetRequiredService<IOptions<SmsOptions>>().Value is var sms
+            && string.Equals(sms.Provider, "unifonic", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(sms.AppSid)
                 ? sp.GetRequiredService<UnifonicSmsSender>()
                 : sp.GetRequiredService<SinkSmsSender>());
         services.AddScoped<ITemplateRenderer, ScribanTemplateRenderer>();

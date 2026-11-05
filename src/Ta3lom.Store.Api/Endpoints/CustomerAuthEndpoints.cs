@@ -21,14 +21,14 @@ internal sealed class CustomerAuthEndpoints : IEndpoint
     {
         var group = app.MapGroup("/auth").WithTags("Auth").RequireSameOrigin();
 
-        group.MapPost("/otp/request", RequestOtpAsync)
+        group.MapPost("/otp/request", RequestOtpAsync).RequireStoreFeature(StoreFeature.CustomerSignIn)
             .AllowAnonymous()
             .RequireRateLimiting(RatePolicies.OtpRequest)
             .Produces<OtpRequestedResponse>(StatusCodes.Status202Accepted)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
-        group.MapPost("/otp/verify", VerifyOtpAsync)
+        group.MapPost("/otp/verify", VerifyOtpAsync).RequireStoreFeature(StoreFeature.CustomerSignIn)
             .AllowAnonymous()
             .RequireRateLimiting(RatePolicies.OtpVerify)
             .Produces<SessionResponse>()
@@ -36,7 +36,7 @@ internal sealed class CustomerAuthEndpoints : IEndpoint
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
-        group.MapPost("/refresh", RefreshAsync)
+        group.MapPost("/refresh", RefreshAsync).RequireStoreFeature(StoreFeature.CustomerSignIn)
             .AllowAnonymous()
             .RequireRateLimiting(RatePolicies.AuthRefresh)
             .Produces<AccessTokenResponse>()

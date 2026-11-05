@@ -104,4 +104,8 @@ public static class ErrorCodes
     public const string IdempotencyKeyReused = "idempotency.key_reused";
     public const string IdempotencyInProgress = "idempotency.in_progress";
     public const string TemplateRenderFailed = "template.render_failed";
+
+    // Showcase mode (deploy without payments): a feature switched off by configuration
+    public const string StorePaymentsDisabled = "store.payments_disabled";
+    public const string StoreSignInDisabled = "store.signin_disabled";
 }

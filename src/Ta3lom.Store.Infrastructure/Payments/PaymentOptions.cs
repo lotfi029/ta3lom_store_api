@@ -12,8 +12,16 @@ public sealed class PaymentOptions
 {
     public const string Section = "Store:Payments";
 
-    /// "moyasar" | "fake" (the fake only in Development and the test host — C-2).
+    /// The provider that switches payments off (showcase mode): no default gateway, no payment jobs, 409 on the payment routes.
+    public const string None = "none";
+
+    /// "moyasar" | "fake" (the fake only in Development and the test host — C-2) | "none" (showcase, every environment).
     public string Provider { get; set; } = "fake";
+
+    /// False when `Provider = none` (showcase mode).
+    public bool PaymentsEnabled => !IsNone(Provider);
+
+    public static bool IsNone(string? provider) => string.Equals(provider?.Trim(), None, StringComparison.OrdinalIgnoreCase);
 
     public MoyasarOptions Moyasar { get; set; } = new();
 
@@ -48,6 +56,7 @@ public sealed class FakePaymentOptions
         Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes("ta3lom-store DEV ONLY fake webhook")));
 }
 
+/// Showcase mode: `none` is accepted in every environment and validates nothing else.
 /// C-2 / plan §3.2: the fake is refused outside Development and the test host ("Testing"); Moyasar needs its keys; the
 /// key mode matches the environment (live keys only in Production, test keys elsewhere); no DEV ONLY value outside
 /// Development.
@@ -72,8 +81,10 @@ internal sealed class PaymentOptionsValidator(IHostEnvironment environment) : IV
             case "moyasar":
                 ValidateMoyasar(options.Moyasar, problems);
                 break;
+            case PaymentOptions.None:
+                break;                                   // showcase: no gateway, so the Moyasar settings are not needed
             default:
-                problems.Add("Store:Payments:Provider must be moyasar or fake");
+                problems.Add("Store:Payments:Provider must be moyasar, fake or none");
                 break;
         }
 

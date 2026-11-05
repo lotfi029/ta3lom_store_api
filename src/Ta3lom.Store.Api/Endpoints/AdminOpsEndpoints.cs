@@ -42,17 +42,17 @@ internal sealed class AdminOpsEndpoints : IEndpoint
         // R5-Payments (plan §4): refunds and payment review — finance only, idempotent, audited.
         // Review 04 P-3: 202 `refund: "pending"` when the gateway gave no definite answer — not kept for replay, so the same
         // key retries (and reconciles) instead of replaying "pending" forever.
-        orders.MapPost("/{reference}/refunds", RefundAsync).RequireAuthorization(Policies.StaffFinance).RequireIdempotencyKey("refund", PendingRefundShaper.Instance)
+        orders.MapPost("/{reference}/refunds", RefundAsync).RequireAuthorization(Policies.StaffFinance).RequireStoreFeature(StoreFeature.Payments).RequireIdempotencyKey("refund", PendingRefundShaper.Instance)
             .Produces<AdminPaymentActionResponse>().Produces<AdminPaymentActionResponse>(StatusCodes.Status202Accepted).ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status422UnprocessableEntity).ProducesProblem(StatusCodes.Status502BadGateway);
-        orders.MapPost("/{reference}/review/accept", AcceptReviewAsync).RequireAuthorization(Policies.StaffFinance)
+        orders.MapPost("/{reference}/review/accept", AcceptReviewAsync).RequireAuthorization(Policies.StaffFinance).RequireStoreFeature(StoreFeature.Payments)
             .Produces<AdminPaymentActionResponse>().ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict);
-        orders.MapPost("/{reference}/receipt/resend", ResendReceiptAsync).RequireAuthorization(Policies.StaffFinance).RequireIdempotencyKey("resend")
+        orders.MapPost("/{reference}/receipt/resend", ResendReceiptAsync).RequireAuthorization(Policies.StaffFinance).RequireStoreFeature(StoreFeature.Payments).RequireIdempotencyKey("resend")
             .Produces<AdminPaymentActionResponse>().ProducesProblem(StatusCodes.Status404NotFound);
 
         admin.MapGet("/reports/donations.csv", DonationsCsvAsync).WithTags("Admin · Reports").RequireAuthorization(Policies.StaffFinance)
             .Produces(StatusCodes.Status200OK, contentType: "text/csv").ProducesProblem(StatusCodes.Status400BadRequest);
-        orders.MapPost("/{reference}/review/refund", RefundReviewAsync).RequireAuthorization(Policies.StaffFinance).RequireIdempotencyKey("refund", PendingRefundShaper.Instance)
+        orders.MapPost("/{reference}/review/refund", RefundReviewAsync).RequireAuthorization(Policies.StaffFinance).RequireStoreFeature(StoreFeature.Payments).RequireIdempotencyKey("refund", PendingRefundShaper.Instance)
             .Produces<AdminPaymentActionResponse>().Produces<AdminPaymentActionResponse>(StatusCodes.Status202Accepted).ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status502BadGateway);
 

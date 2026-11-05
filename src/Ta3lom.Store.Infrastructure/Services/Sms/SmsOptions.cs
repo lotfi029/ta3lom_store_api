@@ -19,12 +19,13 @@ public sealed class SmsOptions
 }
 
 /// A-8: Production sends real SMS — the provider must be `unifonic` with its AppSid and sender id, or the host does not start
-/// (an OTP would otherwise be accepted and silently never delivered).
-internal sealed class SmsOptionsValidator(IHostEnvironment environment) : IValidateOptions<SmsOptions>
+/// (an OTP would otherwise be accepted and silently never delivered). Showcase mode: only while donors sign in by SMS
+/// (`Store:Features:CustomerSignIn`); with sign-in off nothing sends a donor SMS and no Unifonic secret is needed.
+internal sealed class SmsOptionsValidator(IHostEnvironment environment, IOptions<StoreMode.StoreFeatureOptions> features) : IValidateOptions<SmsOptions>
 {
     public ValidateOptionsResult Validate(string? name, SmsOptions options)
     {
-        if (!environment.IsProduction())
+        if (!environment.IsProduction() || !features.Value.CustomerSignIn)
         {
             return ValidateOptionsResult.Success;
         }

@@ -29,9 +29,10 @@ public sealed record ProjectSlugsResponse(IReadOnlyList<string> Slugs);
 /// `GET /v1/catalog/home`.
 public sealed record HomeResponse(IReadOnlyList<ProjectCard> Featured, IReadOnlyList<CategorySummary> Categories, IReadOnlyList<string> AmountPresets);
 
-/// `GET /v1/catalog/config`: the giving limits (D-03, D-04) and presets.
+/// `GET /v1/catalog/config`: the giving limits (D-03, D-04) and presets; `paymentsEnabled` / `customerSignIn` say whether
+/// the store takes donations and donor sign-ins (false/false in showcase mode).
 public sealed record CatalogConfigResponse(string MinGiftAmount, string MaxLineAmount, int CartMaxLines, string CartMaxTotal, int MaxQuantity,
-    IReadOnlyList<string> AmountPresets);
+    IReadOnlyList<string> AmountPresets, bool PaymentsEnabled, bool CustomerSignIn);
 
 // ── Admin ────────────────────────────────────────────────────────────────────────────────────────────────────────────
 

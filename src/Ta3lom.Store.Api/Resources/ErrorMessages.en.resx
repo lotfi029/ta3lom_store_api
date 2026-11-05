@@ -487,4 +487,16 @@
   <data name="checkout.below_minimum.detail" xml:space="preserve">
     <value>The donation total is below the minimum the payment gateway accepts.</value>
   </data>
+  <data name="store.payments_disabled" xml:space="preserve">
+    <value>Online donations are not open yet</value>
+  </data>
+  <data name="store.payments_disabled.detail" xml:space="preserve">
+    <value>The store shows its projects for now; online donations open soon.</value>
+  </data>
+  <data name="store.signin_disabled" xml:space="preserve">
+    <value>Donor sign-in is not open yet</value>
+  </data>
+  <data name="store.signin_disabled.detail" xml:space="preserve">
+    <value>Donor sign-in opens together with online donations.</value>
+  </data>
 </root>
