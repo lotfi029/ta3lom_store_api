@@ -6,8 +6,13 @@ using Microsoft.Extensions.Options;
 namespace Ta3lom.Store.Api.Extensions;
 
 /// Public caching of the catalogue: weak ETag = hash of the JSON body, `If-None-Match` → 304, and
-/// `Cache-Control` per class (content: max-age 60 + SWR 300; live: max-age 15). Output caching keeps a copy per
-/// URL (locale-free: the bodies are bilingual) and is evicted by tag when staff change the catalogue.
+/// `Cache-Control` per class (content: `no-cache`; live: max-age 15). Output caching keeps a copy per URL (locale-free:
+/// the bodies are bilingual) and is evicted by tag when staff change the catalogue.
+///
+/// Content is `no-cache` (browsers keep the copy but ask again every time, a cheap `304` while nothing changed) so a staff
+/// change reaches visitors on their next page load. With the former `max-age=60, stale-while-revalidate=300` a browser
+/// answered the store web's post-hydration refresh from its own cache, without asking the API, so an admin change could
+/// take up to six minutes to show (the server-side eviction never reached it).
 public static class HttpCaching
 {
     public const string ContentPolicy = "catalog-content";
@@ -24,9 +29,12 @@ public static class HttpCaching
             o.AddPolicy(LivePolicy, b => b.Expire(TimeSpan.FromSeconds(15)).SetVaryByQuery(VaryKeys).Tag(CatalogTag));
         });
 
-    /// Content endpoints: `public, max-age=60, stale-while-revalidate=300`.
+    /// Content endpoints: `public, no-cache` — always revalidated (ETag → 304), so catalogue changes show at once.
+    public const string ContentCacheControl = "public, no-cache";
+
+    /// Content endpoints: <see cref="ContentCacheControl"/>.
     public static RouteHandlerBuilder CachedContent(this RouteHandlerBuilder builder) =>
-        builder.CacheOutput(ContentPolicy).AddEndpointFilter(new ETagFilter("public, max-age=60, stale-while-revalidate=300"));
+        builder.CacheOutput(ContentPolicy).AddEndpointFilter(new ETagFilter(ContentCacheControl));
 
     /// Live figures: `public, max-age=15`.
     public static RouteHandlerBuilder CachedLive(this RouteHandlerBuilder builder) =>
