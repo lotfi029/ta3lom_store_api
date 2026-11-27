@@ -23,7 +23,7 @@ public static class HttpCaching
     public static readonly string[] VaryKeys = ["q", "category", "sort", "page", "pageSize", "fields"];
 
     public static IServiceCollection AddStoreOutputCache(this IServiceCollection services) =>
-        services.AddOutputCache(o =>
+        services.AddSingleton<CatalogChanges>().AddOutputCache(o =>
         {
             o.AddPolicy(ContentPolicy, b => b.Expire(TimeSpan.FromSeconds(60)).SetVaryByQuery(VaryKeys).Tag(CatalogTag));
             o.AddPolicy(LivePolicy, b => b.Expire(TimeSpan.FromSeconds(15)).SetVaryByQuery(VaryKeys).Tag(CatalogTag));
@@ -40,11 +40,12 @@ public static class HttpCaching
     public static RouteHandlerBuilder CachedLive(this RouteHandlerBuilder builder) =>
         builder.CacheOutput(LivePolicy).AddEndpointFilter(new ETagFilter("public, max-age=15"));
 
-    /// Admin catalogue writes evict the public catalogue cache (tag `catalog`) after a successful response.
+    /// Admin catalogue writes evict the public catalogue cache (tag `catalog`) after a successful response, then tell open
+    /// store pages (<see cref="CatalogChanges"/>, `GET /v1/catalog/events`).
     public static TBuilder EvictsCatalogCache<TBuilder>(this TBuilder builder)
         where TBuilder : IEndpointConventionBuilder => builder.AddEndpointFilter<TBuilder, EvictCatalogFilter>();
 
-    private sealed class EvictCatalogFilter(Microsoft.AspNetCore.OutputCaching.IOutputCacheStore store) : IEndpointFilter
+    private sealed class EvictCatalogFilter(Microsoft.AspNetCore.OutputCaching.IOutputCacheStore store, CatalogChanges changes) : IEndpointFilter
     {
         public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
         {
@@ -53,6 +54,7 @@ public static class HttpCaching
             if (!HttpMethods.IsGet(context.HttpContext.Request.Method) && status is >= 200 and < 300)
             {
                 await store.EvictByTagAsync(CatalogTag, context.HttpContext.RequestAborted);
+                changes.Publish();
             }
 
             return result;
