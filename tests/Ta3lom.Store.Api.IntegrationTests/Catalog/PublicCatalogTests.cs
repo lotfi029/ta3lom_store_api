@@ -326,7 +326,9 @@ public sealed class PublicCatalogTests(ScenarioFactory factory) : IClassFixture<
         var first = await GetAsync("/v1/catalog/categories");
         first.Response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var etag = first.Response.Headers.ETag!.ToString();
-        first.Response.Headers.CacheControl!.ToString().ShouldContain("max-age=60");
+        var cacheControl = first.Response.Headers.CacheControl!;
+        cacheControl.NoCache.ShouldBeTrue();      // browsers revalidate every time: staff changes show on the next load
+        cacheControl.MaxAge.ShouldBeNull();
 
         (await GetAsync("/v1/catalog/categories", etag)).Response.StatusCode.ShouldBe(HttpStatusCode.NotModified);
         (await GetAsync("/v1/catalog/categories?junk=1")).Response.Headers.ETag!.ToString().ShouldBe(etag);
