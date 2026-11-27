@@ -7,7 +7,8 @@ using Ta3lom.Store.Application.Features.Catalog.Queries;
 
 namespace Ta3lom.Store.Api.Endpoints;
 
-/// `/v1/catalog` — the public catalogue (BR-A01…A06): anonymous, ETag + output cache, evicted by every catalogue write.
+/// `/v1/catalog` — the public catalogue (BR-A01…A06): anonymous, ETag + output cache, evicted by every catalogue write;
+/// `/events` tells open pages about each write (live updates).
 internal sealed class CatalogEndpoints : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
@@ -20,7 +21,13 @@ internal sealed class CatalogEndpoints : IEndpoint
             .Produces<PagedResult<ProjectCard>>().Produces<ProjectSlugsResponse>().ProducesProblem(StatusCodes.Status400BadRequest);
         catalog.MapGet("/projects/{slug}", ProjectAsync).CachedContent()
             .Produces<ProjectDetail>().Produces<SlugRedirectResponse>().ProducesProblem(StatusCodes.Status404NotFound);
+
+        // Live updates for open store pages (Server-Sent Events): `ready`, then `catalog` after every staff catalogue write.
+        catalog.MapGet("/events", Events).Produces(StatusCodes.Status200OK, contentType: "text/event-stream");
     }
+
+    private static IResult Events([FromServices] CatalogChanges changes, HttpContext http) =>
+        TypedResults.ServerSentEvents(changes.StreamAsync(http.RequestAborted));
 
     private static async Task<IResult> HomeAsync([FromServices] IQueryHandler<GetHomeQuery, HomeResponse> handler, CancellationToken ct) =>
         (await handler.HandleAsync(new GetHomeQuery(), ct)).ToHttp();

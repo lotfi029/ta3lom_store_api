@@ -340,4 +340,39 @@ public sealed class PublicCatalogTests(ScenarioFactory factory) : IClassFixture<
         after.Response.Headers.ETag!.ToString().ShouldNotBe(etag);
         after.Body.EnumerateArray().Select(c => c.Str("slug")).ShouldContain(category.Str("slug"));
     }
+
+    [Fact]
+    public async Task Events_stream_says_ready_then_announces_each_catalogue_write()
+    {
+        var (_, build) = await AdminAsync();
+        var ct = TestContext.Current.CancellationToken;
+        using var client = factory.Anonymous();
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/v1/catalog/events");
+        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        response.Content.Headers.ContentType!.MediaType.ShouldBe("text/event-stream");
+
+        await using var body = await response.Content.ReadAsStreamAsync(ct);
+        using var reader = new StreamReader(body);
+        (await NextEventAsync(reader, ct)).ShouldBe("ready");
+
+        await build.CategoryAsync();
+        (await NextEventAsync(reader, ct)).ShouldBe("catalog");
+    }
+
+    /// The `event:` name of the next server-sent event (pings carry no data and are skipped by browsers, not here).
+    private static async Task<string> NextEventAsync(StreamReader reader, CancellationToken ct)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(20));
+        while (await reader.ReadLineAsync(timeout.Token) is { } line)
+        {
+            if (line.StartsWith("event:", StringComparison.Ordinal) && line[6..].Trim() is { } name && name != "ping")
+            {
+                return name;
+            }
+        }
+
+        return string.Empty;
+    }
 }
