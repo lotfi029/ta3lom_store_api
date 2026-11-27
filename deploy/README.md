@@ -57,7 +57,10 @@ run read-only (tmpfs `/tmp`) as non-root.
 
 - **main** → images `:staging-<sha>` (+ `:<sha>`), built, `self-check` (renders a receipt PDF in the image), pushed;
   then on the VPS `docker compose … pull migrate api && docker compose … up -d --wait api` for staging, then a smoke of
-  `/health/ready`.
+  `/health/ready`. **Then production, with no release to create** (owner, 2026-11-27): the gate numbers the next
+  `vX.Y.Z` (latest strict tag, patch + 1; a commit that already has one reuses it) and creates the tag; images `:X.Y.Z`
+  are built (label `X.Y.Z`), self-checked and pushed; once staging is deployed, the same steps run for production.
+  A failed staging deploy or smoke stops it. For a minor or major bump, create the tag yourself (below).
 - **tag `vX.Y.Z`** (review 04 H-3) → the workflow runs on the **tag push itself**, so its ref is the tag and the
   `production` environment's "`v*` tags only" rule really applies. Its gate fails unless the ref is
   `refs/tags/vX.Y.Z`, the tagged commit is on `main`, and every CI check run on that commit (`build-test`, `stack`)
@@ -65,7 +68,8 @@ run read-only (tmpfs `/tmp`) as non-root.
   `production` environment reviewer approves. Release: merge to `main`, then `git tag vX.Y.Z <main sha> && git push origin vX.Y.Z`.
 - Missing `*_SSH_*` secrets → the deploy step is skipped with a warning and prints the commands (never a red run).
 
-GitHub settings: environments `staging` and `production` (required reviewer; tags `v*` only); secrets per environment
+GitHub settings: environments `staging` and `production` (production: deployment branches and tags = `main` and `v*`;
+a required reviewer is optional — with one, every merge waits for an approval); secrets per environment
 `STAGING_SSH_HOST|USER|KEY|KNOWN_HOSTS` and `PRODUCTION_…`; optional variables `STAGING_DEPLOY_DIR`,
 `PRODUCTION_DEPLOY_DIR` (default `/srv/ta3lom-store/deploy`).
 
@@ -74,8 +78,7 @@ migrate → contract). Never run a migration's `Down` in production — roll for
 
 ## 3. Rollback
 
-Actions → **deploy** → *Run workflow* — **for production choose "Use workflow from: the tag"** (the environment only
-allows `v*`). Environment + an earlier tag: production accepts only `X.Y.Z`, staging only `staging-<sha>`, and the
+Actions → **deploy** → *Run workflow* — **for production choose "Use workflow from:" `main` or the tag**. Environment + an earlier tag: production accepts only `X.Y.Z`, staging only `staging-<sha>`, and the
 image's `org.opencontainers.image.version` label must equal the tag. By hand on the VPS:
 `STORE_VERSION=<tag> docker compose --env-file .env.production -p ta3lom-store -f compose.yaml up -d --wait api`.
 A rollback across a migration keeps the newer schema (expand-only migrations stay compatible).
