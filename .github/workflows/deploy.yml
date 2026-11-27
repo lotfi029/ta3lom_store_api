@@ -3,7 +3,11 @@ name: deploy
 # Runbook: deploy/README.md (edge model, plan §5). Images: ghcr.io/lotfi029/ta3lom-store-api and …-api-migrate
 # (private; the VPS pulls with its OWN read:packages token — no registry token is ever sent to the VPS).
 # A deploy starts only after CI succeeded on the same commit:
-#   CI ok on main (workflow_run)       → images :<sha>, :staging-<sha>  → staging (store-api-staging), smoke /health/ready
+#   CI ok on main (workflow_run)       → images :<sha>, :staging-<sha>  → staging (store-api-staging), smoke /health/ready;
+#                                        then PROMOTE (owner, 2026-11-27: every merge goes to production, no release):
+#                                        the gate numbered the next vX.Y.Z (latest tag, patch + 1) and created that tag on
+#                                        the commit (a tag made by GITHUB_TOKEN starts no workflow) → images :X.Y.Z →
+#                                        production once staging passed its smoke check
 #   push of a tag vX.Y.Z (strict)      → the run's ref IS the tag (review 04 H-3: the `production` environment's "v* tags
 #                                        only" rule now applies — a workflow_run always ran on main); the gate checks the
 #                                        ref is refs/tags/vX.Y.Z, the tagged commit is on main, and waits until every CI
@@ -42,27 +46,46 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
-      contents: read
+      contents: write # creates the vX.Y.Z tag of a promoted main commit
       checks: read
     outputs:
       target: ${{ steps.decide.outputs.target }}
       sha: ${{ steps.decide.outputs.sha }}
       tag: ${{ steps.decide.outputs.tag }}
+      version: ${{ steps.decide.outputs.version }}
     steps:
       - name: Staging — CI must have succeeded on a push to main
         if: github.event_name == 'workflow_run'
         id: staging
         env:
+          GH_TOKEN: ${{ github.token }}
           CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           EVENT: ${{ github.event.workflow_run.event }}
           BRANCH: ${{ github.event.workflow_run.head_branch }}
           SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          target=none tag=
-          # Tags no longer deploy from here (H-3): only main → staging.
-          if [ "$CONCLUSION" = success ] && [ "$EVENT" = push ] && [ "$BRANCH" = main ]; then target=staging tag="staging-$SHA"; fi
+          target=none tag= version=
           case "$SHA" in *[!0-9a-f]*) echo "::error::invalid sha"; exit 1 ;; esac
-          { echo "target=$target"; echo "sha=$SHA"; echo "tag=$tag"; } >> "$GITHUB_OUTPUT"
+          # Tags no longer deploy from here (H-3): only main → staging, then production as the next vX.Y.Z.
+          if [ "$CONCLUSION" = success ] && [ "$EVENT" = push ] && [ "$BRANCH" = main ]; then
+            target=staging tag="staging-$SHA"
+            # Next patch of the latest strict vX.Y.Z tag, created here so two quick merges never take the same number
+            # (the API refuses an existing ref). A re-run on a commit that already has a version reuses it.
+            versions() { gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/v" --paginate --jq "$1" \
+              | sed 's#^refs/tags/v##' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1 || true; }
+            version="$(versions '.[] | select(.object.sha == "'"$SHA"'") | .ref')"
+            if [ -z "$version" ]; then
+              IFS=. read -r major minor patch <<<"$(versions '.[].ref' | grep . || echo 0.0.0)"
+              for i in 1 2 3 4 5; do
+                patch=$((patch + 1)) version="$major.$minor.$patch"
+                gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/v$version" -f sha="$SHA" > /dev/null && break
+                echo "v$version is taken — trying the next patch"; version=
+              done
+              [ -n "$version" ] || { echo "::error::could not create a vX.Y.Z tag for $SHA"; exit 1; }
+            fi
+            echo "::notice::main@$SHA → staging, then production as v$version"
+          fi
+          { echo "target=$target"; echo "sha=$SHA"; echo "tag=$tag"; echo "version=$version"; } >> "$GITHUB_OUTPUT"
           echo "deploy target: $target ${tag:+($tag)}"
       - name: Production — the ref must be a release tag vX.Y.Z
         if: github.event_name == 'push'
@@ -105,12 +128,14 @@ jobs:
           S_TARGET: ${{ steps.staging.outputs.target }}
           S_SHA: ${{ steps.staging.outputs.sha }}
           S_TAG: ${{ steps.staging.outputs.tag }}
+          S_VERSION: ${{ steps.staging.outputs.version }}
           P_TARGET: ${{ steps.production.outputs.target }}
           P_SHA: ${{ steps.production.outputs.sha }}
           P_TAG: ${{ steps.production.outputs.tag }}
         run: |
-          if [ -n "$P_TARGET" ]; then target=$P_TARGET sha=$P_SHA tag=$P_TAG; else target=${S_TARGET:-none} sha=$S_SHA tag=$S_TAG; fi
-          { echo "target=$target"; echo "sha=$sha"; echo "tag=$tag"; } >> "$GITHUB_OUTPUT"
+          version=
+          if [ -n "$P_TARGET" ]; then target=$P_TARGET sha=$P_SHA tag=$P_TAG; else target=${S_TARGET:-none} sha=$S_SHA tag=$S_TAG version=$S_VERSION; fi
+          { echo "target=$target"; echo "sha=$sha"; echo "tag=$tag"; echo "version=$version"; } >> "$GITHUB_OUTPUT"
           echo "deploy target: $target ${tag:+($tag)}"
 
   images:
@@ -127,6 +152,7 @@ jobs:
     env:
       SHA: ${{ needs.gate.outputs.sha }}
       TAG: ${{ needs.gate.outputs.tag }}
+      VERSION: ${{ needs.gate.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -143,6 +169,14 @@ jobs:
           docker build --target migrate --build-arg VERSION="$TAG" --build-arg GIT_SHA="$SHA" -t "$MIGRATE_IMAGE:$TAG" -t "$MIGRATE_IMAGE:$SHA" .
           docker run --rm --read-only --tmpfs /tmp "$API_IMAGE:$TAG" self-check
           for image in "$API_IMAGE" "$MIGRATE_IMAGE"; do docker push "$image:$TAG"; docker push "$image:$SHA"; done
+      - name: Promoted main commit — the production images :X.Y.Z (label = X.Y.Z, so a rollback to it passes)
+        if: needs.gate.outputs.version != ''
+        run: |
+          printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "::error::invalid version '$VERSION'"; exit 1; }
+          docker build --target api --build-arg VERSION="$VERSION" --build-arg GIT_SHA="$SHA" -t "$API_IMAGE:$VERSION" .
+          docker build --target migrate --build-arg VERSION="$VERSION" --build-arg GIT_SHA="$SHA" -t "$MIGRATE_IMAGE:$VERSION" .
+          docker run --rm --read-only --tmpfs /tmp "$API_IMAGE:$VERSION" self-check
+          for image in "$API_IMAGE" "$MIGRATE_IMAGE"; do docker push "$image:$VERSION"; done
 
   staging:
     needs: [gate, images]
@@ -193,12 +227,16 @@ jobs:
         if: always()
         run: rm -f ~/.ssh/deploy_key
 
+  # A release tag (target production), or a main commit promoted after its staging deploy and smoke check passed.
   production:
-    needs: [gate, images]
-    if: needs.gate.outputs.target == 'production'
+    needs: [gate, images, staging]
+    if: >-
+      !cancelled() && needs.images.result == 'success' && (needs.gate.outputs.target == 'production'
+      || (needs.gate.outputs.version != '' && needs.staging.result == 'success'))
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    # The `production` environment has a required reviewer and only allows v* tags (repository settings).
+    # Waits for the `production` environment's protection rules, if any (repository settings). For a promoted main
+    # commit the environment must allow the `main` branch.
     environment:
       name: production
       url: https://store-api.ta3lom.sa/health/ready
@@ -206,7 +244,7 @@ jobs:
       group: deploy-production
       cancel-in-progress: false
     env:
-      TAG: ${{ needs.gate.outputs.tag }}
+      TAG: ${{ needs.gate.outputs.target == 'production' && needs.gate.outputs.tag || needs.gate.outputs.version }}
       SSH_HOST: ${{ secrets.PRODUCTION_SSH_HOST }}
       SSH_USER: ${{ secrets.PRODUCTION_SSH_USER }}
       SSH_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
