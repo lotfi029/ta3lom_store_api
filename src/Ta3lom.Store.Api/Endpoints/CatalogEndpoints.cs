@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Ta3lom.Store.Api.Extensions;
 using Ta3lom.Store.Application.Abstractions.Messaging;
@@ -26,7 +27,7 @@ internal sealed class CatalogEndpoints : IEndpoint
         catalog.MapGet("/events", Events).Produces(StatusCodes.Status200OK, contentType: "text/event-stream");
     }
 
-    private static IResult Events([FromServices] CatalogChanges changes, HttpContext http) =>
+    private static ServerSentEventsResult<string> Events([FromServices] CatalogChanges changes, HttpContext http) =>
         TypedResults.ServerSentEvents(changes.StreamAsync(http.RequestAborted));
 
     private static async Task<IResult> HomeAsync([FromServices] IQueryHandler<GetHomeQuery, HomeResponse> handler, CancellationToken ct) =>
